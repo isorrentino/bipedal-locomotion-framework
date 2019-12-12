@@ -1,0 +1,7 @@
+<map id="RobotInterface/YarpImplementation/include/BipedalLocomotion/RobotInterface/YarpSensorBridge.h" name="RobotInterface/YarpImplementation/include/BipedalLocomotion/RobotInterface/YarpSensorBridge.h">
+<area shape="rect" id="node4" href="$Advanceable_8h.html" title="BipedalLocomotion/System\l/Advanceable.h" alt="" coords="584,109,765,151"/>
+<area shape="rect" id="node5" href="$ISensorBridge_8h.html" title="BipedalLocomotion/RobotInterface\l/ISensorBridge.h" alt="" coords="143,109,366,151"/>
+<area shape="rect" id="node10" href="$IParametersHandler_8h.html" title="BipedalLocomotion/Parameters\lHandler/IParametersHandler.h" alt="" coords="153,199,356,240"/>
+<area shape="rect" id="node11" href="$Vector_8h_source.html" title="BipedalLocomotion/Generic\lContainer/Vector.h" alt="" coords="233,288,415,329"/>
+<area shape="rect" id="node13" href="$TemplateHelpers_8h_source.html" title="BipedalLocomotion/Generic\lContainer/TemplateHelpers.h" alt="" coords="565,377,757,419"/>
+</map>
