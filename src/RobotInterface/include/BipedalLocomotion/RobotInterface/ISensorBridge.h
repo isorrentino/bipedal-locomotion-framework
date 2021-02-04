@@ -302,42 +302,90 @@ public:
 
 protected:
     /**
-     * Helper method to maintain SensorBridgeOptions struct by populating it from the configuration parameters
-     * @note the user may choose to use/not use this method depending on their requirements for the implementation
-     * if the user chooses to not use the method, the implementation must simply contain "return true;"
+     * Helper method to maintain SensorBridgeOptions struct by populating it from the configuration
+     * parameters
+     * @note the user may choose to use/not use this method depending on their requirements for the
+     * implementation if the user chooses to not use the method, the implementation must simply
+     * contain "return true;"
      *
      * @param[in] handler  Parameters handler
-     * @param[in] sensorBridgeOptions SensorBridgeOptions to hold the bridge options for streaming sensor measurements
+     * @param[in] sensorBridgeOptions SensorBridgeOptions to hold the bridge options for streaming
+     * sensor measurements
      */
-    virtual bool populateSensorBridgeOptionsFromConfig(std::weak_ptr<BipedalLocomotion::ParametersHandler::IParametersHandler> handler,
-                                                      SensorBridgeOptions& sensorBridgeOptions) { return true; };
+    virtual bool populateSensorBridgeOptionsFromConfig(
+        std::weak_ptr<BipedalLocomotion::ParametersHandler::IParametersHandler> handler,
+        SensorBridgeOptions& sensorBridgeOptions)
+    {
+        return true;
+    };
 
     /**
-     * Helper method to maintain SensorLists struct by populating it from the configuration parameters
-     * @note the user may choose to use/not use this method depending on their requirements for the implementation
-     * if the user chooses to not use the method, the implementation must simply contain "return true;"
+     * Helper method to maintain SensorLists struct by populating it from the configuration
+     * parameters
+     * @note the user may choose to use/not use this method depending on their requirements for the
+     * implementation if the user chooses to not use the method, the implementation must simply
+     * contain "return true;"
      *
      * @param[in] handler  Parameters handler
      * @param[in] sensorBridgeOptions configured object of SensorBridgeOptions
      * @param[in] sensorLists SensorLists object holding list of connected sensor devices
      */
-    virtual bool populateSensorListsFromConfig(std::weak_ptr<BipedalLocomotion::ParametersHandler::IParametersHandler> handler,
-                                               const SensorBridgeOptions& sensorBridgeOptions,
-                                               SensorLists& sensorLists) { return true; };
+    virtual bool populateSensorListsFromConfig(
+        std::weak_ptr<BipedalLocomotion::ParametersHandler::IParametersHandler> handler,
+        const SensorBridgeOptions& sensorBridgeOptions,
+        SensorLists& sensorLists)
+    {
+        return true;
+    };
 
     /**
-     * Helper method to maintain SensorBridgeMetaData struct by populating it from the configuration parameters
-     * @note the user may choose to use/not use this method depending on their requirements for the implementation
-     * if the user chooses to not use the method, the implementation must simply contain "return true;"
+     * Helper method to maintain SensorBridgeMetaData struct by populating it from the configuration
+     * parameters
+     * @note the user may choose to use/not use this method depending on their requirements for the
+     * implementation if the user chooses to not use the method, the implementation must simply
+     * contain "return true;"
      *
      * @param[in] handler  Parameters handler
      * @param[in] sensorBridgeMetaData configured object of SensorBridgeMetadata
      * @param[in] sensorLists SensorLists object holding list of connected sensor devices
      */
-    virtual bool populateSensorBridgeMetaDataFromConfig(std::weak_ptr<BipedalLocomotion::ParametersHandler::IParametersHandler> handler,
-                                                        SensorBridgeMetaData& sensorBridgeMetaData) { return true; };
+    virtual bool populateSensorBridgeMetaDataFromConfig(
+        std::weak_ptr<BipedalLocomotion::ParametersHandler::IParametersHandler> handler,
+        SensorBridgeMetaData& sensorBridgeMetaData)
+    {
+        return true;
+    };
 
+    /**
+     * Get motor currents in ampere
+     * @param[in] jointName name of the joint
+     * @param[out] motorCurrent motor current in ampere
+     * @param[out] receiveTimeInSeconds time at which the measurement was received
+     * @return true/false in case of success/failure
+     */
+    virtual bool getMotorCurrent(const std::string& jointName,
+                                  double& motorCurrent,
+                                  double* receiveTimeInSeconds = nullptr)
+    {
+        return false;
+    };
 
+    /**
+     * Get all motors' current in ampere
+     * @param[out] parameter all motors' current in ampere
+     * @param[out] receiveTimeInSeconds time at which the measurement was received
+     *
+     * @warning the size is decided at the configuration and remains fixed,
+     * and internal checks must be done at the implementation level by the Derived class.
+     * This means that the user must pass a resized argument "jointCurrents" to this method
+     *
+     * @return true/false in case of success/failure
+     */
+    virtual bool getMotorCurrents(Eigen::Ref<Eigen::VectorXd> motorCurrents,
+                                   double* receiveTimeInSeconds = nullptr)
+    {
+        return false;
+    };
 };
 } // namespace RobotInterface
 } // namespace BipedalLocomotion

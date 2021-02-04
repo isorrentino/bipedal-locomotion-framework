@@ -22,6 +22,7 @@
 #include <yarp/dev/IAnalogSensor.h>
 #include <yarp/dev/IGenericSensor.h>
 #include <yarp/dev/MultipleAnalogSensorsInterfaces.h>
+#include <yarp/dev/ICurrentControl.h>
 
 // YARP Camera Interfaces
 #include <yarp/dev/FrameGrabberInterfaces.h>
@@ -53,6 +54,7 @@ struct YarpSensorBridge::Impl
     {
         yarp::dev::IEncodersTimed* encoders{nullptr};
         yarp::dev::IAxisInfo* axis{nullptr};
+        yarp::dev::ICurrentControl* currsensors{nullptr};
     };
 
     ControlBoardRemapperInterfaces controlBoardRemapperInterfaces;
@@ -100,6 +102,7 @@ struct YarpSensorBridge::Impl
         yarp::sig::Vector remappedJointIndices;
         yarp::sig::Vector jointPositions;
         yarp::sig::Vector jointVelocities;
+        yarp::sig::Vector jointCurrents;
         double receivedTimeInSeconds;
     };
 
@@ -841,11 +844,13 @@ struct YarpSensorBridge::Impl
         controlBoardRemapperMeasures.remappedJointIndices.resize(metaData.bridgeOptions.nrJoints);
         controlBoardRemapperMeasures.jointPositions.resize(metaData.bridgeOptions.nrJoints);
         controlBoardRemapperMeasures.jointVelocities.resize(metaData.bridgeOptions.nrJoints);
+        controlBoardRemapperMeasures.jointCurrents.resize(metaData.bridgeOptions.nrJoints);
 
         // zero buffers
         controlBoardRemapperMeasures.remappedJointIndices.zero();
         controlBoardRemapperMeasures.jointPositions.zero();
         controlBoardRemapperMeasures.jointVelocities.zero();
+        controlBoardRemapperMeasures.jointCurrents.zero();
     }
 
     /**
@@ -1196,6 +1201,7 @@ struct YarpSensorBridge::Impl
         bool ok{true};
         ok = ok && controlBoardRemapperInterfaces.encoders->getEncoders(tempJointPositions.data());
         ok = ok && controlBoardRemapperInterfaces.encoders->getEncoderSpeeds(tempJointVelocities.data());
+        ok = ok && controlBoardRemapperInterfaces.currsensors->getCurrents(controlBoardRemapperMeasures.jointCurrents.data());
 
         if (!ok)
         {
@@ -1212,6 +1218,12 @@ struct YarpSensorBridge::Impl
 
             if (nanExistsInVec(tempJointVelocities, logPrefix, "encoder speeds"))
             {
+                return false;
+            }
+
+            if (std::binary_search(controlBoardRemapperMeasures.jointCurrents.begin(), controlBoardRemapperMeasures.jointCurrents.end(), NAN))
+            {
+                std::cerr << logPrefix << " NAN values read from current control interface, use previous measurement" << std::endl;
                 return false;
             }
         }

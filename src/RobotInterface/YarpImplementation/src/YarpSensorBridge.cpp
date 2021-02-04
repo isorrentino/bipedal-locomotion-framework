@@ -397,3 +397,31 @@ bool YarpSensorBridge::getThreeAxisForceTorqueSensorsList(std::vector<std::strin
 
     return false;
 }
+
+bool YarpSensorBridge::getMotorCurrent(const std::string& jointName,
+                                        double& jointCurrent,
+                                        double* receiveTimeInSeconds)
+{
+    int idx;
+    if (!m_pimpl->getIndexFromVector(m_pimpl->metaData.sensorsList.jointsList,
+                                     jointName, idx))
+    {
+        std::cerr << "[YarpSensorBridge::getJointVelocity] " << jointName
+                  <<  " could not be found in the configured list of joints" << std::endl;
+        return false;
+    }
+
+    jointCurrent = m_pimpl->controlBoardRemapperMeasures.jointCurrents[idx];
+    receiveTimeInSeconds = &m_pimpl->controlBoardRemapperMeasures.receivedTimeInSeconds;
+
+    return true;
+}
+
+bool YarpSensorBridge::getMotorCurrents(Eigen::Ref<Eigen::VectorXd> jointCurrents,
+                                         double* receiveTimeInSeconds)
+{
+
+    jointCurrents = yarp::eigen::toEigen(m_pimpl->controlBoardRemapperMeasures.jointCurrents);
+    receiveTimeInSeconds = &m_pimpl->controlBoardRemapperMeasures.receivedTimeInSeconds;
+    return true;
+}
