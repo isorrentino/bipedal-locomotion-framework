@@ -221,7 +221,7 @@ bool YarpSensorBridge::getJointPosition(const std::string& jointName,
     if (!m_pimpl->getIndexFromVector(m_pimpl->metaData.sensorsList.jointsList,
                                      jointName, idx))
     {
-        std::cerr << "[YarpSensorBridge::getJointVelocity] " << jointName
+        std::cerr << "[YarpSensorBridge::getJointPosition] " << jointName
                   <<  " could not be found in the configured list of joints" << std::endl;
         return false;
     }
@@ -406,7 +406,7 @@ bool YarpSensorBridge::getMotorCurrent(const std::string& jointName,
     if (!m_pimpl->getIndexFromVector(m_pimpl->metaData.sensorsList.jointsList,
                                      jointName, idx))
     {
-        std::cerr << "[YarpSensorBridge::getJointVelocity] " << jointName
+        std::cerr << "[YarpSensorBridge::getJointCurrent] " << jointName
                   <<  " could not be found in the configured list of joints" << std::endl;
         return false;
     }
