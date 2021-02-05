@@ -1221,9 +1221,8 @@ struct YarpSensorBridge::Impl
                 return false;
             }
 
-            if (std::binary_search(controlBoardRemapperMeasures.jointCurrents.begin(), controlBoardRemapperMeasures.jointCurrents.end(), NAN))
+            if (nanExistsInVec(controlBoardRemapperMeasures.jointCurrents, logPrefix, "sensor currents"))
             {
-                std::cerr << logPrefix << " NAN values read from current control interface, use previous measurement" << std::endl;
                 return false;
             }
         }
