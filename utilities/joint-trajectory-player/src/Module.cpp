@@ -159,6 +159,8 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
 
     m_currentJointPos.resize(m_numOfJoints);
 
+    m_currentMotorCurr.resize(m_numOfJoints);
+
     if (!readStateFromFile(trajectoryFile, m_numOfJoints))
     {
         return false;
@@ -220,9 +222,16 @@ bool Module::updateModule()
             return false;
         }
 
+        if (!m_sensorBridge.getMotorCurrents(m_currentMotorCurr))
+        {
+            std::cerr << "[Module::updateModule] Error in reading motor currents." << std::endl;
+            return false;
+        }
+
         for (int i = 0; i < m_numOfJoints; i++)
         {
             m_logJointPos[m_axisList[i]].push_back(m_currentJointPos[i]);
+            m_logMotorCurr[m_axisList[i]].push_back(m_currentMotorCurr[i]);
         }
 
         m_idxTraj++;
