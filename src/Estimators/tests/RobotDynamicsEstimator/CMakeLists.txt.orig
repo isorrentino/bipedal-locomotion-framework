@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Istituto Italiano di Tecnologia (IIT). All rights reserved.
+# Copyright (C) 2019 Istituto Italiano di Tecnologia (IIT). All rights reserved.
 # This software may be modified and distributed under the terms of the
 # GNU Lesser General Public License v2.1 or any later version.
 
@@ -31,6 +31,7 @@ if(FRAMEWORK_USE_icub-models AND FRAMEWORK_COMPILE_YarpImplementation)
         icub-models::icub-models
         Eigen3::Eigen
         BipedalLocomotion::ManifConversions)
+<<<<<<< HEAD
 
     add_bipedal_test(NAME ConstantMeasurementModel
         SOURCES ConstantMeasurementModelTest.cpp
@@ -51,21 +52,23 @@ if(FRAMEWORK_USE_icub-models AND FRAMEWORK_COMPILE_YarpImplementation)
         Eigen3::Eigen
         MANIF::manif
         BipedalLocomotion::ManifConversions)
+=======
+>>>>>>> Align with master
 
-    add_bipedal_test(NAME AccelerometerMeasurementDynamics
-        SOURCES AccelerometerMeasurementDynamicsTest.cpp
-        LINKS   BipedalLocomotion::RobotDynamicsEstimator
+    add_bipedal_test(NAME ConstantMeasurementModel
+        SOURCES ConstantMeasurementModelTest.cpp
+        LINKS BipedalLocomotion::RobotDynamicsEstimator
         BipedalLocomotion::ParametersHandler
         BipedalLocomotion::ParametersHandlerYarpImplementation
-        BipedalLocomotion::System
         icub-models::icub-models
         Eigen3::Eigen
-        MANIF::manif
         BipedalLocomotion::ManifConversions)
 
-    add_bipedal_test(NAME GyroscopeMeasurementDynamics
-        SOURCES GyroscopeMeasurementDynamicsTest.cpp
-        LINKS   BipedalLocomotion::RobotDynamicsEstimator
+<<<<<<< HEAD
+=======
+    add_bipedal_test(NAME JointVelocityStateDynamics
+        SOURCES JointVelocityStateDynamicsTest.cpp
+        LINKS BipedalLocomotion::RobotDynamicsEstimator
         BipedalLocomotion::ParametersHandler
         BipedalLocomotion::ParametersHandlerYarpImplementation
         BipedalLocomotion::System
@@ -81,8 +84,28 @@ if(FRAMEWORK_USE_icub-models AND FRAMEWORK_COMPILE_YarpImplementation)
         BipedalLocomotion::ParametersHandlerYarpImplementation
         BipedalLocomotion::System
         icub-models::icub-models
+        Eigen3::Eigen)
+
+>>>>>>> Align with master
+    add_bipedal_test(NAME    AccelerometerMeasurementDynamics
+        SOURCES AccelerometerMeasurementDynamicsTest.cpp
+        LINKS   BipedalLocomotion::RobotDynamicsEstimator
+        BipedalLocomotion::ParametersHandler
+        BipedalLocomotion::ParametersHandlerYarpImplementation
+        BipedalLocomotion::System
+        icub-models::icub-models
         Eigen3::Eigen
-        BipedalLocomotion::ManifConversions)
+        MANIF::manif)
+
+    add_bipedal_test(NAME GyroscopeMeasurementDynamics
+        SOURCES GyroscopeMeasurementDynamicsTest.cpp
+        LINKS   BipedalLocomotion::RobotDynamicsEstimator
+        BipedalLocomotion::ParametersHandler
+        BipedalLocomotion::ParametersHandlerYarpImplementation
+        BipedalLocomotion::System
+        icub-models::icub-models
+        Eigen3::Eigen
+        MANIF::manif)
 
     add_bipedal_test(NAME     UkfState
         SOURCES  UkfStateTest.cpp

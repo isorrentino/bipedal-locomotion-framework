@@ -46,7 +46,6 @@ bool RDE::MotorCurrentMeasurementDynamics::initialize(
     if (!ptr->getParameter("elements", m_elements))
     {
         log()->info("{} Variable elements not found.", errorPrefix);
-        m_elements = {};
     }
 
     // Set the torque constants

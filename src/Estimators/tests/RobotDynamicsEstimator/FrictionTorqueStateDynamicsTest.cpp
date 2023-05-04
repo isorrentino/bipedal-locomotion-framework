@@ -40,7 +40,6 @@ void createModelLoader(IParametersHandler::shared_ptr group, iDynTree::ModelLoad
 
     std::vector<std::string> jointsAndFTs;
     jointsAndFTs.insert(jointsAndFTs.begin(), jointList.begin(), jointList.end());
-    //    jointsAndFTs.insert(jointsAndFTs.end(), ftFramesList.begin(), ftFramesList.end());
 
     REQUIRE(mdlLdr.loadReducedModelFromFile(modelPath, jointsAndFTs));
 }

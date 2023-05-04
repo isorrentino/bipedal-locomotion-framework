@@ -53,7 +53,6 @@ bool RDE::FrictionTorqueStateDynamics::initialize(
     if (!ptr->getParameter("elements", m_elements))
     {
         log()->info("{} Variable elements not found.", errorPrefix);
-        m_elements = {};
     }
 
     // Set the friction parameters
@@ -181,19 +180,23 @@ bool RDE::FrictionTorqueStateDynamics::checkStateVariableHandler()
 bool RDE::FrictionTorqueStateDynamics::update()
 {
     // k_{1} \dot{s,k}
-    m_coshArgument = m_k1.array() * m_jointVelocityFullModel.array();
+//    m_coshArgument = m_k1.array() * m_jointVelocityFullModel.array();
 
     // tanh (k_{1} \dot{s,k}))
-    m_coshsquared = m_coshArgument.array().cosh().square();
+//    m_coshsquared = m_coshArgument.array().cosh().square();
 
     //  k_{0} k_{1}
-    m_k0k1 = m_k0.array() * m_k1.array();
+//    m_k0k1 = m_k0.array() * m_k1.array();
 
     // \ddot{s,k} ( k_{2} + k_{0} k_{1} (1 - tanh^{2} (k_{1} \dot{s,k})) )
-    m_dotTauF = m_ukfInput.robotJointAccelerations.array()
-                * (m_k2.array() + m_k0k1.array() / m_coshsquared.array());
+//    m_dotTauF = m_ukfInput.robotJointAccelerations.array()
+//                * (m_k2.array() + m_k0k1.array() / m_coshsquared.array());
 
     // \tau_{F,k+1} = \tau_{F,k} + \Delta T * \dot{\tau_{F,k}}
+//    m_updatedVariable = m_frictionTorqueFullModel + m_dT * m_dotTauF;
+
+    m_dotTauF = m_k0.array() * m_ukfInput.robotJointAccelerations.array();
+
     m_updatedVariable = m_frictionTorqueFullModel + m_dT * m_dotTauF;
 
     return true;

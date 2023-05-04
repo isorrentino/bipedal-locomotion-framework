@@ -822,7 +822,12 @@ struct YarpSensorBridge::Impl
 
         if (sensorMap.find(sensorName) == sensorMap.end())
         {
-            log()->error("{} {} sensor unavailable in the measurement map.", logPrefix, sensorName);
+            std::string keys = "";
+            for (auto &[key, value] : sensorMap)
+            {
+                keys += " " + key;
+            }
+            log()->error("{} {} sensor unavailable in the measurement map. Available keys:{}.", logPrefix, sensorName, keys);
             return false;
         }
 
@@ -1692,9 +1697,9 @@ struct YarpSensorBridge::Impl
                       * controlBoardRemapperMeasures.motorAccelerationsUnordered * M_PI / 180;
             } else
             {
-                log()->error("{} Unable to read from IMotorEncoders interface, use previous "
-                             "measurement.",
-                             logPrefix);
+//                log()->error("{} Unable to read from IMotorEncoders interface, use previous "
+//                             "measurement.",
+//                             logPrefix);
             }
         }
 

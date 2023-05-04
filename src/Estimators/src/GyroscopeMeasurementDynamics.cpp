@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file GyroscopeMeasurementDynamics.cpp
  * @authors Ines Sorrentino
  * @copyright 2023 Istituto Italiano di Tecnologia (IIT). This software may be modified and
