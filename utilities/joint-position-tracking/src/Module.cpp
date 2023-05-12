@@ -159,7 +159,8 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
         std::cerr << "[Module::updateModule] Unable to read the sensor." << std::endl;
         return false;
     }
-    m_sensorBridge.getJointPositions(m_currentJointPos);
+    //m_sensorBridge.getJointPositions(m_currentJointPos);
+    m_sensorBridge.getMotorCurrents(m_currentJointPos);
 
     // the trajectory will bring the robot in the initial configuration
     m_setPoints.push_back(m_currentJointPos[0]);
@@ -206,11 +207,14 @@ bool Module::updateModule()
         return false;
     }
 
-    m_sensorBridge.getJointPositions(m_currentJointPos);
+    //m_sensorBridge.getJointPositions(m_currentJointPos);
+    m_sensorBridge.getMotorCurrents(m_currentJointPos);
 
     // set the reference
+//    m_robotControl.setReferences(m_spline.getOutput().position,
+//                                 RobotInterface::IRobotControl::ControlMode::PositionDirect);
     m_robotControl.setReferences(m_spline.getOutput().position,
-                                 RobotInterface::IRobotControl::ControlMode::PositionDirect);
+                                 RobotInterface::IRobotControl::ControlMode::Current);
 
     m_logJointPos.push_back(m_currentJointPos[0]);
     m_logDesiredJointPos.push_back(m_spline.getOutput().position[0]);
