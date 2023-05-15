@@ -6,7 +6,7 @@
 <devices>
 
   <device xmlns:xi="http://www.w3.org/2001/XInclude" name="right_foot_imu_client" type="multipleanalogsensorsclient">
-    <param name="remote">/ergocubSim/right_foot/imu</param>
+    <param name="remote">/ergocub/right_foot/imu</param>
     <param name="local">/robot_dynamics_estimator/right_foot/imu</param>
     <param name="timeout">0.5</param>
     <param name="carrier">fast_tcp</param>
