@@ -316,11 +316,11 @@ bool RobotDynamicsEstimatorDevice::setEstimatorInitialState()
         std::string ftBias = key + "_bias";
         m_estimatorOutput.output.ftWrenchesBiases[ftBias] = m_ftOffset[key]; // FT bias
 
-        log()->info("FT {}", key);
-        log()->info("wrench minus offset");
-        log()->info(m_estimatorOutput.output.ftWrenches[key]);
-        log()->info("Offset");
-        log()->info(m_ftOffset[key]);
+//        log()->info("FT {}", key);
+//        log()->info("wrench minus offset");
+//        log()->info(m_estimatorOutput.output.ftWrenches[key]);
+//        log()->info("Offset");
+//        log()->info(m_ftOffset[key]);
     }
 
     m_estimatorOutput.output.tau_m = iDynTree::toEigen(estimatedTau);
@@ -620,11 +620,11 @@ bool RobotDynamicsEstimatorDevice::updateMeasurements()
         }
         m_estimatorInput.input.ftWrenches[key] -= m_ftOffset[key];
 
-        log()->info("FT {}", key);
-        log()->info("wrench minus offset");
-        log()->info(m_estimatorInput.input.ftWrenches[key]);
-        log()->info("Offset");
-        log()->info(m_ftOffset[key]);
+//        log()->info("FT {}", key);
+//        log()->info("wrench minus offset");
+//        log()->info(m_estimatorInput.input.ftWrenches[key]);
+//        log()->info("Offset");
+//        log()->info(m_ftOffset[key]);
     }
 
     for (auto& [key, value] : m_estimatorInput.input.linearAccelerations)

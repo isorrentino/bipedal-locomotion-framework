@@ -200,7 +200,7 @@ BSD-3-Clause license. -->
              <group name="MOTOR_CURRENT">
                 <param name="name">i_m</param>
                 <param name="covariance">(1e-2, 1e-2, 1e-1, 1e-1, 1e-1, 1e-1)</param>
-                <param name="gear_ratio">(100.0, -100.0, 100.0, 100.0, 100.0, 100.0)</param>
+                <param name="gear_ratio">(100.0, -160.0, 100.0, 100.0, 100.0, 160.0)</param>
                 <param name="torque_constant">(0.111, 0.047, 0.047, 0.111, 0.111, 0.025)</param>
                 <param name="dynamic_model">MotorCurrentMeasurementDynamics</param>
              </group>
