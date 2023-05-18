@@ -110,12 +110,6 @@ bool RDE::ConstantMeasurementModel::checkStateVariableHandler()
     constexpr auto errorPrefix = "[ConstantMeasurementModel::checkStateVariableHandler]";
 
     // Check if the variable handler contains the variables used by this dynamics
-    if (!m_stateVariableHandler.getVariable(m_name).isValid())
-    {
-        log()->error("{} The variable handler does not contain the expected state with name `{}`.", errorPrefix, m_name);
-        return false;
-    }
-
     if (m_useBias)
     {
         if (!m_stateVariableHandler.getVariable(m_biasVariableName).isValid())
@@ -144,9 +138,6 @@ bool RDE::ConstantMeasurementModel::update()
 
 void RDE::ConstantMeasurementModel::setState(const Eigen::Ref<const Eigen::VectorXd> ukfState)
 {
-    m_currentState = ukfState.segment(m_stateVariableHandler.getVariable(m_name).offset,
-                                      m_stateVariableHandler.getVariable(m_name).size);
-
     if (m_useBias)
     {
         m_bias = ukfState.segment(m_stateVariableHandler.getVariable(m_biasVariableName).offset,

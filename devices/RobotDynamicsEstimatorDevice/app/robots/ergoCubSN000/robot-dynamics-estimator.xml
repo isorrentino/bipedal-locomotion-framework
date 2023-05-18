@@ -21,17 +21,17 @@ BSD-3-Clause license. -->
         </group>
 
         <group name="ACCELEROMETER">
-            <param name="names">()</param>
-            <param name="frames">()</param>
-            <!--param name="names">("r_leg_ft_acc", "r_foot_front_ft_acc", "r_foot_rear_ft_acc")</param>
-            <param name="frames">("r_leg_ft", "r_foot_front_ft", "r_foot_rear_ft")</param-->
+<!--            <param name="names">()</param>
+            <param name="frames">()</param>-->
+            <param name="names">("r_leg_ft_acc", "r_foot_front_ft_acc", "r_foot_rear_ft_acc")</param>
+            <param name="frames">("r_leg_ft", "r_foot_front_ft", "r_foot_rear_ft")</param>
         </group>
 
         <group name="GYROSCOPE">
-            <param name="names">()</param>
-            <param name="frames">()</param>
-            <!--param name="names">("r_leg_ft_gyro", "r_foot_front_ft_gyro", "r_foot_rear_ft_gyro")</param>
-            <param name="frames">("r_leg_ft", "r_foot_front_ft", "r_foot_rear_ft")</param-->
+<!--            <param name="names">()</param>
+            <param name="frames">()</param>-->
+            <param name="names">("r_leg_ft_gyro", "r_foot_front_ft_gyro", "r_foot_rear_ft_gyro")</param>
+            <param name="frames">("r_leg_ft", "r_foot_front_ft", "r_foot_rear_ft")</param>
         </group>
 
         <group name="EXTERNAL_CONTACT">
@@ -42,7 +42,7 @@ BSD-3-Clause license. -->
     <group name="RobotSensorBridge">
         <param name="check_for_nan">false</param>
         <param name="stream_joint_states">true</param>
-        <param name="stream_inertials">false</param>
+        <param name="stream_inertials">true</param>
         <param name="stream_forcetorque_sensors">true</param>
         <param name="stream_motor_states">true</param>
 
@@ -58,12 +58,12 @@ BSD-3-Clause license. -->
           <param name="temperature_sensors_list">("r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
         </group-->
 
-        <!--group name="InertialSensors">
-          <param name="accelerometers_list">(rfeimu_acc)</param>
-          <param name="gyroscopes_list">(rfeimu_gyro)</param>
-          <param name="magnetometers_list">(rfeimu_mag)</param>
-          <param name="orientation_sensors_list">(rfeimu_eul)</param>
-        </group-->
+        <group name="InertialSensors">
+          <param name="accelerometers_list">(r_leg_ft_acc, r_foot_front_ft_acc, r_foot_rear_ft_acc)</param>
+          <param name="gyroscopes_list">(r_leg_ft_gyro, r_foot_front_ft_gyro, r_foot_rear_ft_gyro)</param>
+          <!--param name="magnetometers_list">(r_leg_ft_mag, r_foot_front_ft_mag, r_foot_rear_ft_mag)</param>
+          <param name="orientation_sensors_list">(r_leg_ft_eul, r_foot_front_ft_eul, r_foot_rear_ft_eul)</param-->
+        </group>
     </group>
 
     <group name="UKF">
@@ -78,7 +78,8 @@ BSD-3-Clause license. -->
                  "RIGHT_LEG_GYRO_BIAS", "RIGHT_FOOT_FRONT_GYRO_BIAS", "RIGHT_FOOT_REAR_GYRO_BIAS")
              </param-->
              <param name="dynamics_list">
-                 ("JOINT_VELOCITY", "MOTOR_TORQUE", "FRICTION_TORQUE", "RIGHT_LEG_FT", "RIGHT_FOOT_FRONT_FT", "RIGHT_FOOT_REAR_FT")
+                 ("JOINT_VELOCITY", "MOTOR_TORQUE", "FRICTION_TORQUE",
+                  "RIGHT_LEG_FT", "RIGHT_FOOT_FRONT_FT", "RIGHT_FOOT_REAR_FT")
               </param>
              <!-- Available models = ["ZeroVelocityStateDynamics", "JointVelocityStateDynamics", "FrictionTorqueStateDynamics"] -->
              <group name="JOINT_VELOCITY">
@@ -188,7 +189,9 @@ BSD-3-Clause license. -->
              </param-->
              <param name="dynamics_list">
                  ("JOINT_VELOCITY", "MOTOR_CURRENT",
-                  "RIGHT_LEG_FT", "RIGHT_FOOT_FRONT_FT", "RIGHT_FOOT_REAR_FT")
+                  "RIGHT_LEG_FT", "RIGHT_FOOT_FRONT_FT", "RIGHT_FOOT_REAR_FT",
+                  "RIGHT_LEG_ACC", "RIGHT_FOOT_FRONT_ACC", "RIGHT_FOOT_REAR_ACC",
+                  "RIGHT_LEG_GYRO", "RIGHT_FOOT_FRONT_GYRO", "RIGHT_FOOT_REAR_GYRO")
               </param>
              <!-- Available models = ["ConstantMeasurementModel", "AccelerometerMeasurementDynamics",
                                       "GyroscopeMeasurementDynamics", "MotorCurrentMeasurementDynamics"] -->
@@ -225,19 +228,19 @@ BSD-3-Clause license. -->
              <group name="RIGHT_LEG_ACC">
                 <param name="name">r_leg_ft_acc</param>
                 <param name="covariance">(2.3e-3, 1.9e-3, 3.1e-3)</param>
-                <param name="use_bias">true</param>
+                <param name="use_bias">false</param>
                 <param name="dynamic_model">ConstantMeasurementModel</param>
              </group>
              <group name="RIGHT_FOOT_FRONT_ACC">
                 <param name="name">r_foot_front_ft_acc</param>
                 <param name="covariance">(2.3e-3, 1.9e-3, 3.1e-3)</param>
-                <param name="use_bias">true</param>
+                <param name="use_bias">false</param>
                 <param name="dynamic_model">ConstantMeasurementModel</param>
              </group>
              <group name="RIGHT_FOOT_REAR_ACC">
                 <param name="name">r_foot_rear_ft_acc</param>
                 <param name="covariance">(2.5e-3, 2.3e-3, 3e-3)</param>
-                <param name="use_bias">true</param>
+                <param name="use_bias">false</param>
                 <param name="dynamic_model">ConstantMeasurementModel</param>
              </group>
              <group name="RIGHT_LEG_GYRO">
@@ -265,7 +268,21 @@ BSD-3-Clause license. -->
     <action phase="startup" level="15" type="attach">
         <paramlist name="networks">
             <elem name="all_joints">all_joints_mc</elem>
+<!--            <elem name="all_joints">alljoints-mc_remapper</elem>-->
             <elem name="mas-remapper">mas-remapper</elem>
+            <!--<elem name="head-j0">head-eb20-j0_1-mc</elem>
+            <elem name="head-j2">head-eb21-j2_3-mc</elem>
+            <elem name="torso">torso-eb5-j0_2-mc</elem>
+            <elem name="left_upper_arm-j0">left_arm-eb2-j0_1-mc</elem>
+            <elem name="left_upper_arm-j2">left_arm-eb4-j2_3-mc</elem>
+            <elem name="left_lower_arm">left_arm-eb31-j4_6-mc</elem>
+            <elem name="right_upper_arm-j0">right_arm-eb1-j0_1-mc</elem>
+            <elem name="right_upper_arm-j2">right_arm-eb3-j2_3-mc</elem>
+            <elem name="right_lower_arm">right_arm-eb30-j4_6-mc</elem>
+            <elem name="left_upper_leg-j0">left_leg-eb8-j0_3-mc</elem>
+            <elem name="left_lower_leg-j2">left_leg-eb9-j4_5-mc</elem>
+            <elem name="right_upper_leg-j0">right_leg-eb6-j0_3-mc</elem>
+            <elem name="right_lower_leg-j2">right_leg-eb7-j4_5-mc</elem>-->
         </paramlist>
     </action>
 

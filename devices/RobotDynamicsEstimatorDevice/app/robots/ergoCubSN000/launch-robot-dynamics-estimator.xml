@@ -10,7 +10,7 @@ BSD-3-Clause license. -->
     <xi:include href="interface-robot-dynamics-estimator/all_joints_mc.xml" />
     <xi:include href="interface-robot-dynamics-estimator/mas-remapper.xml" />
     <xi:include href="interface-robot-dynamics-estimator/ft_clients.xml" />
-    <!--xi:include href="interface-robot-dynamics-estimator/imu_clients.xml" /-->
+    <xi:include href="interface-robot-dynamics-estimator/imu_clients.xml" />
     <xi:include href="./robot-dynamics-estimator.xml" />
     </devices>
 </robot>

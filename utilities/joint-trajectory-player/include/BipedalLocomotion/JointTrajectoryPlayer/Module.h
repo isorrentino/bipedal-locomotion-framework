@@ -24,6 +24,7 @@
 #include <BipedalLocomotion/RobotInterface/YarpHelper.h>
 #include <BipedalLocomotion/RobotInterface/YarpRobotControl.h>
 #include <BipedalLocomotion/RobotInterface/YarpSensorBridge.h>
+#include <BipedalLocomotion/YarpUtilities/VectorsCollection.h>
 
 namespace BipedalLocomotion
 {
@@ -46,11 +47,11 @@ class Module : public yarp::os::RFModule
 
     int m_numOfJoints; /**< Number of joints to control. */
 
-    std::unordered_map<std::string, std::vector<double>> m_log; /**< Measured joint and motor quantities. */
-
     std::vector<std::string> m_axisList; /**< Axis name list. */
 
     matioCpp::MultiDimensionalArray<double> m_traj; /**< Joint trajectory. */
+
+    yarp::os::BufferedPort<BipedalLocomotion::YarpUtilities::VectorsCollection> m_portLogging; /**< Yarp port to publish data. */
 
     unsigned int m_idxTraj{0}; /**< Index to iterate the trajectory. */
 
@@ -69,6 +70,8 @@ class Module : public yarp::os::RFModule
     bool instantiateSensorBridge(std::shared_ptr<ParametersHandler::IParametersHandler> handler);
 
     bool readStateFromFile(const std::string& filename, const std::size_t numFields);
+
+    void publishData();
 
 public:
     /**

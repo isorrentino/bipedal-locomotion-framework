@@ -100,7 +100,7 @@ bool Module::readStateFromFile(const std::string& filename, const std::size_t nu
         return false;
     } else
     {
-        m_traj = input.read("traj").asMultiDimensionalArray<double>(); // Read a multi dimensional
+        m_traj = input.read("joint_positions").asMultiDimensionalArray<double>(); // Read a multi dimensional
                                                                        // array named "traj"
         if (!m_traj.isValid())
         {
@@ -115,6 +115,8 @@ bool Module::readStateFromFile(const std::string& filename, const std::size_t nu
 
 bool Module::configure(yarp::os::ResourceFinder& rf)
 {
+    constexpr auto logPrefix = "[Module::configure]";
+
     auto parametersHandler = std::make_shared<ParametersHandler::YarpImplementation>(rf);
 
     std::string name;
@@ -139,12 +141,14 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
     }
     if (!this->initializeRobotControl(parametersHandler))
     {
-        std::cerr << "[Module::configure] Unable to initialize the robotControl interface." << std::endl;
+        std::cerr << "[Module::configure] Unable to initialize the robotControl interface."
+                  << std::endl;
         return false;
     }
     if (!this->instantiateSensorBridge(parametersHandler))
     {
-        std::cerr << "[Module::configure] Unable toinitialize the sensorBridge interface." << std::endl;
+        std::cerr << "[Module::configure] Unable toinitialize the sensorBridge interface."
+                  << std::endl;
         return false;
     }
 
@@ -174,6 +178,11 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
 
     m_state = State::positioning;
 
+    if (!m_portLogging.open("/JointTrajectoryPlayer/data:o"))
+    {
+        log()->error("{} Could not open the port to publish application data", logPrefix);
+    }
+
     return true;
 }
 
@@ -198,8 +207,7 @@ bool Module::updateModule()
                       << std::endl;
             for (int i = 0; i < jointlist.size(); i++)
             {
-                std::cerr << "Joint " << jointlist[i].first << "--> Error  " << jointlist[i].second
-                          << " rad" << std::endl;
+                log()->error("Joint {} --> Error {} rad", jointlist[i].first, jointlist[i].second);
             }
             return false;
         }
@@ -234,28 +242,13 @@ bool Module::updateModule()
             return false;
         }
 
-        // log data
-        m_log["time"].push_back(yarp::os::Time::now());
-        for (int i = 0; i < m_numOfJoints; i++)
-        {
-            m_log[m_axisList[i] + "_pos"].push_back(m_currentJointPos[i]);
-        }
-
-        m_log["time"].push_back(yarp::os::Time::now());
-        for (int i = 0; i < m_numOfJoints; i++)
-        {
-            m_log[m_axisList[i] + "_vel"].push_back(m_currentJointVel[i]);
-        }
-
-        for (int i = 0; i < m_numOfJoints; i++)
-        {
-            m_log[m_axisList[i] + "_curr"].push_back(m_currentMotorCurr[i]);
-        }
 
         m_idxTraj++;
         if (m_idxTraj == Conversions::toEigen(m_traj).rows())
         {
             std::cout << "[Module::updateModule] Experiment finished." << std::endl;
+
+            m_portLogging.close();
 
             return false;
         }
@@ -266,7 +259,7 @@ bool Module::updateModule()
                                 RobotInterface::IRobotControl::ControlMode::PositionDirect))
         {
             std::cerr << "[Module::updateModule] Error while setting the reference position to "
-                         "iCub."
+                         "the robot."
                       << std::endl;
             return false;
         }
@@ -281,30 +274,24 @@ bool Module::updateModule()
     return true;
 }
 
+void Module::publishData()
+{
+    auto& data = m_portLogging.prepare();
+    data.vectors.clear();
+
+    data.vectors["joint_state::positions::measured"].assign(m_currentJointPos.data(),
+                                                            m_currentJointPos.data()
+                                                                + m_currentJointPos.size());
+    data.vectors["joint_state::positions::desired"]
+        .assign(Conversions::toEigen(m_traj).row(m_idxTraj).data(),
+                Conversions::toEigen(m_traj).row(m_idxTraj).data()
+                    + Conversions::toEigen(m_traj).row(m_idxTraj).size());
+
+    m_portLogging.write();
+}
+
 bool Module::close()
 {
-    std::cout << "[Module::close] I'm storing the dataset." << std::endl;
-
-    // set the file name
-    std::time_t t = std::time(nullptr);
-    std::tm tm = *std::localtime(&t);
-
-    std::stringstream fileName;
-
-    fileName << "Dataset_Measured_" << m_robotControl.getJointList().front() << "_"
-             << std::put_time(&tm, "%Y_%m_%d_%H_%M_%S") << ".mat";
-
-    matioCpp::File file = matioCpp::File::Create(fileName.str());
-
-    for (auto& [key, value] : m_log)
-    {
-        matioCpp::Vector<double> out(key);
-        out = value;
-        file.write(out);
-    }
-
-    std::cout << "[Module::close] Dataset stored. Closing." << std::endl;
-
     // switch back in position control
     m_robotControl.setReferences(m_currentJointPos,
                                  RobotInterface::IRobotControl::ControlMode::Position);

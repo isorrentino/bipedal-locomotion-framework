@@ -505,6 +505,12 @@ bool RobotDynamicsEstimatorDevice::open(yarp::os::Searchable& config)
         return false;
     }
 
+    if (!openRemapperVirtualSensors())
+    {
+        log()->error("{} Could not open virtual analog sensors remapper.", logPrefix);
+        return false;
+    }
+
     return true;
 }
 
@@ -561,12 +567,6 @@ bool RobotDynamicsEstimatorDevice::attachAll(const yarp::dev::PolyDriverList& po
     if (!m_robotSensorBridge->setDriversList(poly))
     {
         log()->error("{} Failed to attach to devices through RobotSensorBridge.", logPrefix);
-        return false;
-    }
-
-    if (!openRemapperVirtualSensors())
-    {
-        log()->error("{} Could not open virtual analog sensors remapper.", logPrefix);
         return false;
     }
 
@@ -778,6 +778,8 @@ void RobotDynamicsEstimatorDevice::run()
         if (!setEstimatorInitialState())
         {
             log()->error("{} Could not set estimator initial state", logPrefix);
+            detachAll();
+            close();
             return;
         }
 

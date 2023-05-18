@@ -14,6 +14,7 @@ if(FRAMEWORK_COMPILE_JointTrajectoryPlayer)
     BipedalLocomotion::RobotInterfaceYarpImplementation
     matioCpp::matioCpp
     BipedalLocomotion::matioCppConversions
+    BipedalLocomotion::VectorsCollection
     )
 
   install_ini_files(${CMAKE_CURRENT_SOURCE_DIR}/config)
