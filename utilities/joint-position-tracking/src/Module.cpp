@@ -124,15 +124,15 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
     if(!parametersHandler->getParameter("max_angle_deg", maxValue))
         return false;
 
-    maxValue *= M_PI / 180;
+//    maxValue *= M_PI / 180;
 
     double minValue = 0;
     if(!parametersHandler->getParameter("min_angle_deg", minValue))
         return false;
 
-    minValue *= M_PI / 180;
+//    minValue *= M_PI / 180;
 
-    double trajectoryDuration = 5;
+    double trajectoryDuration = 10;
     if(!parametersHandler->getParameter("trajectory_duration", trajectoryDuration))
         return false;
 
@@ -140,10 +140,21 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
     this->initializeRobotControl(parametersHandler);
     this->instantiateSensorBridge(parametersHandler);
 
-    m_setPoints.push_back((maxValue + minValue) / 2);
+    if (!m_sensorBridge.advance())
+    {
+        std::cerr << "[Module::updateModule] Unable to read the sensor." << std::endl;
+        return false;
+    }
+    //m_sensorBridge.getJointPositions(m_currentJointPos);
+    m_sensorBridge.getMotorCurrents(m_currentJointPos);
+
+    m_setPoints.push_back(m_currentJointPos[0] * 0.0);
+    log()->info("Max value = {}", maxValue);
     m_setPoints.push_back(maxValue);
+    m_setPoints.push_back(0.0);
+    log()->info("Min value = {}", minValue);
     m_setPoints.push_back(minValue);
-    m_setPoints.push_back((maxValue + minValue) / 2);
+//    m_setPoints.push_back(0.0);
 
     m_spline.setAdvanceTimeStep(m_dT);
     m_spline.setInitialConditions(Vector1d::Zero(), Vector1d::Zero());
@@ -154,19 +165,12 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
     m_timeKnots.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(trajectoryDuration)));
 
-    if (!m_sensorBridge.advance())
-    {
-        std::cerr << "[Module::updateModule] Unable to read the sensor." << std::endl;
-        return false;
-    }
-    //m_sensorBridge.getJointPositions(m_currentJointPos);
-    m_sensorBridge.getMotorCurrents(m_currentJointPos);
-
     // the trajectory will bring the robot in the initial configuration
     m_setPoints.push_back(m_currentJointPos[0]);
     m_currentSetPoint = m_setPoints.begin();
 
-    m_trajectoryKnots.push_back(m_currentJointPos);
+    log()->info("Current set point = {}", *m_currentSetPoint);
+    m_trajectoryKnots.push_back(m_currentJointPos.setZero());
     m_trajectoryKnots.push_back(Vector1d::Constant(*m_currentSetPoint));
 
     m_spline.setKnots(m_trajectoryKnots, m_timeKnots);
@@ -188,6 +192,9 @@ bool Module::generateNewTrajectory()
 
     std::advance(m_currentSetPoint, 1);
     double endTrajectory = *m_currentSetPoint;
+//    double endTrajectory = 0.0;
+
+    log()->info("Current set point = {}", *m_currentSetPoint);
 
     m_trajectoryKnots[0] = Vector1d::Constant(initTrajectory);
     m_trajectoryKnots[1] = Vector1d::Constant(endTrajectory);
@@ -263,7 +270,10 @@ bool Module::close()
     std::cout << "[Module::close] Dataset stored. Closing." << std::endl;
 
     // switch back in position control
-    m_robotControl.setReferences(m_spline.getOutput().position,
+    Eigen::VectorXd positions;
+    positions.resize(m_logJointPos.size());
+    m_sensorBridge.getJointPositions(positions);
+    m_robotControl.setReferences(positions,
                                  RobotInterface::IRobotControl::ControlMode::Position);
 
     return true;

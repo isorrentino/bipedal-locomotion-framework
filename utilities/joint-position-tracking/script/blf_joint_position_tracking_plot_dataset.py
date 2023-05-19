@@ -56,7 +56,7 @@ def plot_and_save(data):
     plot_1, = plot_data(ax, times(channel_1), channel_1, "blue")
 
     legend = [plot_0, plot_1]
-    legend = fig.legend(legend, labels = ["$\mathrm{Reference}$", "$\mathrm{Actual}$"], ncol = 2, loc = "upper center", frameon=False)
+    legend = fig.legend(legend, ["$\mathrm{Reference}$", "$\mathrm{Actual}$"])
 
     for line in legend.get_lines():
         line.set_linewidth(2.0)
