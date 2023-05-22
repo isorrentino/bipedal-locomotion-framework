@@ -197,12 +197,12 @@ BSD-3-Clause license. -->
                                       "GyroscopeMeasurementDynamics", "MotorCurrentMeasurementDynamics"] -->
              <group name="JOINT_VELOCITY">
                 <param name="name">ds</param>
-                <param name="covariance">(1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1)</param>
+                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3)</param>
                 <param name="dynamic_model">ConstantMeasurementModel</param>
              </group>
              <group name="MOTOR_CURRENT">
                 <param name="name">i_m</param>
-                <param name="covariance">(1e-2, 1e-2, 1e-1, 1e-1, 1e-1, 1e-1)</param>
+                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3)</param>
                 <param name="gear_ratio">(100.0, -160.0, 100.0, 100.0, 100.0, 160.0)</param>
                 <param name="torque_constant">(0.111, 0.047, 0.047, 0.111, 0.111, 0.025)</param>
                 <param name="dynamic_model">MotorCurrentMeasurementDynamics</param>
@@ -229,37 +229,37 @@ BSD-3-Clause license. -->
                 <param name="name">r_leg_ft_acc</param>
                 <param name="covariance">(2.3e-3, 1.9e-3, 3.1e-3)</param>
                 <param name="use_bias">false</param>
-                <param name="dynamic_model">ConstantMeasurementModel</param>
+                <param name="dynamic_model">AccelerometerMeasurementDynamics</param>
              </group>
              <group name="RIGHT_FOOT_FRONT_ACC">
                 <param name="name">r_foot_front_ft_acc</param>
                 <param name="covariance">(2.3e-3, 1.9e-3, 3.1e-3)</param>
                 <param name="use_bias">false</param>
-                <param name="dynamic_model">ConstantMeasurementModel</param>
+                <param name="dynamic_model">AccelerometerMeasurementDynamics</param>
              </group>
              <group name="RIGHT_FOOT_REAR_ACC">
                 <param name="name">r_foot_rear_ft_acc</param>
                 <param name="covariance">(2.5e-3, 2.3e-3, 3e-3)</param>
                 <param name="use_bias">false</param>
-                <param name="dynamic_model">ConstantMeasurementModel</param>
+                <param name="dynamic_model">AccelerometerMeasurementDynamics</param>
              </group>
              <group name="RIGHT_LEG_GYRO">
                 <param name="name">r_leg_ft_gyro</param>
-                <param name="covariance">(0.000000283, 0.0127, 0.0000001)</param>
+                <param name="covariance">(4.9e-4, 4.2e-4, 3.3e-4)</param>
                 <param name="use_bias">false</param>
-                <param name="dynamic_model">ConstantMeasurementModel</param>
+                <param name="dynamic_model">GyroscopeMeasurementDynamics</param>
              </group>
              <group name="RIGHT_FOOT_FRONT_GYRO">
                 <param name="name">r_foot_front_ft_gyro</param>
                 <param name="covariance">(4.1e-4, 3.3e-4, 3.2e-4)</param>
                 <param name="use_bias">false</param>
-                <param name="dynamic_model">ConstantMeasurementModel</param>
+                <param name="dynamic_model">GyroscopeMeasurementDynamics</param>
              </group>
              <group name="RIGHT_FOOT_REAR_GYRO">
                 <param name="name">r_foot_rear_ft_gyro</param>
                 <param name="covariance">(4.9e-4, 4.2e-4, 3.3e-4)</param>
                 <param name="use_bias">false</param>
-                <param name="dynamic_model">ConstantMeasurementModel</param>
+                <param name="dynamic_model">GyroscopeMeasurementDynamics</param>
              </group>
         </group>
     </group>

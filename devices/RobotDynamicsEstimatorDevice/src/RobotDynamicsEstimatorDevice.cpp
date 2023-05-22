@@ -809,7 +809,7 @@ void RobotDynamicsEstimatorDevice::run()
     }
 
     auto toc = BipedalLocomotion::clock().now();
-//    BipedalLocomotion::log()->info("{}", toc - tic);
+    BipedalLocomotion::log()->info("{}", toc - tic);
 
     //    std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
     m_estimatorOutput.output = m_estimator->getOutput();

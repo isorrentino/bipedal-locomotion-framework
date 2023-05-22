@@ -201,16 +201,16 @@ bool Module::updateModule()
                       << std::endl;
             return false;
         }
-        if (isTimeExpired)
-        {
-            std::cerr << "[Module::updateModule] List of joints not finishing in time: "
-                      << std::endl;
-            for (int i = 0; i < jointlist.size(); i++)
-            {
-                log()->error("Joint {} --> Error {} rad", jointlist[i].first, jointlist[i].second);
-            }
-            return false;
-        }
+//        if (isTimeExpired)
+//        {
+//            std::cerr << "[Module::updateModule] List of joints not finishing in time: "
+//                      << std::endl;
+//            for (int i = 0; i < jointlist.size(); i++)
+//            {
+//                log()->error("Joint {} --> Error {} rad", jointlist[i].first, jointlist[i].second);
+//            }
+//            return false;
+//        }
         if (isMotionDone)
         {
             m_state = State::running;

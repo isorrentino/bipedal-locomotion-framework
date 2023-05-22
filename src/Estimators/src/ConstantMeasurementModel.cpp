@@ -138,6 +138,9 @@ bool RDE::ConstantMeasurementModel::update()
 
 void RDE::ConstantMeasurementModel::setState(const Eigen::Ref<const Eigen::VectorXd> ukfState)
 {
+    m_currentState = ukfState.segment(m_stateVariableHandler.getVariable(m_name).offset,
+                                      m_stateVariableHandler.getVariable(m_name).size);
+
     if (m_useBias)
     {
         m_bias = ukfState.segment(m_stateVariableHandler.getVariable(m_biasVariableName).offset,

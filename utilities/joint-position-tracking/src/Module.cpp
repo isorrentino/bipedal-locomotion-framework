@@ -148,10 +148,10 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
     //m_sensorBridge.getJointPositions(m_currentJointPos);
     m_sensorBridge.getMotorCurrents(m_currentJointPos);
 
-    m_setPoints.push_back(m_currentJointPos[0] * 0.0);
+//    m_setPoints.push_back(m_currentJointPos[0] * 0.0);
     log()->info("Max value = {}", maxValue);
     m_setPoints.push_back(maxValue);
-    m_setPoints.push_back(0.0);
+    m_setPoints.push_back(m_currentJointPos[0]);
     log()->info("Min value = {}", minValue);
     m_setPoints.push_back(minValue);
 //    m_setPoints.push_back(0.0);
@@ -172,6 +172,8 @@ bool Module::configure(yarp::os::ResourceFinder& rf)
     log()->info("Current set point = {}", *m_currentSetPoint);
     m_trajectoryKnots.push_back(m_currentJointPos.setZero());
     m_trajectoryKnots.push_back(Vector1d::Constant(*m_currentSetPoint));
+
+    m_sensorBridge.getMotorCurrents(m_currentJointPos);
 
     m_spline.setKnots(m_trajectoryKnots, m_timeKnots);
 
@@ -236,7 +238,12 @@ bool Module::updateModule()
 
         if (!generateNewTrajectory())
         {
-            std::cerr << "[Module::updateModule] Experiment finished." << std::endl;
+            log()->info("[Module::updateModule] Experiment finished.");
+            Eigen::VectorXd positions;
+            positions.resize(m_spline.getOutput().position.size());
+            m_sensorBridge.getJointPositions(positions);
+            m_robotControl.setReferences(positions,
+                                         RobotInterface::IRobotControl::ControlMode::Position);
             return false;
         }
     }
@@ -268,13 +275,6 @@ bool Module::close()
     stream.close();
 
     std::cout << "[Module::close] Dataset stored. Closing." << std::endl;
-
-    // switch back in position control
-    Eigen::VectorXd positions;
-    positions.resize(m_logJointPos.size());
-    m_sensorBridge.getJointPositions(positions);
-    m_robotControl.setReferences(positions,
-                                 RobotInterface::IRobotControl::ControlMode::Position);
 
     return true;
 }
