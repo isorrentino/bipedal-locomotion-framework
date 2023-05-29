@@ -37,7 +37,7 @@ namespace RobotDynamicsEstimator
 class FrictionTorqueStateDynamics : public Dynamics
 {
     Eigen::VectorXd m_jointVelocityFullModel; /**< Vector of joint velocities. */
-    Eigen::VectorXd m_k0, m_k1, m_k2; /**< Friction parameters (see class description). */
+    Eigen::VectorXd m_Fc, m_Fs, m_Fv; /**< Friction parameters (see class description). */
     double m_dT; /**< Sampling time. */
     Eigen::VectorXd m_frictionTorqueFullModel; /**< Friction torque vector of full-model. */
     UKFInput m_ukfInput;
@@ -47,7 +47,7 @@ class FrictionTorqueStateDynamics : public Dynamics
                                                         and the sizes in the ukf state vector. */
     Eigen::VectorXd m_coshArgument;
     Eigen::VectorXd m_coshsquared;
-    Eigen::VectorXd m_k0k1;
+    Eigen::VectorXd m_FcFs;
     Eigen::VectorXd m_dotTauF;
 
 public:

@@ -56,19 +56,19 @@ bool RDE::FrictionTorqueStateDynamics::initialize(
     }
 
     // Set the friction parameters
-    if (!ptr->getParameter("friction_k0", m_k0))
+    if (!ptr->getParameter("friction_k0", m_Fc))
     {
         log()->error("{} Error while retrieving the friction_k0 variable.", errorPrefix);
         return false;
     }
 
-    if (!ptr->getParameter("friction_k1", m_k1))
+    if (!ptr->getParameter("friction_k1", m_Fs))
     {
         log()->error("{} Error while retrieving the friction_k1 variable.", errorPrefix);
         return false;
     }
 
-    if (!ptr->getParameter("friction_k2", m_k2))
+    if (!ptr->getParameter("friction_k2", m_Fv))
     {
         log()->error("{} Error while retrieving the friction_k2 variable.", errorPrefix);
         return false;
@@ -128,8 +128,8 @@ bool RDE::FrictionTorqueStateDynamics::finalize(const System::VariablesHandler& 
     m_coshsquared.resize(m_size);
     m_coshsquared.setZero();
 
-    m_k0k1.resize(m_size);
-    m_k0k1.setZero();
+    m_FcFs.resize(m_size);
+    m_FcFs.setZero();
 
     m_dotTauF.resize(m_size);
     m_dotTauF.setZero();
@@ -179,23 +179,17 @@ bool RDE::FrictionTorqueStateDynamics::checkStateVariableHandler()
 // Change the model
 bool RDE::FrictionTorqueStateDynamics::update()
 {
-    // k_{1} \dot{s,k}
-//    m_coshArgument = m_k1.array() * m_jointVelocityFullModel.array();
+    m_coshArgument = m_Fs.array() * m_jointVelocityFullModel.array();
 
-    // tanh (k_{1} \dot{s,k}))
-//    m_coshsquared = m_coshArgument.array().cosh().square();
+    m_coshsquared = m_coshArgument.array().cosh().square();
 
-    //  k_{0} k_{1}
-//    m_k0k1 = m_k0.array() * m_k1.array();
+    m_FcFs = m_Fc.array() * m_Fs.array();
 
-    // \ddot{s,k} ( k_{2} + k_{0} k_{1} (1 - tanh^{2} (k_{1} \dot{s,k})) )
-//    m_dotTauF = m_ukfInput.robotJointAccelerations.array()
-//                * (m_k2.array() + m_k0k1.array() / m_coshsquared.array());
+    m_FcFs = (m_FcFs.array() / m_coshsquared.array()).eval();
 
-    // \tau_{F,k+1} = \tau_{F,k} + \Delta T * \dot{\tau_{F,k}}
-//    m_updatedVariable = m_frictionTorqueFullModel + m_dT * m_dotTauF;
+    m_dotTauF = (m_FcFs + m_Fv).array() * m_ukfInput.robotJointAccelerations.array();
 
-    m_dotTauF = m_k0.array() * m_ukfInput.robotJointAccelerations.array();
+//    m_dotTauF = m_Fc.array() * m_ukfInput.robotJointAccelerations.array();
 
     m_updatedVariable = m_frictionTorqueFullModel + m_dT * m_dotTauF;
 
