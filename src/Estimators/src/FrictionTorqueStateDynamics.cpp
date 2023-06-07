@@ -148,14 +148,6 @@ bool RDE::FrictionTorqueStateDynamics::checkStateVariableHandler()
 {
     constexpr auto errorPrefix = "[FrictionTorqueStateDynamics::checkStateVariableHandler]";
 
-    if (!m_stateVariableHandler.getVariable("tau_m").isValid())
-    {
-        log()->error("{} The variable handler does not contain the expected state with name "
-                     "`tau_m`.",
-                     errorPrefix);
-        return false;
-    }
-
     // Check if the variable handler contains the variables used by this dynamics
     if (!m_stateVariableHandler.getVariable("tau_F").isValid())
     {
@@ -181,17 +173,29 @@ bool RDE::FrictionTorqueStateDynamics::update()
 {
     m_coshArgument = m_Fs.array() * m_jointVelocityFullModel.array();
 
-    m_coshsquared = m_coshArgument.array().cosh().square();
+//    log()->info("m_coshArgument = m_Fs.array() * m_jointVelocityFullModel.array() --> {} = {} * {}", m_coshArgument, m_Fs, m_jointVelocityFullModel);
+
+    m_coshsquared = m_coshArgument.array().cosh().array() * m_coshArgument.array().cosh().array();
+
+//    log()->info("m_coshsquared = m_coshArgument.array().cosh().square() --> {}", m_coshsquared);
 
     m_FcFs = m_Fc.array() * m_Fs.array();
 
+//    log()->info("m_FcFs = m_Fc.array() * m_Fs.array() --> {} = {} * {}", m_FcFs, m_Fc, m_Fs);
+
     m_FcFs = (m_FcFs.array() / m_coshsquared.array()).eval();
+
+//    log()->info("m_FcFs = (m_FcFs.array() / m_coshsquared.array()) --> {}", m_FcFs);
 
     m_dotTauF = (m_FcFs + m_Fv).array() * m_ukfInput.robotJointAccelerations.array();
 
-//    m_dotTauF = m_Fc.array() * m_ukfInput.robotJointAccelerations.array();
+//    log()->info("m_dotTauF = (m_FcFs + m_Fv).array() * m_ukfInput.robotJointAccelerations.array() --> {} = ({} + {}) * {}", m_dotTauF, m_FcFs, m_Fv, m_ukfInput.robotJointAccelerations);
 
-    m_updatedVariable = m_frictionTorqueFullModel + m_dT * m_dotTauF;
+//    m_dotTauF = m_Fv.array() * m_ukfInput.robotJointAccelerations.array();
+
+    m_updatedVariable = m_frictionTorqueFullModel.array() + m_dT * m_dotTauF.array();
+
+//    log()->info("m_updatedVariable = m_frictionTorqueFullModel + m_dT * m_dotTauF --> {} = {} + {} * {}", m_updatedVariable, m_frictionTorqueFullModel, m_dT, m_dotTauF);
 
     return true;
 }

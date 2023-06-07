@@ -51,7 +51,7 @@ bool RDE::ConstantMeasurementModel::initialize(std::weak_ptr<const ParametersHan
         m_biasVariableName = m_name + "_bias";
     }
 
-    m_description = "Zero velocity dynamics";
+    m_description = "Constant measurement dynamics";
 
     m_isInitialized = true;
 

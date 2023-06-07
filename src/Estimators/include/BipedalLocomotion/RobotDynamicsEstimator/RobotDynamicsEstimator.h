@@ -56,6 +56,7 @@ struct RobotDynamicsEstimatorOutput
     std::map<std::string, Eigen::VectorXd> ftWrenchesBiases; /**< Biases of the force/torque sensors. */
     std::map<std::string, Eigen::VectorXd> accelerometerBiases; /**< Biases of the accelerometer sensors. */
     std::map<std::string, Eigen::VectorXd> gyroscopeBiases; /**< Biases of the gyroscope sensors. */
+    std::map<std::string, Eigen::VectorXd> contactWrenches; /**< External contact wrenches. */
 };
 
 /**

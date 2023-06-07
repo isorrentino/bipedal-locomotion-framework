@@ -218,9 +218,7 @@ TEST_CASE("Friction Torque Dynamics")
 
     for (int idx = 0; idx < subModelCreator.getSubModelList().size(); idx++)
     {
-        REQUIRE(kinDynWrapperList.at(idx)->updateState(baseAcceleration,
-                                                       input.robotJointAccelerations,
-                                                       UpdateMode::Full));
+        REQUIRE(kinDynWrapperList.at(idx)->updateState(UpdateMode::Full));
     }
 
     accDynamics.setInput(input);

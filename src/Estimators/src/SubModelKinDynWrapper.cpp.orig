@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file SubModelKinDynWrapper.cpp
  * @authors Ines Sorrentino
  * @copyright 2023 Istituto Italiano di Tecnologia (IIT). This software may be modified and
@@ -67,9 +67,7 @@ bool RDE::SubModelKinDynWrapper::initialize(const RDE::SubModel& subModel)
     m_genBiasJointTorques.resize(m_numOfJoints);
     m_pseudoInverseH.resize(m_numOfJoints, m_numOfJoints);
     m_FTBaseAcc.resize(m_numOfJoints);
-    m_totalTorques.resize(6 + m_numOfJoints);
-    m_subModelNuDot.resize(6 + m_numOfJoints);
-    m_subModelNuDot.setZero();
+    m_totalTorques.resize(m_numOfJoints);
 
     m_subModelBaseAcceleration.setZero();
 
@@ -81,14 +79,14 @@ bool RDE::SubModelKinDynWrapper::initialize(const RDE::SubModel& subModel)
     m_genForces.resize(6 + m_subModel.getModel().getNrOfDOFs());
     m_genForces.setZero();
 
-    for (auto& [key, value] : m_subModel.getFTList())
+    for (auto & [key, value] : m_subModel.getFTList())
     {
         Eigen::MatrixXd tempJacobian(6, 6 + m_numOfJoints);
         tempJacobian.setZero();
         m_jacFTList.emplace(key, std::move(tempJacobian));
     }
 
-    for (auto& [key, value] : m_subModel.getAccelerometerList())
+    for (auto & [key, value] : m_subModel.getAccelerometerList())
     {
         Eigen::MatrixXd tempJacobian(6, 6 + m_numOfJoints);
         tempJacobian.setZero();
@@ -107,7 +105,7 @@ bool RDE::SubModelKinDynWrapper::initialize(const RDE::SubModel& subModel)
         m_accVelList.emplace(key, std::move(vel));
     }
 
-    for (auto& [key, value] : m_subModel.getGyroscopeList())
+    for (auto & [key, value] : m_subModel.getGyroscopeList())
     {
         Eigen::MatrixXd tempJacobian(6, 6 + m_numOfJoints);
         tempJacobian.setZero();
@@ -124,7 +122,13 @@ bool RDE::SubModelKinDynWrapper::initialize(const RDE::SubModel& subModel)
     return true;
 }
 
-bool RDE::SubModelKinDynWrapper::updateState(UpdateMode updateMode)
+bool RDE::SubModelKinDynWrapper::updateState(const manif::SE3d::Tangent& robotBaseAcceleration,
+                                             Eigen::Ref<const Eigen::VectorXd> robotJointAcceleration,
+<<<<<<< HEAD
+                                             UpdateMode updateMode)
+=======
+                                             bool updateRobotDynamicsOnly)
+>>>>>>> 4f87a058d... Implement python bindings for RobotDynamicsEstimator
 {
     constexpr auto logPrefix = "[BipedalLocomotion::Estimators::SubModelKinDynWrapper::"
                                "updateKinDynState]";
@@ -156,10 +160,30 @@ bool RDE::SubModelKinDynWrapper::updateState(UpdateMode updateMode)
         return false;
     }
 
+    if (!m_kinDynFullModel->getFrameAcc(m_baseFrame,
+                                        iDynTree::make_span(robotBaseAcceleration.data(),
+                                                            manif::SE3d::Tangent::DoF),
+                                        robotJointAcceleration,
+                                        iDynTree::make_span(m_subModelBaseAcceleration.data(),
+                                                            manif::SE3d::Tangent::DoF)))
+    {
+        blf::log()->error("{} Unable to get the acceleration of the frame {}.",
+                          logPrefix,
+                          m_baseFrame);
+        return false;
+    }
+
+<<<<<<< HEAD
     return updateDynamicsVariableState(updateMode);
 }
 
 bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(UpdateMode updateMode)
+=======
+    return updateDynamicsVariableState(updateRobotDynamicsOnly);
+}
+
+bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(bool updateRobotDynamicsOnly)
+>>>>>>> 4f87a058d... Implement python bindings for RobotDynamicsEstimator
 {
     constexpr auto logPrefix = "[BipedalLocomotion::Estimators::SubModelKinDynWrapper::"
                                "updateDynamicsVariableState]";
@@ -171,7 +195,7 @@ bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(UpdateMode updateMo
     }
 
     if (!m_kinDyn.generalizedBiasForces(
-            iDynTree::make_span(m_genForces.data(), m_genForces.size())))
+                iDynTree::make_span(m_genForces.data(), m_genForces.size())))
     {
         blf::log()->error("{} Unable to get the generalized bias forces of the sub-model.",
                           logPrefix);
@@ -180,9 +204,10 @@ bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(UpdateMode updateMo
 
     // The jacobians are computed wrt the base of the submodel
     // (floating base with known pos and vel thanks to the kinematics)
-    for (auto& [key, value] : m_subModel.getFTList())
+    for (auto & [key, value] : m_subModel.getFTList())
     {
-        if (!m_kinDyn.getFrameFreeFloatingJacobian(value.frame, m_jacFTList[key]))
+        if (!m_kinDyn.getFrameFreeFloatingJacobian(value.frame,
+                                                   m_jacFTList[key]))
         {
             blf::log()->error("{} Unable to get the compute the free floating jacobian of the "
                               "frame {}.",
@@ -192,12 +217,13 @@ bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(UpdateMode updateMo
         }
     }
 
+<<<<<<< HEAD
     // Update external contact jacobians
     for (int idx = 0; idx < m_subModel.getExternalContactList().size(); idx++)
     {
         if (!m_kinDyn.getFrameFreeFloatingJacobian(m_subModel.getExternalContactList()[idx],
                                                    m_jacContactList
-                                                       [m_subModel.getExternalContactList()[idx]]))
+                                                   [m_subModel.getExternalContactList()[idx]]))
         {
             blf::log()->error("{} Unable to get the compute the free floating jacobian of the "
                               "frame {}.",
@@ -208,12 +234,16 @@ bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(UpdateMode updateMo
     }
 
     if (updateMode == UpdateMode::Full)
+=======
+    if (!updateRobotDynamicsOnly)
+>>>>>>> 4f87a058d... Implement python bindings for RobotDynamicsEstimator
     {
         // Update accelerometer jacobians, dJnu, rotMatrix
-        for (auto& [key, value] : m_subModel.getAccelerometerList())
+        for (auto & [key, value] : m_subModel.getAccelerometerList())
         {
             // Update jacobian
-            if (!m_kinDyn.getFrameFreeFloatingJacobian(value.frame, m_jacAccList[key]))
+            if (!m_kinDyn
+                    .getFrameFreeFloatingJacobian(value.frame, m_jacAccList[key]))
             {
                 blf::log()->error("{} Unable to get the compute the free floating jacobian of the "
                                   "frame {}.",
@@ -223,20 +253,25 @@ bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(UpdateMode updateMo
             }
 
             // Update dJnu
-//            m_dJnuList[key] = iDynTree::toEigen(m_kinDyn.getFrameBiasAcc(value.frame));
+            m_dJnuList[key] = iDynTree::toEigen(
+                        m_kinDyn.getFrameBiasAcc(value.frame));
 
             // Update rotMatrix
             m_accRworldList[key] = blf::Conversions::toManifRot(
-                m_kinDynFullModel->getWorldTransform(value.frame).getRotation().inverse());
+                        m_kinDyn.getWorldTransform(value.frame)
+                        .getRotation()
+                        .inverse());
 
             // Update accelerometer velocity
-            m_accVelList[key] = iDynTree::toEigen(m_kinDyn.getFrameVel(value.frame));
+            m_accVelList[key] = iDynTree::toEigen(
+                        m_kinDyn.getFrameVel(value.frame));
         }
 
         // Update gyroscope jacobians
-        for (auto& [key, value] : m_subModel.getGyroscopeList())
+        for (auto & [key, value] : m_subModel.getGyroscopeList())
         {
-            if (!m_kinDyn.getFrameFreeFloatingJacobian(value.frame, m_jacGyroList[key]))
+            if (!m_kinDyn.getFrameFreeFloatingJacobian(value.frame,
+                                                       m_jacGyroList[key]))
             {
                 blf::log()->error("{} Unable to get the compute the free floating jacobian of the "
                                   "frame {}.",
@@ -250,75 +285,43 @@ bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(UpdateMode updateMo
     return true;
 }
 
-bool RDE::SubModelKinDynWrapper::forwardDynamics(
-    Eigen::Ref<const Eigen::VectorXd> motorTorqueAfterGearbox,
-    Eigen::Ref<const Eigen::VectorXd> frictionTorques,
-    Eigen::Ref<const Eigen::VectorXd> tauExt,
-    const manif::SE3d::Tangent baseAcceleration)
+bool RDE::SubModelKinDynWrapper::forwardDynamics(Eigen::Ref<Eigen::VectorXd> motorTorqueAfterGearbox,
+                                                 Eigen::Ref<Eigen::VectorXd> frictionTorques,
+                                                 Eigen::Ref<Eigen::VectorXd> tauExt,
+                                                 Eigen::Ref<Eigen::VectorXd> baseAcceleration,
+                                                 Eigen::Ref<Eigen::VectorXd> jointAcceleration)
 {
-    m_totalTorques.setZero();
-    m_totalTorques.tail(motorTorqueAfterGearbox.size()) = motorTorqueAfterGearbox - frictionTorques;
+    constexpr auto logPrefix = "[SubModelKinDynWrapper::inverseDynamics]";
 
-//    if (m_baseFrame == m_kinDynFullModel->getFloatingBase())
-//    {
-//        m_FTBaseAcc = m_massMatrix.block(6, 0, motorTorqueAfterGearbox.size(), 6)
-//                      * baseAcceleration.coeffs();
+    if (m_subModel.getModel().getNrOfDOFs() == 0)
+    {
+        blf::log()->error("{} The forward dynamics is not defined for sub-models with zero degrees of freedom.",
+                          logPrefix);
+        return false;
+    }
 
-//        log()->info("m_FTBaseAcc");
-//        log()->info(m_FTBaseAcc);
+    if (motorTorqueAfterGearbox.size() == 0 || frictionTorques.size() == 0 || tauExt.size() == 0 || baseAcceleration.size() == 0)
+    {
+        blf::log()->error("{} Wrong size of input parameters.",
+                          logPrefix);
+        return false;
+    }
 
-//        m_totalTorques.tail(motorTorqueAfterGearbox.size())
-//            = m_totalTorques.tail(motorTorqueAfterGearbox.size())
-//              + tauExt.tail(motorTorqueAfterGearbox.size())
-//              - m_genForces.tail(motorTorqueAfterGearbox.size()) - m_FTBaseAcc;
+    m_FTranspose = m_massMatrix.block(6, 0, m_numOfJoints, 6);
+    m_H = m_massMatrix.block(6, 6, m_numOfJoints, m_numOfJoints);
 
-//        m_totalTorques.head(6) = 0*tauExt.head(6);
+    m_genBiasJointTorques = m_genForces.tail(m_numOfJoints);
 
-//        log()->info("m_totalTorques");
-//        log()->info(m_totalTorques);
+    m_pseudoInverseH = m_H.completeOrthogonalDecomposition().pseudoInverse();
 
-//        //        m_subModelNuDot.tail(motorTorqueAfterGearbox.size())
-//        //            = m_massMatrix
-//        //                  .block(6, 6, motorTorqueAfterGearbox.size(),
-//        //                  motorTorqueAfterGearbox.size()) .llt()
-//        //                  .solve(m_totalTorques.tail(motorTorqueAfterGearbox.size()));
+    m_FTBaseAcc = m_FTranspose * baseAcceleration;
 
-//        m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
+    m_totalTorques
+            = motorTorqueAfterGearbox - frictionTorques - m_genBiasJointTorques + tauExt - m_FTBaseAcc;
 
-//        log()->info("m_subModelNuDot");
-//        log()->info(m_subModelNuDot);
-
-//        m_subModelNuDot.head(6) = baseAcceleration.coeffs();
-
-//        log()->info("m_subModelNuDot");
-//        log()->info(m_subModelNuDot);
-
-//        m_subModelBaseAcceleration = baseAcceleration.coeffs();
-//    } else
-//    {
-//        m_totalTorques = m_totalTorques + tauExt - m_genForces;
-//        m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
-//        m_subModelBaseAcceleration = m_subModelNuDot.head(6);
-//    }
-
-    m_totalTorques = m_totalTorques + tauExt - m_genForces;
-    m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
-    m_subModelBaseAcceleration = m_subModelNuDot.head(6);
-
-    log()->info("m_subModelNuDot");
-    log()->info(m_subModelNuDot);
+    jointAcceleration = m_pseudoInverseH * m_totalTorques;
 
     return true;
-}
-
-manif::SE3d::Tangent RDE::SubModelKinDynWrapper::getFrameAcceleration(const std::string & frameName,
-                                                                      Eigen::Ref<const Eigen::VectorXd> nuDot)
-{
-    manif::SE3d::Tangent frameAcceleration;
-
-    m_kinDyn.getFrameAcc(frameName, nuDot.head(6), nuDot.tail(m_kinDyn.model().getNrOfDOFs()), frameAcceleration.coeffs());
-
-    return frameAcceleration;
 }
 
 const manif::SE3d::Tangent& RDE::SubModelKinDynWrapper::getBaseAcceleration()
@@ -326,13 +329,9 @@ const manif::SE3d::Tangent& RDE::SubModelKinDynWrapper::getBaseAcceleration()
     return m_subModelBaseAcceleration;
 }
 
-const Eigen::Ref<const Eigen::VectorXd> RDE::SubModelKinDynWrapper::getnudot()
-{
-    return m_subModelNuDot;
-}
-
 const manif::SE3d::Tangent& RDE::SubModelKinDynWrapper::getBaseVelocity()
 {
+    m_baseVelocity = blf::Conversions::toManifTwist(m_kinDynFullModel->getFrameVel(m_baseFrame));
     return m_baseVelocity;
 }
 

@@ -173,9 +173,7 @@ TEST_CASE("UkfMeasurement")
 
     for (int idx = 0; idx < subModelCreator.getSubModelList().size(); idx++)
     {
-        REQUIRE(kinDynWrapperList.at(idx)->updateState(baseAcceleration,
-                                                       Eigen::VectorXd(kinDyn->model().getNrOfDOFs()).setZero(),
-                                                       UpdateMode::Full));
+        REQUIRE(kinDynWrapperList.at(idx)->updateState(UpdateMode::Full));
     }
 
     std::shared_ptr<UkfInputProvider> inputProvider = std::make_shared<UkfInputProvider>();

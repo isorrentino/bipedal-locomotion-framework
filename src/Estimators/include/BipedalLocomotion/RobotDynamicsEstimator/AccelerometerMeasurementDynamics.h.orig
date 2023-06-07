@@ -46,6 +46,7 @@ class AccelerometerMeasurementDynamics : public Dynamics
     std::vector<Eigen::VectorXd> m_subModelJointAcc; /**< Updated joint acceleration of each
                                                         sub-model. */
     Eigen::Vector3d m_gravity; /**< Gravitational acceleration. */
+<<<<<<< HEAD
     std::vector<std::size_t> m_subModelsWithAccelerometer; /**< List of indeces saying which
                                                               sub-model in the m_subDynamics list
                                                               containa the accelerometer. */
@@ -56,15 +57,27 @@ class AccelerometerMeasurementDynamics : public Dynamics
     Eigen::VectorXd m_covSingleVar; /**< Covariance of the accelerometer measurement from
                                        configuration. */
     Eigen::VectorXd m_JdotNu; /**< Jdot nu. */
-    Eigen::VectorXd m_Jvdot; /**< Jacobian times the base acceleration. */
+    Eigen::VectorXd m_JvdotBase; /**< Jacobian times the base acceleration. */
     Eigen::VectorXd m_Jsdotdot; /**< Jacobian times the joint acceleration. */
     Eigen::Vector3d m_accRg; /**< Gravity rotated in the accelerometer frame. */
     Eigen::Vector3d m_vCrossW; /**< Accelerometer linear velocity cross accelerometer angular
                                   velocity. */
     Eigen::Vector3d m_linVel; /**< Accelerometer linear velocity. */
     Eigen::Vector3d m_angVel; /**< Accelerometer angular velocity. */
+=======
+    std::vector<std::size_t> m_subModelsWithAccelerometer; /**< List of indeces saying which sub-model in the m_subDynamics list containa the accelerometer. */
+    manif::SE3d::Tangent m_accFrameVel; /**< Velocity at the accelerometer frame. */
 
-    manif::SE3d::Tangent m_frameAcceleration; /** Acceleration of the accelerometer given by the forward dynamics. */
+protected:
+    Eigen::VectorXd m_covSingleVar;
+    Eigen::VectorXd m_JdotNu;
+    Eigen::VectorXd m_JvdotBase;
+    Eigen::VectorXd m_Jsdotdot;
+    Eigen::Vector3d m_accRg;
+    Eigen::Vector3d m_vCrossW;
+    Eigen::Vector3d m_linVel;
+    Eigen::Vector3d m_angVel;
+>>>>>>> 4f87a058d... Implement python bindings for RobotDynamicsEstimator
 
 public:
     /*

@@ -57,6 +57,7 @@ void CreateRobotDynamicsEstimator(pybind11::module& module)
             .def_readwrite("ftWrenchesBiases", &RobotDynamicsEstimatorOutput::ftWrenchesBiases)
             .def_readwrite("accelerometerBiases", &RobotDynamicsEstimatorOutput::accelerometerBiases)
             .def_readwrite("gyroscopeBiases", &RobotDynamicsEstimatorOutput::gyroscopeBiases)
+            .def_readwrite("contactWrenches", &RobotDynamicsEstimatorOutput::contactWrenches)
             .def(py::pickle([](const RobotDynamicsEstimatorOutput &output) { //__getstate__
                 return py::make_tuple(output.ds,
                                       output.tau_m,
@@ -64,7 +65,8 @@ void CreateRobotDynamicsEstimator(pybind11::module& module)
                                       output.ftWrenches,
                                       output.ftWrenchesBiases,
                                       output.accelerometerBiases,
-                                      output.gyroscopeBiases);
+                                      output.gyroscopeBiases,
+                                      output.contactWrenches);
                 },
                 [](py::tuple t) { // __setstate__
                       if(t.size() != 7)
@@ -77,6 +79,7 @@ void CreateRobotDynamicsEstimator(pybind11::module& module)
                       rde.ftWrenchesBiases = t[4].cast<std::map<std::string, Eigen::VectorXd>>();
                       rde.accelerometerBiases = t[5].cast<std::map<std::string, Eigen::VectorXd>>();
                       rde.gyroscopeBiases = t[6].cast<std::map<std::string, Eigen::VectorXd>>();
+                      rde.contactWrenches = t[7].cast<std::map<std::string, Eigen::VectorXd>>();
 
                       return rde;
                  }
@@ -225,7 +228,8 @@ void CreateSubModelKinDynWrapper(pybind11::module& module)
         .def("getGyroscopeJacobian", &SubModelKinDynWrapper::getGyroscopeJacobian)
         .def("getExtContactJacobian", &SubModelKinDynWrapper::getExtContactJacobian)
         .def("getAccelerometerBiasAcceleration", &SubModelKinDynWrapper::getAccelerometerBiasAcceleration)
-        .def("getAccelerometerRotation", &SubModelKinDynWrapper::getAccelerometerRotation);
+        .def("getAccelerometerRotation", &SubModelKinDynWrapper::getAccelerometerRotation)
+        .def("getnudot", &SubModelKinDynWrapper::getnudot);
 }
 
 } // namespace RobotDynamicsEstimator

@@ -271,9 +271,7 @@ TEST_CASE("Joint Velocity Dynamics Without FT")
 
     for (int idx = 0; idx < subModelCreatorWithFT.getSubModelList().size(); idx++)
     {
-        REQUIRE(kinDynWrapperList.at(idx)->updateState(baseAcceleration,
-                                                       input.robotJointAccelerations,
-                                                       BipedalLocomotion::Estimators::RobotDynamicsEstimator::UpdateMode::Full));
+        REQUIRE(kinDynWrapperList.at(idx)->updateState(BipedalLocomotion::Estimators::RobotDynamicsEstimator::UpdateMode::Full));
     }
 
     ds.setInput(input);
@@ -409,9 +407,7 @@ TEST_CASE("Joint Velocity Dynamics With FT")
 
     for (int idx = 0; idx < subModelCreatorWithFT.getSubModelList().size(); idx++)
     {
-        REQUIRE(kinDynWrapperListWithFT.at(idx)->updateState(baseAcceleration,
-                                                             Eigen::VectorXd(kinDyn->model().getNrOfDOFs()).setZero(),
-                                                             BipedalLocomotion::Estimators::RobotDynamicsEstimator::UpdateMode::RobotDynamicsOnly));
+        REQUIRE(kinDynWrapperListWithFT.at(idx)->updateState(BipedalLocomotion::Estimators::RobotDynamicsEstimator::UpdateMode::RobotDynamicsOnly));
     }
 
     input.robotJointAccelerations = Eigen::VectorXd(kinDyn->model().getNrOfDOFs()).setZero();

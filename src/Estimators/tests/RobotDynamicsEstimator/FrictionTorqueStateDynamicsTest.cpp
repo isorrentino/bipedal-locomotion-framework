@@ -163,9 +163,7 @@ TEST_CASE("Friction Torque Dynamics")
         REQUIRE(kinDynWrapperList.at(idx)->initialize(subModelList[idx]));
         REQUIRE(
             kinDynWrapperList.at(idx)
-                ->updateState(baseAcceleration,
-                              Eigen::VectorXd(subModelList[idx].getModel().getNrOfDOFs()).setZero(),
-                              UpdateMode::Full));
+                ->updateState(UpdateMode::Full));
     }
 
     FrictionTorqueStateDynamics tau_F_dynamics;
@@ -228,9 +226,7 @@ TEST_CASE("Friction Torque Dynamics")
 
     for (int idx = 0; idx < subModelCreator.getSubModelList().size(); idx++)
     {
-        REQUIRE(kinDynWrapperList.at(idx)->updateState(input.robotBaseAcceleration,
-                                                       input.robotJointAccelerations,
-                                                       UpdateMode::Full));
+        REQUIRE(kinDynWrapperList.at(idx)->updateState(UpdateMode::Full));
     }
 
     tau_F_dynamics.setInput(input);
@@ -255,9 +251,7 @@ TEST_CASE("Friction Torque Dynamics")
 
     for (int idx = 0; idx < subModelCreator.getSubModelList().size(); idx++)
     {
-        REQUIRE(kinDynWrapperList.at(idx)->updateState(input.robotBaseAcceleration,
-                                                       input.robotJointAccelerations,
-                                                       UpdateMode::Full));
+        REQUIRE(kinDynWrapperList.at(idx)->updateState(UpdateMode::Full));
     }
 
     tau_F_dynamics.setInput(input);

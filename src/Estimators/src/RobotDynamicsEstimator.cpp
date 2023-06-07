@@ -350,6 +350,20 @@ bool RobotDynamicsEstimator::setInitialState(const RobotDynamicsEstimatorOutput&
         }
     }
 
+    for (auto const& [key, val] : initialState.contactWrenches)
+    {
+//        log()->info("Contact wrench frame: {}", key);
+        if (m_pimpl->stateHandler.getVariable(key, variable))
+        {
+            if (val.size() != variable.size)
+            {
+                log()->error("{} Wrong size of variable `{}`. Found {}, expected {}.", logPrefix, val, val.size(), variable.size);
+                return false;
+            }
+            m_pimpl->correctedState.mean().segment(variable.offset, variable.size) = val;
+        }
+    }
+
     m_pimpl->estimatorOutput = initialState;
 
     m_pimpl->isInitialStateSet = true;
@@ -425,6 +439,7 @@ bool RobotDynamicsEstimator::setInput(const RobotDynamicsEstimatorInput & input)
     // for the freeze method of the UkfCorrection
     m_pimpl->ukfMeasurementFromSensors["ds"] = input.jointVelocities;
     m_pimpl->ukfMeasurementFromSensors["i_m"] = input.motorCurrents;
+    m_pimpl->ukfMeasurementFromSensors["dv_base"] = input.baseAcceleration.coeffs();
     for (auto & [key, value] : input.ftWrenches)
     {
         m_pimpl->ukfMeasurementFromSensors[key] = value;
@@ -500,6 +515,19 @@ const RobotDynamicsEstimatorOutput& RobotDynamicsEstimator::getOutput() const
             if (m_pimpl->stateHandler.getVariable(key).size > 0)
             {
                 m_pimpl->estimatorOutput.gyroscopeBiases[key] = m_pimpl->correctedState.mean().segment(m_pimpl->stateHandler.getVariable(key).offset,
+                                                                                                       m_pimpl->stateHandler.getVariable(key).size);
+            }
+            else
+            {
+                log()->debug("{} Variable {} not found in the state vector.", logPrefix, key);
+            }
+        }
+
+        for (auto & [key, value] : m_pimpl->estimatorOutput.contactWrenches)
+        {
+            if (m_pimpl->stateHandler.getVariable(key).size > 0)
+            {
+                m_pimpl->estimatorOutput.contactWrenches[key] = m_pimpl->correctedState.mean().segment(m_pimpl->stateHandler.getVariable(key).offset,
                                                                                                        m_pimpl->stateHandler.getVariable(key).size);
             }
             else

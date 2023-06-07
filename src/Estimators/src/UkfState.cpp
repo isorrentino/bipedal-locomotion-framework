@@ -7,15 +7,15 @@
 
 #include <map>
 
-#include <BipedalLocomotion/TextLogging/Logger.h>
 #include <BipedalLocomotion/Math/Constants.h>
+#include <BipedalLocomotion/TextLogging/Logger.h>
 
+#include <BipedalLocomotion/RobotDynamicsEstimator/FrictionTorqueStateDynamics.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/JointVelocityStateDynamics.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/UkfState.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/ZeroVelocityStateDynamics.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/FrictionTorqueStateDynamics.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/JointVelocityStateDynamics.h>
 
 using namespace BipedalLocomotion;
 namespace RDE = BipedalLocomotion::Estimators::RobotDynamicsEstimator;
@@ -34,32 +34,52 @@ struct RDE::UkfState::Impl
     std::size_t stateSize; /**< Length of the state vector. */
     double dT; /**< Sampling time */
 
-    std::vector<std::pair<std::string, std::shared_ptr<Dynamics>>> dynamicsList; /**< List of the dynamics composing the process model. */
+    std::vector<std::pair<std::string, std::shared_ptr<Dynamics>>> dynamicsList; /**< List of the
+                                                                                    dynamics
+                                                                                    composing the
+                                                                                    process model.
+                                                                                  */
 
-    System::VariablesHandler stateVariableHandler; /**< Variable handler describing the state vector. */
+    System::VariablesHandler stateVariableHandler; /**< Variable handler describing the state
+                                                      vector. */
 
-    std::shared_ptr<iDynTree::KinDynComputations> kinDynFullModel; /**< KinDynComputation object for the full model. */
-    std::vector<SubModel> subModelList; /**< List of SubModel object describing the sub-models composing the full model. */
-    std::vector<std::shared_ptr<SubModelKinDynWrapper>> kinDynWrapperList; /**< List of SubModelKinDynWrapper objects containing kinematic and dynamic information specific of each sub-model. */
+    std::shared_ptr<iDynTree::KinDynComputations> kinDynFullModel; /**< KinDynComputation object for
+                                                                      the full model. */
+    std::vector<SubModel> subModelList; /**< List of SubModel object describing the sub-models
+                                           composing the full model. */
+    std::vector<std::shared_ptr<SubModelKinDynWrapper>> kinDynWrapperList; /**< List of
+                                                                              SubModelKinDynWrapper
+                                                                              objects containing
+                                                                              kinematic and dynamic
+                                                                              information specific
+                                                                              of each sub-model. */
 
-    std::shared_ptr<const UkfInputProvider> ukfInputProvider; /**< Provider containing the updated robot state. */
-    UKFInput ukfInput; /**< Struct containing the inputs for the ukf populated by the ukfInputProvider. */
+    std::shared_ptr<const UkfInputProvider> ukfInputProvider; /**< Provider containing the updated
+                                                                 robot state. */
+    UKFInput ukfInput; /**< Struct containing the inputs for the ukf populated by the
+                          ukfInputProvider. */
 
     Eigen::VectorXd jointVelocityState; /**< Joint velocity computed by the ukf. */
-    Eigen::VectorXd jointAccelerationState; /**< Joint acceleration computed from forward dynamics which depends on the current ukf state. */
+    Eigen::VectorXd jointAccelerationState; /**< Joint acceleration computed from forward dynamics
+                                               which depends on the current ukf state. */
     Eigen::VectorXd currentState; /**< State estimated in the previous step. */
     Eigen::VectorXd nextState; /**< Vector containing all the updated states. */
 
     std::vector<Eigen::VectorXd> subModelJointVel; /**< List of sub-model joint velocities. */
     std::vector<Eigen::VectorXd> subModelJointAcc; /**< List of sub-model joint accelerations. */
-    std::vector<Eigen::VectorXd> subModelJointMotorTorque; /**< List of sub-model joint motor torques. */
+    std::vector<Eigen::VectorXd> subModelNuDot; /**< List of sub-model accelerations (base + joints
+                                                   = nudot). */
+    std::vector<Eigen::VectorXd> subModelJointMotorTorque; /**< List of sub-model joint motor
+                                                              torques. */
     std::vector<Eigen::VectorXd> subModelFrictionTorque; /**< List of sub-model friction torques. */
-    std::map<std::string, Math::Wrenchd> FTMap; /**< The map contains names of the ft sensors and values of the wrench */
-    std::map<std::string, Math::Wrenchd> extContactMap; /**< The map contains names of the ft sensors and values of the wrench */
-    manif::SE3d::Tangent tempSubModelBaseAcc; /**< Acceleration of the base of the sub-model. */
+    std::map<std::string, Math::Wrenchd> FTMap; /**< The map contains names of the ft sensors and
+                                                   values of the wrench */
+    std::map<std::string, Math::Wrenchd> extContactMap; /**< The map contains names of the ft
+                                                           sensors and values of the wrench */
 
     // Support variables
-    std::vector<Eigen::VectorXd> totalTorqueFromContacts; /**< Joint torques due to known and unknown contacts on the sub-model. */
+    std::vector<Eigen::VectorXd> totalTorqueFromContacts; /**< Joint torques due to known and
+                                                             unknown contacts on the sub-model. */
     std::vector<Eigen::VectorXd> torqueFromContact; /**< Joint torques due to a specific contact. */
     Math::Wrenchd wrench; /**< Joint torques due to a specific contact. */
 
@@ -72,22 +92,24 @@ struct RDE::UkfState::Impl
 
         for (int subModelIdx = 0; subModelIdx < subModelList.size(); subModelIdx++)
         {
-            // Take sub-model joint velocities, motor torques, friction torques, ft wrenches, ext contact wrenches
-            for (int jointIdx = 0; jointIdx < subModelList[subModelIdx].getModel().getNrOfDOFs(); jointIdx++)
+            // Take sub-model joint velocities, motor torques, friction torques, ft wrenches, ext
+            // contact wrenches
+            for (int jointIdx = 0; jointIdx < subModelList[subModelIdx].getModel().getNrOfDOFs();
+                 jointIdx++)
             {
-                subModelJointVel[subModelIdx](jointIdx) =
-                        jointVelocityState(subModelList[subModelIdx].getJointMapping()[jointIdx]);
+                subModelJointVel[subModelIdx](jointIdx)
+                    = jointVelocityState(subModelList[subModelIdx].getJointMapping()[jointIdx]);
 
-                subModelJointMotorTorque[subModelIdx](jointIdx) =
-                        currentState[stateVariableHandler.getVariable("tau_m").offset +
-                        subModelList[subModelIdx].getJointMapping()[jointIdx]];
+                subModelJointMotorTorque[subModelIdx](jointIdx)
+                    = currentState[stateVariableHandler.getVariable("tau_m").offset
+                                   + subModelList[subModelIdx].getJointMapping()[jointIdx]];
 
-                subModelFrictionTorque[subModelIdx](jointIdx) =
-                        currentState[stateVariableHandler.getVariable("tau_F").offset +
-                        subModelList[subModelIdx].getJointMapping()[jointIdx]];
+                subModelFrictionTorque[subModelIdx](jointIdx)
+                    = currentState[stateVariableHandler.getVariable("tau_F").offset
+                                   + subModelList[subModelIdx].getJointMapping()[jointIdx]];
             }
 
-            for (auto & [key, value] : subModelList[subModelIdx].getFTList())
+            for (auto& [key, value] : subModelList[subModelIdx].getFTList())
             {
                 FTMap[key] = currentState.segment(stateVariableHandler.getVariable(key).offset,
                                                   stateVariableHandler.getVariable(key).size);
@@ -95,9 +117,16 @@ struct RDE::UkfState::Impl
 
             for (int idx = 0; idx < subModelList[subModelIdx].getNrOfExternalContact(); idx++)
             {
-                extContactMap[subModelList[subModelIdx].getExternalContact(idx)] =
-                        currentState.segment(stateVariableHandler.getVariable(subModelList[subModelIdx].getExternalContact(idx)).offset,
-                                             stateVariableHandler.getVariable(subModelList[subModelIdx].getExternalContact(idx)).size);
+                extContactMap[subModelList[subModelIdx].getExternalContact(idx)]
+                    = currentState
+                          .segment(stateVariableHandler
+                                       .getVariable(
+                                           subModelList[subModelIdx].getExternalContact(idx))
+                                       .offset,
+                                   stateVariableHandler
+                                       .getVariable(
+                                           subModelList[subModelIdx].getExternalContact(idx))
+                                       .size);
             }
         }
     }
@@ -107,58 +136,74 @@ struct RDE::UkfState::Impl
         // Update kindyn full model
         kinDynFullModel->setRobotState(ukfInput.robotBasePose.transform(),
                                        ukfInput.robotJointPositions,
-                                       iDynTree::make_span(ukfInput.robotBaseVelocity.data(), manif::SE3d::Tangent::DoF),
+                                       iDynTree::make_span(ukfInput.robotBaseVelocity.data(),
+                                                           manif::SE3d::Tangent::DoF),
                                        jointVelocityState,
                                        gravity);
 
-        // compute joint acceleration per each sub-model
+        // compute nu dot per each sub-model
         for (int subModelIdx = 0; subModelIdx < subModelList.size(); subModelIdx++)
         {
             // Update the kindyn wrapper object of the submodel
-            kinDynWrapperList[subModelIdx]->updateState(ukfInput.robotBaseAcceleration,
-                                                        jointAccelerationState,
-                                                        UpdateMode::RobotDynamicsOnly);
+            kinDynWrapperList[subModelIdx]->updateState(UpdateMode::RobotDynamicsOnly);
 
-            if (subModelList[subModelIdx].getModel().getNrOfDOFs() > 0)
+            totalTorqueFromContacts[subModelIdx].setZero();
+
+            // Contribution of FT measurements
+            for (auto& [key, value] : subModelList[subModelIdx].getFTList())
             {
-                totalTorqueFromContacts[subModelIdx].setZero();
+                wrench = static_cast<int>(value.forceDirection) * FTMap[key].array();
 
-                // Contribution of FT measurements
-                for (auto & [key, value] : subModelList[subModelIdx].getFTList())
-                {
-                    wrench = static_cast<int>(value.forceDirection) * FTMap[key].array();
+                torqueFromContact[subModelIdx]
+                    = kinDynWrapperList[subModelIdx]->getFTJacobian(key).transpose() * wrench;
 
-                    torqueFromContact[subModelIdx] = kinDynWrapperList[subModelIdx]->
-                            getFTJacobian(key).block(0, 6, 6, subModelList[subModelIdx].getModel().getNrOfDOFs()).transpose() * wrench;
+                totalTorqueFromContacts[subModelIdx] = (totalTorqueFromContacts[subModelIdx]
+                                                       + torqueFromContact[subModelIdx]).eval();
+            }
 
-                    totalTorqueFromContacts[subModelIdx] = totalTorqueFromContacts[subModelIdx].array() + torqueFromContact[subModelIdx].array();
-                }
+            // Contribution of unknown external contacts
+            for (int idx = 0; idx < subModelList[subModelIdx].getNrOfExternalContact(); idx++)
+            {
+                torqueFromContact[subModelIdx]
+                    = kinDynWrapperList[subModelIdx]
+                          ->getExtContactJacobian(subModelList[subModelIdx].getExternalContact(idx))
+                          .transpose()
+                      * extContactMap[subModelList[subModelIdx].getExternalContact(idx)];
 
-                // Contribution of unknown external contacts
-                for (int idx = 0; idx < subModelList[subModelIdx].getNrOfExternalContact(); idx++)
-                {
-                    torqueFromContact[subModelIdx] = kinDynWrapperList[subModelIdx]->getExtContactJacobian(subModelList[subModelIdx].getExternalContact(idx)).block(0, 6, 6, subModelList[subModelIdx].getModel().getNrOfDOFs()).transpose() * extContactMap[subModelList[subModelIdx].getExternalContact(idx)];
+                totalTorqueFromContacts[subModelIdx]
+                    = (totalTorqueFromContacts[subModelIdx] + torqueFromContact[subModelIdx]).eval();
 
-                    totalTorqueFromContacts[subModelIdx] = totalTorqueFromContacts[subModelIdx].array() + torqueFromContact[subModelIdx].array();
-                }
+//                log()->info("torqueFromContact: {}", torqueFromContact[subModelIdx]);
+            }
 
-                tempSubModelBaseAcc = kinDynWrapperList[subModelIdx]->getBaseAcceleration();
+            log()->info("subModelJointMotorTorque[subModelIdx]");
+            log()->info(subModelJointMotorTorque[subModelIdx]);
+            log()->info("subModelFrictionTorque[subModelIdx]");
+            log()->info(subModelFrictionTorque[subModelIdx]);
+            log()->info("totalTorqueFromContacts[subModelIdx]");
+            log()->info(totalTorqueFromContacts[subModelIdx]);
+            log()->info("ukfInput.robotBaseAcceleration)");
+            log()->info(ukfInput.robotBaseAcceleration);
 
-                if (!kinDynWrapperList[subModelIdx]->forwardDynamics(subModelJointMotorTorque[subModelIdx],
-                                                                     subModelFrictionTorque[subModelIdx],
-                                                                     totalTorqueFromContacts[subModelIdx],
-                                                                     tempSubModelBaseAcc.coeffs(),
-                                                                     subModelJointAcc[subModelIdx]))
-                {
-                    log()->error("Cannot compute the inverse dynamics.");
-                    return false;
-                }
+            if (!kinDynWrapperList[subModelIdx]
+                     ->forwardDynamics(subModelJointMotorTorque[subModelIdx],
+                                       subModelFrictionTorque[subModelIdx],
+                                       totalTorqueFromContacts[subModelIdx],
+                                       ukfInput.robotBaseAcceleration))
+            {
+                log()->error("Cannot compute the inverse dynamics.");
+                return false;
+            }
 
-                // Assign joint acceleration using the correct indeces
-                for (int jointIdx = 0; jointIdx < subModelList[subModelIdx].getJointMapping().size(); jointIdx++)
-                {
-                    jointAccelerationState[subModelList[subModelIdx].getJointMapping()[jointIdx]] = subModelJointAcc[subModelIdx][jointIdx];
-                }
+            subModelJointAcc[subModelIdx] = kinDynWrapperList[subModelIdx]->getnudot().tail(
+                        subModelJointMotorTorque[subModelIdx].size());
+
+            // Assign joint acceleration using the correct indeces
+            for (int jointIdx = 0; jointIdx < subModelList[subModelIdx].getJointMapping().size();
+                 jointIdx++)
+            {
+                jointAccelerationState[subModelList[subModelIdx].getJointMapping()[jointIdx]]
+                    = subModelJointAcc[subModelIdx][jointIdx];
             }
         }
 
@@ -209,28 +254,18 @@ bool RDE::UkfState::finalize(const System::VariablesHandler& handler)
 
     m_pimpl->stateSize = 0;
 
-    // finalize all the dynamics
-//    for (auto& [name, dynamics] : m_pimpl->dynamicsList)
-//    {
-//        if(!dynamics->finalize(handler))
-//        {
-//            log()->error("{} Error while finalizing the dynamics named {}", logPrefix, name);
-//            return false;
-//        }
-
-//        m_pimpl->stateSize += dynamics->size();
-//    }
     for (int indexDyn1 = 0; indexDyn1 < m_pimpl->dynamicsList.size(); indexDyn1++)
     {
-        if(!m_pimpl->dynamicsList[indexDyn1].second->finalize(handler))
+        if (!m_pimpl->dynamicsList[indexDyn1].second->finalize(handler))
         {
-            log()->error("{} Error while finalizing the dynamics named {}", logPrefix, m_pimpl->dynamicsList[indexDyn1].first);
+            log()->error("{} Error while finalizing the dynamics named {}",
+                         logPrefix,
+                         m_pimpl->dynamicsList[indexDyn1].first);
             return false;
         }
 
         m_pimpl->stateSize += m_pimpl->dynamicsList[indexDyn1].second->size();
     }
-
 
     // Set value of process covariance matrix
     m_pimpl->covarianceQ.resize(m_pimpl->stateSize, m_pimpl->stateSize);
@@ -239,23 +274,21 @@ bool RDE::UkfState::finalize(const System::VariablesHandler& handler)
     m_pimpl->initialCovariance.resize(m_pimpl->stateSize, m_pimpl->stateSize);
     m_pimpl->initialCovariance.setZero();
 
-//    for (auto& [name, dynamics] : m_pimpl->dynamicsList)
-//    {
-//        m_pimpl->covarianceQ.block(handler.getVariable(name).offset, handler.getVariable(name).offset,
-//                                   handler.getVariable(name).size, handler.getVariable(name).size) = dynamics->getCovariance().asDiagonal();
-
-//        m_pimpl->initialCovariance.block(handler.getVariable(name).offset, handler.getVariable(name).offset,
-//                                   handler.getVariable(name).size, handler.getVariable(name).size) = dynamics->getInitialStateCovariance().asDiagonal();
-
-//    }
     for (int indexDyn2 = 0; indexDyn2 < m_pimpl->dynamicsList.size(); indexDyn2++)
     {
-        m_pimpl->covarianceQ.block(handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).offset, handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).offset,
-                                   handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size, handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size) = m_pimpl->dynamicsList[indexDyn2].second->getCovariance().asDiagonal();
+        m_pimpl->covarianceQ
+            .block(handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).offset,
+                   handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).offset,
+                   handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size,
+                   handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size)
+            = m_pimpl->dynamicsList[indexDyn2].second->getCovariance().asDiagonal();
 
-        m_pimpl->initialCovariance.block(handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).offset, handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).offset,
-                                   handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size, handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size) = m_pimpl->dynamicsList[indexDyn2].second->getInitialStateCovariance().asDiagonal();
-
+        m_pimpl->initialCovariance
+            .block(handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).offset,
+                   handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).offset,
+                   handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size,
+                   handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size)
+            = m_pimpl->dynamicsList[indexDyn2].second->getInitialStateCovariance().asDiagonal();
     }
 
     m_pimpl->jointVelocityState.resize(m_pimpl->kinDynFullModel->model().getNrOfDOFs());
@@ -263,12 +296,18 @@ bool RDE::UkfState::finalize(const System::VariablesHandler& handler)
 
     for (int idx = 0; idx < m_pimpl->subModelList.size(); idx++)
     {
-        m_pimpl->subModelJointVel.emplace_back(Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
-        m_pimpl->subModelJointAcc.emplace_back(Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
-        m_pimpl->subModelJointMotorTorque.emplace_back(Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
-        m_pimpl->subModelFrictionTorque.emplace_back(Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
-        m_pimpl->totalTorqueFromContacts.emplace_back(Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
-        m_pimpl->torqueFromContact.emplace_back(Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
+        m_pimpl->subModelJointVel.emplace_back(
+            Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
+        m_pimpl->subModelJointAcc.emplace_back(
+            Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
+        m_pimpl->subModelJointMotorTorque.emplace_back(
+            Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
+        m_pimpl->subModelFrictionTorque.emplace_back(
+            Eigen::VectorXd(m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
+        m_pimpl->totalTorqueFromContacts.emplace_back(
+            Eigen::VectorXd(6 + m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
+        m_pimpl->torqueFromContact.emplace_back(
+            Eigen::VectorXd(6 + m_pimpl->subModelList[idx].getModel().getNrOfDOFs()));
     }
 
     m_pimpl->currentState.resize(m_pimpl->stateSize);
@@ -282,10 +321,11 @@ bool RDE::UkfState::finalize(const System::VariablesHandler& handler)
     return true;
 }
 
-std::unique_ptr<RDE::UkfState> RDE::UkfState::build(std::weak_ptr<const ParametersHandler::IParametersHandler> handler,
-                                                    std::shared_ptr<iDynTree::KinDynComputations> kinDynFullModel,
-                                                    const std::vector<SubModel>& subModelList,
-                                                    const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList)
+std::unique_ptr<RDE::UkfState>
+RDE::UkfState::build(std::weak_ptr<const ParametersHandler::IParametersHandler> handler,
+                     std::shared_ptr<iDynTree::KinDynComputations> kinDynFullModel,
+                     const std::vector<SubModel>& subModelList,
+                     const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList)
 {
     constexpr auto logPrefix = "[UkfState::build]";
 
@@ -370,10 +410,15 @@ std::unique_ptr<RDE::UkfState> RDE::UkfState::build(std::weak_ptr<const Paramete
             return nullptr;
         }
 
-        std::shared_ptr<Dynamics> dynamicsInstance = RDE::DynamicsFactory::createInstance(dynamicModel);
+        std::shared_ptr<Dynamics> dynamicsInstance
+            = RDE::DynamicsFactory::createInstance(dynamicModel);
         if (dynamicsInstance == nullptr)
         {
-            log()->error("{} The dynamic model '{}' has not been registered.", logPrefix, dynamicModel);
+            log()->error("{} The dynamic model '{}' has not been registered for the state variable "
+                         "`{}`.",
+                         logPrefix,
+                         dynamicModel,
+                         dynamicsName);
             return nullptr;
         }
 
@@ -383,7 +428,6 @@ std::unique_ptr<RDE::UkfState> RDE::UkfState::build(std::weak_ptr<const Paramete
 
         // add dynamics to the list
         state->m_pimpl->dynamicsList.emplace_back(dynamicsName, dynamicsInstance);
-//        state->m_pimpl->dynamicsList.insert({dynamicsName, dynamicsInstance});
     }
 
     // finalize estimator
@@ -414,7 +458,8 @@ System::VariablesHandler& RDE::UkfState::getStateVariableHandler()
 // TODO
 // Here the cur_state has size state_size x n_sigma_points
 // this means that the computation can be parallelized
-void RDE::UkfState::propagate(const Eigen::Ref<const Eigen::MatrixXd>& cur_states, Eigen::Ref<Eigen::MatrixXd> prop_states)
+void RDE::UkfState::propagate(const Eigen::Ref<const Eigen::MatrixXd>& cur_states,
+                              Eigen::Ref<Eigen::MatrixXd> prop_states)
 {
     constexpr auto logPrefix = "[UkfState::propagate]";
 
@@ -452,24 +497,6 @@ void RDE::UkfState::propagate(const Eigen::Ref<const Eigen::MatrixXd>& cur_state
 
         // TODO
         // This could be parallelized
-
-        // Update all the dynamics
-//        for (auto& [name, dynamics] : m_pimpl->dynamicsList)
-//        {
-//            dynamics->setState(m_pimpl->currentState);
-
-//            dynamics->setInput(m_pimpl->ukfInput);
-
-//            if (!dynamics->update())
-//            {
-//                log()->error("{} Cannot update the dynamics with name `{}`.", logPrefix, name);
-//                throw std::runtime_error("Error");
-//            }
-
-//            m_pimpl->nextState.segment(m_pimpl->stateVariableHandler.getVariable(name).offset,
-//                                       m_pimpl->stateVariableHandler.getVariable(name).size) = dynamics->getUpdatedVariable();
-//        }
-
         for (int indexDyn = 0; indexDyn < m_pimpl->dynamicsList.size(); indexDyn++)
         {
             m_pimpl->dynamicsList[indexDyn].second->setState(m_pimpl->currentState);
@@ -478,12 +505,19 @@ void RDE::UkfState::propagate(const Eigen::Ref<const Eigen::MatrixXd>& cur_state
 
             if (!m_pimpl->dynamicsList[indexDyn].second->update())
             {
-                log()->error("{} Cannot update the dynamics with name `{}`.", logPrefix, m_pimpl->dynamicsList[indexDyn].first);
+                log()->error("{} Cannot update the dynamics with name `{}`.",
+                             logPrefix,
+                             m_pimpl->dynamicsList[indexDyn].first);
                 throw std::runtime_error("Error");
             }
 
-            m_pimpl->nextState.segment(m_pimpl->stateVariableHandler.getVariable(m_pimpl->dynamicsList[indexDyn].first).offset,
-                                       m_pimpl->stateVariableHandler.getVariable(m_pimpl->dynamicsList[indexDyn].first).size) = m_pimpl->dynamicsList[indexDyn].second->getUpdatedVariable();
+            m_pimpl->nextState.segment(m_pimpl->stateVariableHandler
+                                           .getVariable(m_pimpl->dynamicsList[indexDyn].first)
+                                           .offset,
+                                       m_pimpl->stateVariableHandler
+                                           .getVariable(m_pimpl->dynamicsList[indexDyn].first)
+                                           .size)
+                = m_pimpl->dynamicsList[indexDyn].second->getUpdatedVariable();
         }
 
         prop_states.block(0, sample, cur_states.rows(), 1) = m_pimpl->nextState;

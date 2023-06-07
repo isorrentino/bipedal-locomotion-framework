@@ -221,9 +221,7 @@ TEST_CASE("Gyroscope Measurement Dynamics")
     {
         REQUIRE(
             kinDynWrapperList.at(idx)
-                ->updateState(baseAcceleration,
-                              Eigen::VectorXd(subModelList[idx].getModel().getNrOfDOFs()).setZero(),
-                              UpdateMode::Full));
+                ->updateState(UpdateMode::Full));
     }
 
     gyroDynamics.setInput(input);

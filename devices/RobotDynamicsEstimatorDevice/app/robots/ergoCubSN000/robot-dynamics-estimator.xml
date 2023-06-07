@@ -13,6 +13,8 @@ BSD-3-Clause license. -->
         <param name="model_file">model.urdf</param>
         <param name="base_link">root_link</param>
         <param name="joint_list">("r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
+        <param name="gear_ratio">(100.0, -160.0, 100.0, 100.0, 100.0, 160.0)</param>
+        <param name="torque_constant">(0.111, 0.047, 0.047, 0.111, 0.111, 0.025)</param>
 
         <group name="FT">
             <param name="names">("r_leg_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>

@@ -183,12 +183,20 @@ bool RDE::GyroscopeMeasurementDynamics::update()
               * m_subModelBaseVel.coeffs();
 
         m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-            = m_JvBase.tail(3);
+            = m_JvBase.segment(3, 3);
 
+<<<<<<< HEAD
         if (m_useBias)
         {
             m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
                 += m_bias;
+=======
+        m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) = m_JvBase.segment(3, 3);
+
+        if (m_useBias)
+        {
+            m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) += m_bias;
+>>>>>>> 4f87a058d... Implement python bindings for RobotDynamicsEstimator
         }
 
         if (m_subModelList[m_subModelWithGyro[index]].getJointMapping().size() > 0)

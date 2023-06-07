@@ -66,6 +66,18 @@ bool RobotDynamicsEstimatorDevice::setupRobotModel(
         return false;
     }
 
+    if (!ptr->getParameter("gear_ratio", m_gearboxRatio))
+    {
+        log()->error("{} Could not find parameter `gear_ratio`", logPrefix);
+        return false;
+    }
+
+    if (!ptr->getParameter("torque_constant", m_torqueConstant))
+    {
+        log()->error("{} Could not find parameter `torque_constant`", logPrefix);
+        return false;
+    }
+
     auto ftGroup = ptr->getGroup("FT").lock();
     if (ftGroup == nullptr)
     {
@@ -250,11 +262,7 @@ bool RobotDynamicsEstimatorDevice::setEstimatorInitialState()
     auto estimatedContacts = iDynTree::LinkContactWrenches(m_iDynEstimator.model());
     auto estimatedTau = iDynTree::JointDOFsDoubleArray(m_iDynEstimator.model());
 
-    // Base transform
-    auto wHb = iDynTree::Transform::Identity();
-    auto baseVel = iDynTree::Twist::Zero();
-    auto baseAcc = iDynTree::Vector6();
-    baseAcc.zero();
+    // INES SAYS TO BE CHANGED WITH THE REAL ORIENTATION, ANGULAR VELOCITY, LINEAR ACCELERATION
 
     iDynTree::Vector3 gravity;
     gravity.zero();
@@ -315,15 +323,13 @@ bool RobotDynamicsEstimatorDevice::setEstimatorInitialState()
         m_estimatorOutput.output.ftWrenches[key] = ftFromModel[key];
         std::string ftBias = key + "_bias";
         m_estimatorOutput.output.ftWrenchesBiases[ftBias] = m_ftOffset[key]; // FT bias
-
-//        log()->info("FT {}", key);
-//        log()->info("wrench minus offset");
-//        log()->info(m_estimatorOutput.output.ftWrenches[key]);
-//        log()->info("Offset");
-//        log()->info(m_ftOffset[key]);
     }
 
-    m_estimatorOutput.output.tau_m = iDynTree::toEigen(estimatedTau);
+    if (!m_robotSensorBridge->getMotorCurrents(m_estimatorOutput.output.tau_m))
+    {
+        return false;
+    }
+    m_estimatorOutput.output.tau_m = (m_estimatorOutput.output.tau_m * m_gearboxRatio * m_torqueConstant).eval();
 
     if (!m_estimator->setInitialState(m_estimatorOutput.output))
     {
@@ -619,12 +625,6 @@ bool RobotDynamicsEstimatorDevice::updateMeasurements()
             return false;
         }
         m_estimatorInput.input.ftWrenches[key] -= m_ftOffset[key];
-
-//        log()->info("FT {}", key);
-//        log()->info("wrench minus offset");
-//        log()->info(m_estimatorInput.input.ftWrenches[key]);
-//        log()->info("Offset");
-//        log()->info(m_ftOffset[key]);
     }
 
     for (auto& [key, value] : m_estimatorInput.input.linearAccelerations)

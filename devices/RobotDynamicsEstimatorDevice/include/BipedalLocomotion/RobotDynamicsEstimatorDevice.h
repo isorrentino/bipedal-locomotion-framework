@@ -60,6 +60,8 @@ private:
     std::string m_robot{"ergocubSim"};
     std::string m_baseLink{"root_link"};
     std::vector<std::string> m_jointNameList{};
+    Eigen::VectorXd m_gearboxRatio;
+    Eigen::VectorXd m_torqueConstant;
     std::shared_ptr<iDynTree::KinDynComputations> m_kinDyn;
     std::unique_ptr<BipedalLocomotion::Estimators::RobotDynamicsEstimator::RobotDynamicsEstimator>
         m_estimator;
