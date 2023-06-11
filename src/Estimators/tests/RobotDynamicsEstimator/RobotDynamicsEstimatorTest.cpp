@@ -264,10 +264,10 @@ TEST_CASE("RobotDynamicsEstimator")
     REQUIRE(estimator->setInitialState(initialState));
 
     RobotDynamicsEstimatorInput measurement;
-    createInput(kinDyn,
-                modelHandler,
-                measurement);
+    createInput(kinDyn, modelHandler, measurement);
 
+    for (int i = 0; i < 10; i++)
+    {
         auto tic = BipedalLocomotion::clock().now();
         REQUIRE(estimator->setInput(measurement));
         REQUIRE(estimator->advance());
@@ -276,4 +276,5 @@ TEST_CASE("RobotDynamicsEstimator")
         BipedalLocomotion::log()->error("{}", toc - tic);
 
         RobotDynamicsEstimatorOutput result = estimator->getOutput();
+    }
 }

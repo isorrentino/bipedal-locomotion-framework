@@ -94,6 +94,8 @@ class SubModelKinDynWrapper
     Eigen::VectorXd m_qj; /**< Vector of joint positions of the sub-model */
     Eigen::VectorXd m_dqj; /**< Vector of joint velocities of the sub-model */
 
+    int counter = 0;
+
 protected:
     /**
      * updateDynamicsVariableState updates the value of all the member variables containing

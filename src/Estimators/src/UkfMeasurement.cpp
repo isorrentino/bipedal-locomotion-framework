@@ -11,13 +11,16 @@
 #include <BipedalLocomotion/Math/Wrench.h>
 #include <BipedalLocomotion/TextLogging/Logger.h>
 
+#include <BipedalLocomotion/RobotDynamicsEstimator/AccelerometerMeasurementDynamics.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/ConstantMeasurementModel.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/GyroscopeMeasurementDynamics.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/MotorCurrentMeasurementDynamics.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/UkfMeasurement.h>
 
-namespace RDE = BipedalLocomotion::Estimators::RobotDynamicsEstimator;
 using namespace BipedalLocomotion;
+namespace RDE = Estimators::RobotDynamicsEstimator;
 
 using namespace std::chrono;
 
@@ -151,6 +154,11 @@ struct RDE::UkfMeasurement::Impl
                                        jointVelocityState,
                                        gravity);
 
+        BipedalLocomotion::log()->info("Base pose\n{}", ukfInput.robotBasePose.transform());
+        BipedalLocomotion::log()->info("Joint positions\n{}", ukfInput.robotJointPositions);
+        BipedalLocomotion::log()->info("Base velocity\n{}", ukfInput.robotBaseVelocity.coeffs());
+        BipedalLocomotion::log()->info("Joint velocity\n{}", jointVelocityState);
+
         // compute joint acceleration per each sub-model containing the accelerometer
         for (int subModelIdx = 0; subModelIdx < subModelList.size(); subModelIdx++)
         {
@@ -167,8 +175,8 @@ struct RDE::UkfMeasurement::Impl
                 torqueFromContact[subModelIdx]
                     = kinDynWrapperList[subModelIdx]->getFTJacobian(key).transpose() * wrench;
 
-                totalTorqueFromContacts[subModelIdx] = totalTorqueFromContacts[subModelIdx].array()
-                                                       + torqueFromContact[subModelIdx].array();
+                totalTorqueFromContacts[subModelIdx]
+                    = (totalTorqueFromContacts[subModelIdx] + torqueFromContact[subModelIdx]).eval();
             }
 
             // Contribution of unknown external contacts
@@ -180,8 +188,8 @@ struct RDE::UkfMeasurement::Impl
                           .transpose()
                       * extContactMap[subModelList[subModelIdx].getExternalContact(idx)];
 
-                totalTorqueFromContacts[subModelIdx] = totalTorqueFromContacts[subModelIdx].array()
-                                                       + torqueFromContact[subModelIdx].array();
+                totalTorqueFromContacts[subModelIdx]
+                    = (totalTorqueFromContacts[subModelIdx] + torqueFromContact[subModelIdx]).eval();
             }
 
             if (!kinDynWrapperList[subModelIdx]
@@ -195,7 +203,7 @@ struct RDE::UkfMeasurement::Impl
             }
 
             subModelJointAcc[subModelIdx] = kinDynWrapperList[subModelIdx]->getnudot().tail(
-                        subModelJointMotorTorque[subModelIdx].size());
+                subModelJointMotorTorque[subModelIdx].size());
 
             // Assign joint acceleration using the correct indeces
             for (int jointIdx = 0; jointIdx < subModelList[subModelIdx].getJointMapping().size();
@@ -205,6 +213,9 @@ struct RDE::UkfMeasurement::Impl
                     = subModelJointAcc[subModelIdx][jointIdx];
             }
         }
+
+        //        BipedalLocomotion::log()->info("jointAccelerationState");
+        //        BipedalLocomotion::log()->info(jointAccelerationState);
 
         return true;
     }
@@ -321,12 +332,9 @@ bool RDE::UkfMeasurement::finalize(const System::VariablesHandler& handler)
     m_pimpl->measurement.setZero();
 
     m_pimpl->tempPredictedMeas.resize(m_pimpl->measurementSize);
+    m_pimpl->tempPredictedMeas.setZero();
 
     m_pimpl->measurementDescription = bfl::VectorDescription(m_pimpl->measurementSize);
-
-    m_pimpl->predictedMeasurement.resize(m_pimpl->measurementSize,
-                                         2 * m_pimpl->stateVariableHandler.getNumberOfVariables()
-                                             + 1);
 
     m_pimpl->isFinalized = true;
 
@@ -508,20 +516,14 @@ RDE::UkfMeasurement::predictedMeasure(const Eigen::Ref<const Eigen::MatrixXd>& c
     // Get input of ukf from provider
     m_pimpl->ukfInput = m_pimpl->ukfInputProvider->getOutput();
 
+    m_pimpl->predictedMeasurement.resize(m_pimpl->measurementSize, cur_states.cols());
+    m_pimpl->predictedMeasurement.setZero();
+
     for (int sample = 0; sample < cur_states.cols(); sample++)
     {
         m_pimpl->currentState = cur_states.block(0, sample, cur_states.rows(), 1);
 
         m_pimpl->unpackState();
-
-        // Update kindyn full model
-        m_pimpl->kinDynFullModel
-            ->setRobotState(m_pimpl->ukfInput.robotBasePose.transform(),
-                            m_pimpl->ukfInput.robotJointPositions,
-                            iDynTree::make_span(m_pimpl->ukfInput.robotBaseVelocity.data(),
-                                                manif::SE3d::Tangent::DoF),
-                            m_pimpl->jointVelocityState,
-                            m_pimpl->gravity);
 
         if (!m_pimpl->updateState())
         {
@@ -532,10 +534,11 @@ RDE::UkfMeasurement::predictedMeasure(const Eigen::Ref<const Eigen::MatrixXd>& c
 
         m_pimpl->ukfInput.robotJointAccelerations = m_pimpl->jointAccelerationState;
 
+        //        BipedalLocomotion::log()->info("Joint acceleration\n{}",
+        //        m_pimpl->ukfInput.robotJointAccelerations);
+
         // TODO
         // This could be parallelized
-
-        // Update all the dynamics
         for (int indexDyn = 0; indexDyn < m_pimpl->dynamicsList.size(); indexDyn++)
         {
             m_pimpl->dynamicsList[indexDyn].second->setState(m_pimpl->currentState);
@@ -563,15 +566,34 @@ RDE::UkfMeasurement::predictedMeasure(const Eigen::Ref<const Eigen::MatrixXd>& c
             = m_pimpl->tempPredictedMeas;
     }
 
+    BipedalLocomotion::log()->info("Predicted measurement sigma points");
+    BipedalLocomotion::log()->info(m_pimpl->predictedMeasurement.transpose());
+
     return std::make_pair(true, m_pimpl->predictedMeasurement);
 }
 
 std::pair<bool, bfl::Data> RDE::UkfMeasurement::innovation(const bfl::Data& predicted_measurements,
                                                            const bfl::Data& measurements) const
 {
-    Eigen::MatrixXd innovation
-        = -(bfl::any::any_cast<Eigen::MatrixXd>(predicted_measurements).colwise()
-            - bfl::any::any_cast<Eigen::VectorXd>(measurements));
+//    Eigen::MatrixXd innovation
+//        = -(bfl::any::any_cast<Eigen::MatrixXd>(predicted_measurements).colwise()
+//            - bfl::any::any_cast<Eigen::VectorXd>(measurements));
+
+    Eigen::VectorXd measurement(m_pimpl->measurementSize);
+    measurement.setZero();
+    measurement = bfl::any::any_cast<Eigen::VectorXd>(measurements);
+
+    Eigen::VectorXd pred_measurement(m_pimpl->measurementSize);
+    pred_measurement.setZero();
+    pred_measurement = bfl::any::any_cast<Eigen::MatrixXd>(predicted_measurements).col(0);
+
+    Eigen::MatrixXd innovation = measurement - pred_measurement;
+
+
+    BipedalLocomotion::log()->info("IIIIIIIIIIINNNNNNNNNNNNOOOOOOOOOVVVVVVVVVVAAAAAAAAAAATTTTTTTTTTIIIIIIIIIIIOOOOOOOOOOONNNNNNNNNNNNNNNNN");
+    BipedalLocomotion::log()->info("Primo vettore\n{}", measurement);
+    BipedalLocomotion::log()->info("Secondo vettore\n{}", pred_measurement);
+    BipedalLocomotion::log()->info("Risultato vettore\n{}", innovation);
 
     return std::make_pair(true, std::move(innovation));
 }
@@ -581,7 +603,7 @@ std::size_t RDE::UkfMeasurement::getMeasurementSize()
     return m_pimpl->measurementSize;
 }
 
-BipedalLocomotion::System::VariablesHandler& RDE::UkfMeasurement::getMeasurementVariableHandler()
+System::VariablesHandler& RDE::UkfMeasurement::getMeasurementVariableHandler()
 {
     return m_pimpl->measurementVariableHandler;
 }
@@ -627,6 +649,8 @@ bool RDE::UkfMeasurement::freeze(const bfl::Data& data)
                + m_pimpl->measurementVariableHandler.getVariable(m_pimpl->dynamicsList[index].first)
                      .size))
         {
+            BipedalLocomotion::log()->info("Dynamics {} measurement setting\n{}", m_pimpl->dynamicsList[index].first);
+
             m_pimpl->measurement
                 .segment(m_pimpl->offsetMeasurement,
                          m_pimpl->measurementMap[m_pimpl->dynamicsList[index].first].size())
@@ -636,6 +660,8 @@ bool RDE::UkfMeasurement::freeze(const bfl::Data& data)
                 += m_pimpl->measurementMap[m_pimpl->dynamicsList[index].first].size();
         }
     }
+
+        BipedalLocomotion::log()->info("Measurement\n{}", m_pimpl->measurement);
 
     return true;
 }

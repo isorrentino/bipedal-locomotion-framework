@@ -191,7 +191,8 @@ bool RDE::FrictionTorqueStateDynamics::update()
 
 //    log()->info("m_dotTauF = (m_FcFs + m_Fv).array() * m_ukfInput.robotJointAccelerations.array() --> {} = ({} + {}) * {}", m_dotTauF, m_FcFs, m_Fv, m_ukfInput.robotJointAccelerations);
 
-//    m_dotTauF = m_Fv.array() * m_ukfInput.robotJointAccelerations.array();
+    log()->info("in friction - joint acceleration\n{}", m_ukfInput.robotJointAccelerations.array());
+    m_dotTauF = m_Fv.array() * m_ukfInput.robotJointAccelerations.array();
 
     m_updatedVariable = m_frictionTorqueFullModel.array() + m_dT * m_dotTauF.array();
 

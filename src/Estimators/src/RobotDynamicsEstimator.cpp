@@ -135,6 +135,7 @@ bool RobotDynamicsEstimator::finalize(const System::VariablesHandler& stateVaria
     m_pimpl->ukfInput.robotBaseVelocity.setZero();
     m_pimpl->ukfInput.robotBaseAcceleration.setZero();
     m_pimpl->ukfInput.robotJointPositions.resize(kinDynFullModel->model().getNrOfDOFs());
+    m_pimpl->ukfInput.robotJointAccelerations.resize(kinDynFullModel->model().getNrOfDOFs());
     m_pimpl->inputProvider->setInput(m_pimpl->ukfInput);
 
     m_pimpl->isFinalized = true;
@@ -404,6 +405,11 @@ bool RobotDynamicsEstimator::advance()
     // Step 1 --> Predict
     m_pimpl->ukfPrediction->predict(m_pimpl->correctedState, m_pimpl->predictedState);
 
+    log()->info("################# Predicted state ###################");
+    log()->info("ds\n{}", m_pimpl->predictedState.mean().segment(m_pimpl->stateHandler.getVariable("ds").offset, m_pimpl->stateHandler.getVariable("ds").size));
+    log()->info("tau m\n{}", m_pimpl->predictedState.mean().segment(m_pimpl->stateHandler.getVariable("tau_m").offset, m_pimpl->stateHandler.getVariable("tau_m").size));
+    log()->info("tau F\n{}", m_pimpl->predictedState.mean().segment(m_pimpl->stateHandler.getVariable("tau_F").offset, m_pimpl->stateHandler.getVariable("tau_F").size));
+
     // Step 2 --> Set measurement
     if (!m_pimpl->ukfCorrection->freeze_measurements(m_pimpl->ukfMeasurementFromSensors))
     {
@@ -428,6 +434,7 @@ bool RobotDynamicsEstimator::setInput(const RobotDynamicsEstimatorInput & input)
     m_pimpl->ukfInput.robotBaseVelocity = input.baseVelocity;
     m_pimpl->ukfInput.robotBaseAcceleration = input.baseAcceleration;
     m_pimpl->ukfInput.robotJointPositions = input.jointPositions;
+    m_pimpl->ukfInput.robotJointAccelerations.setZero();
 
     if (!m_pimpl->inputProvider->setInput(m_pimpl->ukfInput))
     {

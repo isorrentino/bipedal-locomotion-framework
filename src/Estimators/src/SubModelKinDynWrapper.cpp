@@ -212,25 +212,14 @@ bool RDE::SubModelKinDynWrapper::updateDynamicsVariableState(UpdateMode updateMo
         // Update accelerometer jacobians, dJnu, rotMatrix
         for (auto& [key, value] : m_subModel.getAccelerometerList())
         {
-            // Update jacobian
-            if (!m_kinDyn.getFrameFreeFloatingJacobian(value.frame, m_jacAccList[key]))
-            {
-                blf::log()->error("{} Unable to get the compute the free floating jacobian of the "
-                                  "frame {}.",
-                                  logPrefix,
-                                  value.frame);
-                return false;
-            }
-
-            // Update dJnu
-//            m_dJnuList[key] = iDynTree::toEigen(m_kinDyn.getFrameBiasAcc(value.frame));
-
             // Update rotMatrix
             m_accRworldList[key] = blf::Conversions::toManifRot(
                 m_kinDynFullModel->getWorldTransform(value.frame).getRotation().inverse());
 
             // Update accelerometer velocity
             m_accVelList[key] = iDynTree::toEigen(m_kinDyn.getFrameVel(value.frame));
+
+            log()->info("accelerometer velocity\n{}", m_accVelList[key]);
         }
 
         // Update gyroscope jacobians
@@ -256,56 +245,72 @@ bool RDE::SubModelKinDynWrapper::forwardDynamics(
     Eigen::Ref<const Eigen::VectorXd> tauExt,
     const manif::SE3d::Tangent baseAcceleration)
 {
+    log()->info("--------------------------------------- Sigma point {}", counter);
+    counter++;
+
+//    log()->info("tau m\n{}", motorTorqueAfterGearbox);
+//    log()->info("tau F\n{}", frictionTorques);
+//    log()->info("tau ext\n{}", tauExt.tail(motorTorqueAfterGearbox.size()));
+
     m_totalTorques.setZero();
     m_totalTorques.tail(motorTorqueAfterGearbox.size()) = motorTorqueAfterGearbox - frictionTorques;
 
-//    if (m_baseFrame == m_kinDynFullModel->getFloatingBase())
-//    {
-//        m_FTBaseAcc = m_massMatrix.block(6, 0, motorTorqueAfterGearbox.size(), 6)
-//                      * baseAcceleration.coeffs();
+    if (m_baseFrame == m_kinDynFullModel->getFloatingBase())
+    {
+        m_FTBaseAcc = m_massMatrix.block(6, 0, motorTorqueAfterGearbox.size(), 6)
+                      * baseAcceleration.coeffs();
 
-//        log()->info("m_FTBaseAcc");
-//        log()->info(m_FTBaseAcc);
+//        log()->info("F transpose");
+//        log()->info(m_massMatrix.block(6, 0, motorTorqueAfterGearbox.size(), 6));
+//        log()->info("base acceleration\n{}", baseAcceleration.coeffs());
 
-//        m_totalTorques.tail(motorTorqueAfterGearbox.size())
-//            = m_totalTorques.tail(motorTorqueAfterGearbox.size())
-//              + tauExt.tail(motorTorqueAfterGearbox.size())
-//              - m_genForces.tail(motorTorqueAfterGearbox.size()) - m_FTBaseAcc;
+        m_totalTorques.tail(motorTorqueAfterGearbox.size())
+            = m_totalTorques.tail(motorTorqueAfterGearbox.size())
+              + tauExt.tail(motorTorqueAfterGearbox.size())
+              - m_genForces.tail(motorTorqueAfterGearbox.size()) - m_FTBaseAcc;
 
-//        m_totalTorques.head(6) = 0*tauExt.head(6);
+        m_totalTorques.head(6) = 0*tauExt.head(6);
 
 //        log()->info("m_totalTorques");
 //        log()->info(m_totalTorques);
 
-//        //        m_subModelNuDot.tail(motorTorqueAfterGearbox.size())
-//        //            = m_massMatrix
-//        //                  .block(6, 6, motorTorqueAfterGearbox.size(),
-//        //                  motorTorqueAfterGearbox.size()) .llt()
-//        //                  .solve(m_totalTorques.tail(motorTorqueAfterGearbox.size()));
+        m_subModelNuDot.tail(motorTorqueAfterGearbox.size())
+            = m_massMatrix
+                  .block(6, 6, motorTorqueAfterGearbox.size(), motorTorqueAfterGearbox.size())
+                  .llt()
+                  .solve(m_totalTorques.tail(motorTorqueAfterGearbox.size()));
 
-//        m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
+        //        m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
+
+//        log()->info("H\n{}", m_massMatrix
+//              .block(6, 6, motorTorqueAfterGearbox.size(), motorTorqueAfterGearbox.size()));
+
+//        log()->info("H inverse\n{}", m_massMatrix
+//                    .block(6, 6, motorTorqueAfterGearbox.size(), motorTorqueAfterGearbox.size())
+//                    .llt()
+//                    .solve(Eigen::MatrixXd::Identity(motorTorqueAfterGearbox.size(), motorTorqueAfterGearbox.size())));
 
 //        log()->info("m_subModelNuDot");
 //        log()->info(m_subModelNuDot);
 
-//        m_subModelNuDot.head(6) = baseAcceleration.coeffs();
+        m_subModelNuDot.head(6) = baseAcceleration.coeffs();
 
 //        log()->info("m_subModelNuDot");
 //        log()->info(m_subModelNuDot);
 
-//        m_subModelBaseAcceleration = baseAcceleration.coeffs();
-//    } else
-//    {
-//        m_totalTorques = m_totalTorques + tauExt - m_genForces;
-//        m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
-//        m_subModelBaseAcceleration = m_subModelNuDot.head(6);
-//    }
+        m_subModelBaseAcceleration = baseAcceleration.coeffs();
+    } else
+    {
+        m_totalTorques = m_totalTorques + tauExt - m_genForces;
+        m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
+        m_subModelBaseAcceleration = m_subModelNuDot.head(6);
+    }
 
-    m_totalTorques = m_totalTorques + tauExt - m_genForces;
-    m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
-    m_subModelBaseAcceleration = m_subModelNuDot.head(6);
+//    m_totalTorques = m_totalTorques + tauExt - m_genForces;
+//    m_subModelNuDot = m_massMatrix.llt().solve(m_totalTorques);
+//    m_subModelBaseAcceleration = m_subModelNuDot.head(6);
 
-    log()->info("m_subModelNuDot");
+    log()->info("joint acceleration");
     log()->info(m_subModelNuDot);
 
     return true;
@@ -315,8 +320,14 @@ manif::SE3d::Tangent RDE::SubModelKinDynWrapper::getFrameAcceleration(const std:
                                                                       Eigen::Ref<const Eigen::VectorXd> nuDot)
 {
     manif::SE3d::Tangent frameAcceleration;
+    frameAcceleration.setZero();
 
-    m_kinDyn.getFrameAcc(frameName, nuDot.head(6), nuDot.tail(m_kinDyn.model().getNrOfDOFs()), frameAcceleration.coeffs());
+    m_kinDyn.getFrameAcc(frameName,
+                         nuDot.head(6),
+                         nuDot.tail(m_kinDyn.model().getNrOfDOFs()),
+                         iDynTree::make_span(frameAcceleration.data(), manif::SE3d::Tangent::DoF));
+
+//    log()->info("Frame {} acceleration\n{}", frameName, frameAcceleration.coeffs());
 
     return frameAcceleration;
 }

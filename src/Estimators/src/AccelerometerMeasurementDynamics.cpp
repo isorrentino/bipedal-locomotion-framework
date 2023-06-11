@@ -177,6 +177,9 @@ bool RDE::AccelerometerMeasurementDynamics::update()
                                    m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
                                        ->getnudot());
 
+       log()->info("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA acceleration frame {}", m_name);
+       log()->info(m_frameAcceleration);
+
 //        m_JdotNu = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
 //                       ->getAccelerometerBiasAcceleration(m_name);
 
@@ -189,6 +192,8 @@ bool RDE::AccelerometerMeasurementDynamics::update()
                       ->getAccelerometerRotation(m_name)
                       .act(m_gravity);
 
+//        log()->info("gravity rotated\n{}", m_accRg);
+
         m_linVel = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
                        ->getAccelerometerVelocity(m_name)
                        .lin();
@@ -199,7 +204,7 @@ bool RDE::AccelerometerMeasurementDynamics::update()
         m_vCrossW = m_linVel.cross(m_angVel);
 
         m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-            = m_frameAcceleration.lin() - m_vCrossW - m_accRg;
+            = m_frameAcceleration.lin() - m_vCrossW + m_accRg;
 
         if (m_useBias)
         {
@@ -207,9 +212,6 @@ bool RDE::AccelerometerMeasurementDynamics::update()
                 = m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
                   + m_bias;
         }
-
-//        log()->info("Accelerometer {} for submodel {}", m_name, m_subModelsWithAccelerometer[index]);
-//        log()->info(m_updatedVariable);
     }
 
     return true;

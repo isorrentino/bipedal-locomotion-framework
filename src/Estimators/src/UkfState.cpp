@@ -8,6 +8,7 @@
 #include <map>
 
 #include <BipedalLocomotion/Math/Constants.h>
+#include <BipedalLocomotion/Math/Wrench.h>
 #include <BipedalLocomotion/TextLogging/Logger.h>
 
 #include <BipedalLocomotion/RobotDynamicsEstimator/FrictionTorqueStateDynamics.h>
@@ -109,6 +110,16 @@ struct RDE::UkfState::Impl
                                    + subModelList[subModelIdx].getJointMapping()[jointIdx]];
             }
 
+//            for (int i = 0; i < subModelFrictionTorque[subModelIdx].size(); i++)
+//            {
+//                int index_right = subModelList[subModelIdx].getJointMapping()[i];
+
+//                subModelFrictionTorque[subModelIdx][i]
+//                    = friction_k0[index_right]
+//                          * tanh(friction_k1[index_right] * jointVelocityState[index_right])
+//                      + friction_k2[index_right] * jointVelocityState[index_right];
+//            }
+
             for (auto& [key, value] : subModelList[subModelIdx].getFTList())
             {
                 FTMap[key] = currentState.segment(stateVariableHandler.getVariable(key).offset,
@@ -176,14 +187,14 @@ struct RDE::UkfState::Impl
 //                log()->info("torqueFromContact: {}", torqueFromContact[subModelIdx]);
             }
 
-            log()->info("subModelJointMotorTorque[subModelIdx]");
-            log()->info(subModelJointMotorTorque[subModelIdx]);
-            log()->info("subModelFrictionTorque[subModelIdx]");
-            log()->info(subModelFrictionTorque[subModelIdx]);
-            log()->info("totalTorqueFromContacts[subModelIdx]");
-            log()->info(totalTorqueFromContacts[subModelIdx]);
-            log()->info("ukfInput.robotBaseAcceleration)");
-            log()->info(ukfInput.robotBaseAcceleration);
+//            log()->info("subModelJointMotorTorque[subModelIdx]");
+//            log()->info(subModelJointMotorTorque[subModelIdx]);
+//            log()->info("subModelFrictionTorque[subModelIdx]");
+//            log()->info(subModelFrictionTorque[subModelIdx]);
+//            log()->info("totalTorqueFromContacts[subModelIdx]");
+//            log()->info(totalTorqueFromContacts[subModelIdx]);
+//            log()->info("ukfInput.robotBaseAcceleration)");
+//            log()->info(ukfInput.robotBaseAcceleration);
 
             if (!kinDynWrapperList[subModelIdx]
                      ->forwardDynamics(subModelJointMotorTorque[subModelIdx],
@@ -205,6 +216,9 @@ struct RDE::UkfState::Impl
                 jointAccelerationState[subModelList[subModelIdx].getJointMapping()[jointIdx]]
                     = subModelJointAcc[subModelIdx][jointIdx];
             }
+
+//            log()->info("jointAccelerationState");
+//            log()->info(jointAccelerationState);
         }
 
         return true;
@@ -290,6 +304,8 @@ bool RDE::UkfState::finalize(const System::VariablesHandler& handler)
                    handler.getVariable(m_pimpl->dynamicsList[indexDyn2].first).size)
             = m_pimpl->dynamicsList[indexDyn2].second->getInitialStateCovariance().asDiagonal();
     }
+
+//    log()->info("Covariance process\n{}", m_pimpl->covarianceQ);
 
     m_pimpl->jointVelocityState.resize(m_pimpl->kinDynFullModel->model().getNrOfDOFs());
     m_pimpl->jointAccelerationState.resize(m_pimpl->kinDynFullModel->model().getNrOfDOFs());
