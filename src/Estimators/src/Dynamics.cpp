@@ -33,17 +33,17 @@ bool RDE::UkfInputProvider::isOutputValid() const
     return m_ukfInput.robotJointPositions.size() != 0;
 }
 
-bool RDE::Dynamics::initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> /*paramHandler*/)
+bool RDE::Dynamics::initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
 {
     return true;
 }
 
-bool RDE::Dynamics::finalize(const System::VariablesHandler& /*stateVariableHandler*/)
+bool RDE::Dynamics::finalize(const System::VariablesHandler& stateVariableHandler)
 {
     return true;
 }
 
-bool RDE::Dynamics::setSubModels(const std::vector<SubModel>& /*subModelList*/, const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& /*kinDynWrapperList*/)
+bool RDE::Dynamics::setSubModels(const std::vector<SubModel>& subModelList, const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList)
 {
     return true;
 }

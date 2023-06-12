@@ -7,8 +7,8 @@
 
 #include <Eigen/Dense>
 
-#include <BipedalLocomotion/RobotDynamicsEstimator/MotorCurrentMeasurementDynamics.h>
 #include <BipedalLocomotion/TextLogging/Logger.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/MotorCurrentMeasurementDynamics.h>
 
 namespace RDE = BipedalLocomotion::Estimators::RobotDynamicsEstimator;
 
@@ -16,8 +16,7 @@ RDE::MotorCurrentMeasurementDynamics::MotorCurrentMeasurementDynamics() = defaul
 
 RDE::MotorCurrentMeasurementDynamics::~MotorCurrentMeasurementDynamics() = default;
 
-bool RDE::MotorCurrentMeasurementDynamics::initialize(
-    std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
+bool RDE::MotorCurrentMeasurementDynamics::initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
 {
     constexpr auto errorPrefix = "[MotorCurrentMeasurementDynamics::initialize]";
 
@@ -42,10 +41,18 @@ bool RDE::MotorCurrentMeasurementDynamics::initialize(
         return false;
     }
 
+    // Set the dynamic model type
+    if (!ptr->getParameter("dynamic_model", m_dynamicModel))
+    {
+        log()->error("{} Error while retrieving the dynamic_model variable.", errorPrefix);
+        return false;
+    }
+
     // Set the list of elements if it exists
     if (!ptr->getParameter("elements", m_elements))
     {
         log()->info("{} Variable elements not found.", errorPrefix);
+        m_elements = {};
     }
 
     // Set the torque constants
@@ -69,8 +76,7 @@ bool RDE::MotorCurrentMeasurementDynamics::initialize(
     return true;
 }
 
-bool RDE::MotorCurrentMeasurementDynamics::finalize(
-    const System::VariablesHandler& stateVariableHandler)
+bool RDE::MotorCurrentMeasurementDynamics::finalize(const System::VariablesHandler &stateVariableHandler)
 {
     constexpr auto errorPrefix = "[MotorCurrentMeasurementDynamics::finalize]";
 
@@ -105,9 +111,7 @@ bool RDE::MotorCurrentMeasurementDynamics::finalize(
     return true;
 }
 
-bool RDE::MotorCurrentMeasurementDynamics::setSubModels(
-    const std::vector<RDE::SubModel>& /*subModelList*/,
-    const std::vector<std::shared_ptr<RDE::SubModelKinDynWrapper>>& /*kinDynWrapperList*/)
+bool RDE::MotorCurrentMeasurementDynamics::setSubModels(const std::vector<RDE::SubModel>& subModelList, const std::vector<std::shared_ptr<RDE::SubModelKinDynWrapper>>& kinDynWrapperList)
 {
     return true;
 }
@@ -119,9 +123,7 @@ bool RDE::MotorCurrentMeasurementDynamics::checkStateVariableHandler()
     // Check if the variable handler contains the variables used by this dynamics
     if (!m_stateVariableHandler.getVariable("tau_m").isValid())
     {
-        log()->error("{} The variable handler does not contain the expected measurement name {}.",
-                     errorPrefix,
-                     "tau_m");
+        log()->error("{} The variable handler does not contain the expected measurement name {}.", errorPrefix, "tau_m");
         return false;
     }
 
@@ -141,7 +143,7 @@ void RDE::MotorCurrentMeasurementDynamics::setState(const Eigen::Ref<const Eigen
                                      m_stateVariableHandler.getVariable("tau_m").size);
 }
 
-void RDE::MotorCurrentMeasurementDynamics::setInput(const UKFInput& /*ukfInput*/)
+void RDE::MotorCurrentMeasurementDynamics::setInput(const UKFInput& ukfInput)
 {
     return;
 }

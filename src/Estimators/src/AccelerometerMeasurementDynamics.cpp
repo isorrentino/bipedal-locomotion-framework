@@ -7,9 +7,9 @@
 
 #include <Eigen/Dense>
 
+#include <BipedalLocomotion/TextLogging/Logger.h>
 #include <BipedalLocomotion/Math/Constants.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/AccelerometerMeasurementDynamics.h>
-#include <BipedalLocomotion/TextLogging/Logger.h>
 
 namespace RDE = BipedalLocomotion::Estimators::RobotDynamicsEstimator;
 
@@ -17,8 +17,7 @@ RDE::AccelerometerMeasurementDynamics::AccelerometerMeasurementDynamics() = defa
 
 RDE::AccelerometerMeasurementDynamics::~AccelerometerMeasurementDynamics() = default;
 
-bool RDE::AccelerometerMeasurementDynamics::initialize(
-    std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
+bool RDE::AccelerometerMeasurementDynamics::initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
 {
     constexpr auto errorPrefix = "[AccelerometerMeasurementDynamics::initialize]";
 
@@ -43,20 +42,41 @@ bool RDE::AccelerometerMeasurementDynamics::initialize(
         return false;
     }
 
+    // Set the dynamic model type
+    if (!ptr->getParameter("dynamic_model", m_dynamicModel))
+    {
+        log()->error("{} Error while retrieving the dynamic_model variable.", errorPrefix);
+        return false;
+    }
+
+    // Set the list of elements if it exists
+    if (!ptr->getParameter("elements", m_elements))
+    {
+        log()->info("{} Variable elements not found.", errorPrefix);
+        m_elements = {};
+    }
+
+    if (!ptr->getParameter("sampling_time", m_dT))
+    {
+        log()->error("{} Error while retrieving the sampling_time variable.", errorPrefix);
+        return false;
+    }
+
     // Set the bias related variables if use_bias is true
     if (!ptr->getParameter("use_bias", m_useBias))
     {
         log()->info("{} Variable use_bias not found. Set to false by default.", errorPrefix);
-    } else
+    }
+    else
     {
         m_biasVariableName = m_name + "_bias";
     }
 
     m_gravity.setZero();
-    m_gravity[2] = -BipedalLocomotion::Math::StandardAccelerationOfGravitation;
+    m_gravity[2] = - BipedalLocomotion::Math::StandardAccelerationOfGravitation;
 
     m_JdotNu.resize(6);
-    m_Jvdot.resize(6);
+    m_JvdotBase.resize(6);
     m_Jsdotdot.resize(6);
 
     m_description = "Accelerometer measurement dynamics";
@@ -66,8 +86,7 @@ bool RDE::AccelerometerMeasurementDynamics::initialize(
     return true;
 }
 
-bool RDE::AccelerometerMeasurementDynamics::finalize(
-    const System::VariablesHandler& stateVariableHandler)
+bool RDE::AccelerometerMeasurementDynamics::finalize(const System::VariablesHandler &stateVariableHandler)
 {
     constexpr auto errorPrefix = "[AccelerometerMeasurementDynamics::finalize]";
 
@@ -109,8 +128,7 @@ bool RDE::AccelerometerMeasurementDynamics::finalize(
     m_covariances.resize(m_covSingleVar.size() * m_subModelsWithAccelerometer.size());
     for (int index = 0; index < m_subModelsWithAccelerometer.size(); index++)
     {
-        m_covariances.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-            = m_covSingleVar;
+        m_covariances.segment(index*m_covSingleVar.size(), m_covSingleVar.size()) = m_covSingleVar;
     }
 
     m_size = m_covariances.size();
@@ -129,18 +147,22 @@ bool RDE::AccelerometerMeasurementDynamics::finalize(
     m_updatedVariable.resize(m_size);
     m_updatedVariable.setZero();
 
+    m_accFrameVel.setZero();
+
     m_linVel.setZero();
     m_angVel.setZero();
 
     return true;
 }
 
-bool RDE::AccelerometerMeasurementDynamics::setSubModels(
-    const std::vector<SubModel>& subModelList,
-    const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList)
+bool RDE::AccelerometerMeasurementDynamics::setSubModels(const std::vector<SubModel>& subModelList, const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList)
 {
+    constexpr auto errorPrefix = "[AccelerometerMeasurementDynamics::setSubModels]";
+
     m_subModelList = subModelList;
+
     m_kinDynWrapperList = kinDynWrapperList;
+
     m_isSubModelListSet = true;
 
     return true;
@@ -150,16 +172,60 @@ bool RDE::AccelerometerMeasurementDynamics::checkStateVariableHandler()
 {
     constexpr auto errorPrefix = "[AccelerometerMeasurementDynamics::checkStateVariableHandler]";
 
-    if (!m_useBias)
+    if (!m_isSubModelListSet)
     {
-        return true;
-    }
-    if (!m_stateVariableHandler.getVariable(m_biasVariableName).isValid())
-    {
-        log()->error("{} The variable handler does not contain the expected state with name `{}`.",
-                     errorPrefix,
-                     m_biasVariableName);
+        log()->error("{} Set the sub-model list before setting the variable handler", errorPrefix);
         return false;
+    }
+
+    if (!m_stateVariableHandler.getVariable("tau_m").isValid())
+    {
+        log()->error("{} The variable handler does not contain the expected state with name `tau_m`.", errorPrefix);
+        return false;
+    }
+
+    // Check if the variable handler contains the variables used by this dynamics
+    if (!m_stateVariableHandler.getVariable("tau_F").isValid())
+    {
+        log()->error("{} The variable handler does not contain the expected state with name `tau_F`.", errorPrefix);
+        return false;
+    }
+
+    if (!m_stateVariableHandler.getVariable("ds").isValid())
+    {
+        log()->error("{} The variable handler does not contain the expected state with name `ds`.", errorPrefix);
+        return false;
+    }
+
+    if (m_useBias)
+    {
+        if (!m_stateVariableHandler.getVariable(m_biasVariableName).isValid())
+        {
+            log()->error("{} The variable handler does not contain the expected state with name `{}`.", errorPrefix, m_biasVariableName);
+            return false;
+        }
+    }
+
+    // check if all the sensors are part of the sub-model
+    for (int subModelIdx = 0; subModelIdx < m_subModelList.size(); subModelIdx++)
+    {
+        for (int ftIdx = 0; ftIdx < m_subModelList[subModelIdx].getNrOfFTSensor(); ftIdx++)
+        {
+            if (!m_stateVariableHandler.getVariable(m_subModelList[subModelIdx].getFTSensor(ftIdx).name).isValid())
+            {
+                log()->error("{} The variable handler does not contain the expected state with name `{}`.", errorPrefix, m_subModelList[subModelIdx].getFTSensor(ftIdx).name);
+                return false;
+            }
+        }
+
+        for (int contactIdx = 0; contactIdx < m_subModelList[subModelIdx].getNrOfExternalContact(); contactIdx++)
+        {
+            if (!m_stateVariableHandler.getVariable(m_subModelList[subModelIdx].getExternalContact(contactIdx)).isValid())
+            {
+                log()->error("{} The variable handler does not contain the expected state with name `{}`.", errorPrefix, m_subModelList[subModelIdx].getExternalContact(contactIdx));
+                return false;
+            }
+        }
     }
 
     return true;
@@ -167,58 +233,77 @@ bool RDE::AccelerometerMeasurementDynamics::checkStateVariableHandler()
 
 bool RDE::AccelerometerMeasurementDynamics::update()
 {
-    m_updatedVariable.setZero();
+    constexpr auto errorPrefix = "[AccelerometerMeasurementDynamics::update]";
 
-    // J_dot nu + J nu_dot - (v_acc x w_acc) - acc_Rot_world gravity + bias
+    // compute joint acceleration per each sub-model containing the accelerometer
+    for (int subDynamicsIdx = 0; subDynamicsIdx < m_subModelList.size(); subDynamicsIdx++)
+    {
+        if (m_subModelList[subDynamicsIdx].getModel().getNrOfDOFs() > 0)
+        {
+            for (int jointIdx = 0; jointIdx < m_subModelList[subDynamicsIdx].getJointMapping().size(); jointIdx++)
+            {
+                m_subModelJointAcc[subDynamicsIdx][jointIdx] = m_ukfInput.robotJointAccelerations[m_subModelList[subDynamicsIdx].getJointMapping()[jointIdx]];
+            }
+        }
+    }
+
+    // J_dot nu + base_J v_dot_base + joint_J s_dotdot - acc_Rot_world gravity + bias
     for (int index = 0; index < m_subModelsWithAccelerometer.size(); index++)
     {
-       m_frameAcceleration = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
-            ->getFrameAcceleration(m_subModelList[m_subModelsWithAccelerometer[index]].getAccelerometer(m_name).frame,
-                                   m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
-                                       ->getnudot());
+//        std::cout << "------------------------------------------------------- Submodel index " << m_subModelsWithAccelerometer[index] << ", acc name " << m_name << std::endl;
 
-       log()->info("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA acceleration frame {}", m_name);
-       log()->info(m_frameAcceleration);
+        m_JdotNu = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getAccelerometerBiasAcceleration(m_name);
 
-//        m_JdotNu = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
-//                       ->getAccelerometerBiasAcceleration(m_name);
+//        std::cout << "m_JdotNu" << std::endl;
+//        std::cout << m_JdotNu << std::endl;
 
-//        m_Jvdot = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
-//                          ->getAccelerometerJacobian(m_name)
-//                      * m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
-//                            ->getnudot();
+        m_JvdotBase = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getAccelerometerJacobian(m_name).block(0, 0, 6, 6) *
+                m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getBaseAcceleration().coeffs();
 
-        m_accRg = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
-                      ->getAccelerometerRotation(m_name)
-                      .act(m_gravity);
+//        std::cout << "m_JvdotBase" << std::endl;
+//        std::cout << m_JvdotBase << std::endl;
 
-//        log()->info("gravity rotated\n{}", m_accRg);
+        m_accRg = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getAccelerometerRotation(m_name).rotation() * m_gravity;
 
-        m_linVel = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
-                       ->getAccelerometerVelocity(m_name)
-                       .lin();
-        m_angVel = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]
-                       ->getAccelerometerVelocity(m_name)
-                       .ang();
+//        std::cout << "m_accRg" << std::endl;
+//        std::cout << m_accRg << std::endl;
+
+//        std::cout << "accelerometer velocity\n" << m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getAccelerometerVelocity(m_name).coeffs() << std::endl;
+
+        m_linVel = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getAccelerometerVelocity(m_name).coeffs().segment(0, 3);
+        m_angVel = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getAccelerometerVelocity(m_name).coeffs().segment(3, 3);
+
+//        std::cout << "Lin vel" << std::endl;
+//        std::cout << m_linVel << std::endl;
+//        std::cout << "Ang vel" << std::endl;
+//        std::cout << m_angVel << std::endl;
 
         m_vCrossW = m_linVel.cross(m_angVel);
 
-        m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-            = m_frameAcceleration.lin() - m_vCrossW + m_accRg;
+//        std::cout << "m_vCrossW" << std::endl;
+//        std::cout << m_vCrossW << std::endl;
+
+        m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) = m_JdotNu.segment(0, 3) + m_JvdotBase.segment(0, 3) - m_vCrossW + m_accRg;
 
         if (m_useBias)
         {
-            m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-                = m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-                  + m_bias;
+            m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) = m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) + m_bias;
+        }
+
+        if (m_subModelList[m_subModelsWithAccelerometer[index]].getJointMapping().size() > 0)
+        {
+            m_Jsdotdot = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getAccelerometerJacobian(m_name).
+                    block(0, 6, 6, m_subModelJointAcc[m_subModelsWithAccelerometer[index]].size()) *
+                    m_subModelJointAcc[m_subModelsWithAccelerometer[index]];
+
+            m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) += m_Jsdotdot.segment(0, 3);
         }
     }
 
     return true;
 }
 
-void RDE::AccelerometerMeasurementDynamics::setState(
-    const Eigen::Ref<const Eigen::VectorXd> ukfState)
+void RDE::AccelerometerMeasurementDynamics::setState(const Eigen::Ref<const Eigen::VectorXd> ukfState)
 {
     if (m_useBias)
     {

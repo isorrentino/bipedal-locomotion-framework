@@ -21,12 +21,12 @@
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
 
 /**
- * BLF_REGISTER_UKF_DYNAMICS is a macro that can be used to register a Dynamics. The key of
+ * BLF_REGISTER_DYNAMICS is a macro that can be used to register a Dynamics. The key of
  * the dynamics will be the stringified version of the Dynamics C++ Type
  * @param _model the model of the dynamics
  * @param _baseModel the base model from which the _model inherits.
  */
-#define BLF_REGISTER_UKF_DYNAMICS(_model, _baseModel)               \
+#define BLF_REGISTER_DYNAMICS(_model, _baseModel)               \
     static std::shared_ptr<_baseModel> _model##FactoryBuilder() \
 {                                                               \
     return std::make_shared<_model>();                          \
@@ -91,12 +91,7 @@ public:
 }; // class UkfProcessInputProvider
 
 /**
- * The class Dynamics represents a base class describing a generic model composing the ukf process
- * model or the ukf measurement model. The Dynamics object is created from a parameter handler which
- * specifies the name of the variable described by the dynamics object, the covariances associated to the variable,
- * the initial covariance, the Dynamics model which specifies which implementation of this class will be used.
- * The model of the Dynamics object depends on the current state and an input object which need to be set
- * before calling the update method.
+ * Dynamics describes a generic dynamic model for a UKF state or measurement.
  */
 class Dynamics
 {
@@ -104,8 +99,14 @@ protected:
     int m_size; /**< Size of the variable associate to the Dynamics object. */
     Eigen::VectorXd m_updatedVariable; /**< Updated variable computed using the dynamic model. */
     std::string m_description{"Generic Dynamics Element"}; /**< String describing the type of the dynamics */
+    std::string m_name; /**< Name of dynamics. */
     Eigen::VectorXd m_covariances; /**< Vector of covariances. */
+    std::vector<std::string> m_elements = {}; /**< Elements composing the variable vector. */
+    std::string m_dynamicModel;
     bool m_isInitialized{false}; /**< True if the dynamics has been initialized. */
+    System::VariablesHandler m_stateVariableHandler; /**< Variable handler describing the variables and the sizes in the ukf state vector. */
+    bool m_isStateVariableHandlerSet{false}; /**< True if setVariableHandler is called. */
+    UKFInput m_ukfInput;
     Eigen::VectorXd m_initialCovariances; /**< Vector of initial covariances. */
 
     /**
@@ -113,6 +114,7 @@ protected:
       * @return True in case all the dependencies are contained in the variable handler, false otherwise.
       */
     virtual bool checkStateVariableHandler();
+
 
 public:
     /**
@@ -133,8 +135,7 @@ public:
 
     /**
      * Set the SubModelKinDynWrapper object.
-     * @param subModelList list of SubModel objects
-     * @param kinDynWrapperList list of pointers to SubModelKinDynWrapper objects.
+     * @param kinDynWrapper pointer to a SubModelKinDynWrapper object.
      * @return True in case of success, false otherwise.
      */
     virtual bool setSubModels(const std::vector<SubModel>& subModelList, const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList);

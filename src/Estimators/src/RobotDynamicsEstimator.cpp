@@ -135,7 +135,6 @@ bool RobotDynamicsEstimator::finalize(const System::VariablesHandler& stateVaria
     m_pimpl->ukfInput.robotBaseVelocity.setZero();
     m_pimpl->ukfInput.robotBaseAcceleration.setZero();
     m_pimpl->ukfInput.robotJointPositions.resize(kinDynFullModel->model().getNrOfDOFs());
-    m_pimpl->ukfInput.robotJointAccelerations.resize(kinDynFullModel->model().getNrOfDOFs());
     m_pimpl->inputProvider->setInput(m_pimpl->ukfInput);
 
     m_pimpl->isFinalized = true;
@@ -351,20 +350,6 @@ bool RobotDynamicsEstimator::setInitialState(const RobotDynamicsEstimatorOutput&
         }
     }
 
-    for (auto const& [key, val] : initialState.contactWrenches)
-    {
-//        log()->info("Contact wrench frame: {}", key);
-        if (m_pimpl->stateHandler.getVariable(key, variable))
-        {
-            if (val.size() != variable.size)
-            {
-                log()->error("{} Wrong size of variable `{}`. Found {}, expected {}.", logPrefix, val, val.size(), variable.size);
-                return false;
-            }
-            m_pimpl->correctedState.mean().segment(variable.offset, variable.size) = val;
-        }
-    }
-
     m_pimpl->estimatorOutput = initialState;
 
     m_pimpl->isInitialStateSet = true;
@@ -405,11 +390,6 @@ bool RobotDynamicsEstimator::advance()
     // Step 1 --> Predict
     m_pimpl->ukfPrediction->predict(m_pimpl->correctedState, m_pimpl->predictedState);
 
-    log()->info("################# Predicted state ###################");
-    log()->info("ds\n{}", m_pimpl->predictedState.mean().segment(m_pimpl->stateHandler.getVariable("ds").offset, m_pimpl->stateHandler.getVariable("ds").size));
-    log()->info("tau m\n{}", m_pimpl->predictedState.mean().segment(m_pimpl->stateHandler.getVariable("tau_m").offset, m_pimpl->stateHandler.getVariable("tau_m").size));
-    log()->info("tau F\n{}", m_pimpl->predictedState.mean().segment(m_pimpl->stateHandler.getVariable("tau_F").offset, m_pimpl->stateHandler.getVariable("tau_F").size));
-
     // Step 2 --> Set measurement
     if (!m_pimpl->ukfCorrection->freeze_measurements(m_pimpl->ukfMeasurementFromSensors))
     {
@@ -434,7 +414,6 @@ bool RobotDynamicsEstimator::setInput(const RobotDynamicsEstimatorInput & input)
     m_pimpl->ukfInput.robotBaseVelocity = input.baseVelocity;
     m_pimpl->ukfInput.robotBaseAcceleration = input.baseAcceleration;
     m_pimpl->ukfInput.robotJointPositions = input.jointPositions;
-    m_pimpl->ukfInput.robotJointAccelerations.setZero();
 
     if (!m_pimpl->inputProvider->setInput(m_pimpl->ukfInput))
     {
@@ -446,7 +425,6 @@ bool RobotDynamicsEstimator::setInput(const RobotDynamicsEstimatorInput & input)
     // for the freeze method of the UkfCorrection
     m_pimpl->ukfMeasurementFromSensors["ds"] = input.jointVelocities;
     m_pimpl->ukfMeasurementFromSensors["i_m"] = input.motorCurrents;
-    m_pimpl->ukfMeasurementFromSensors["dv_base"] = input.baseAcceleration.coeffs();
     for (auto & [key, value] : input.ftWrenches)
     {
         m_pimpl->ukfMeasurementFromSensors[key] = value;
@@ -522,19 +500,6 @@ const RobotDynamicsEstimatorOutput& RobotDynamicsEstimator::getOutput() const
             if (m_pimpl->stateHandler.getVariable(key).size > 0)
             {
                 m_pimpl->estimatorOutput.gyroscopeBiases[key] = m_pimpl->correctedState.mean().segment(m_pimpl->stateHandler.getVariable(key).offset,
-                                                                                                       m_pimpl->stateHandler.getVariable(key).size);
-            }
-            else
-            {
-                log()->debug("{} Variable {} not found in the state vector.", logPrefix, key);
-            }
-        }
-
-        for (auto & [key, value] : m_pimpl->estimatorOutput.contactWrenches)
-        {
-            if (m_pimpl->stateHandler.getVariable(key).size > 0)
-            {
-                m_pimpl->estimatorOutput.contactWrenches[key] = m_pimpl->correctedState.mean().segment(m_pimpl->stateHandler.getVariable(key).offset,
                                                                                                        m_pimpl->stateHandler.getVariable(key).size);
             }
             else

@@ -228,8 +228,8 @@ void CreateSubModelKinDynWrapper(pybind11::module& module)
         .def("getGyroscopeJacobian", &SubModelKinDynWrapper::getGyroscopeJacobian)
         .def("getExtContactJacobian", &SubModelKinDynWrapper::getExtContactJacobian)
         .def("getAccelerometerBiasAcceleration", &SubModelKinDynWrapper::getAccelerometerBiasAcceleration)
-        .def("getAccelerometerRotation", &SubModelKinDynWrapper::getAccelerometerRotation)
-        .def("getnudot", &SubModelKinDynWrapper::getnudot);
+        .def("getAccelerometerRotation", &SubModelKinDynWrapper::getAccelerometerRotation);
+//        .def("getnudot", &SubModelKinDynWrapper::getnudot);
 }
 
 } // namespace RobotDynamicsEstimator

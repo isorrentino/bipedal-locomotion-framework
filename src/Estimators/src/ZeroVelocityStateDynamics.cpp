@@ -38,7 +38,13 @@ bool RDE::ZeroVelocityStateDynamics::initialize(std::weak_ptr<const ParametersHa
     // Set the state initial covariance
     if (!ptr->getParameter("initial_covariance", m_initialCovariances))
     {
-        log()->error("{} Variable initial_covariance not found.", errorPrefix);
+        log()->debug("{} Variable initial_covariance not found.", errorPrefix);
+    }
+
+    // Set the dynamic model type
+    if (!ptr->getParameter("dynamic_model", m_dynamicModel))
+    {
+        log()->error("{} Error while retrieving the dynamic_model variable.", errorPrefix);
         return false;
     }
 
@@ -46,6 +52,17 @@ bool RDE::ZeroVelocityStateDynamics::initialize(std::weak_ptr<const ParametersHa
     if (!ptr->getParameter("elements", m_elements))
     {
         log()->debug("{} Variable elements not found.", errorPrefix);
+        m_elements = {};
+    }
+
+    // Set the bias related variables if use_bias is true
+    if (!ptr->getParameter("use_bias", m_useBias))
+    {
+        log()->debug("{} Variable use_bias not found. Set to false by default.", errorPrefix);
+    }
+    else
+    {
+        m_biasVariableName = m_name + "_bias";
     }
 
     m_description = "Zero velocity dynamics";
@@ -87,10 +104,17 @@ bool RDE::ZeroVelocityStateDynamics::finalize(const System::VariablesHandler &st
     m_updatedVariable.resize(m_size);
     m_updatedVariable.setZero();
 
+    // Set the bias related variables if use_bias is true
+    if (m_useBias)
+    {
+        m_bias.resize(m_size);
+        m_bias.setZero();
+    }
+
     return true;
 }
 
-bool RDE::ZeroVelocityStateDynamics::setSubModels(const std::vector<RDE::SubModel>& /*subModelList*/, const std::vector<std::shared_ptr<RDE::SubModelKinDynWrapper>>& /*kinDynWrapperList*/)
+bool RDE::ZeroVelocityStateDynamics::setSubModels(const std::vector<RDE::SubModel>& subModelList, const std::vector<std::shared_ptr<RDE::SubModelKinDynWrapper>>& kinDynWrapperList)
 {
     return true;
 }
@@ -106,12 +130,28 @@ bool RDE::ZeroVelocityStateDynamics::checkStateVariableHandler()
         return false;
     }
 
+    if (m_useBias)
+    {
+        if (!m_stateVariableHandler.getVariable(m_biasVariableName).isValid())
+        {
+            log()->error("{} The variable handler does not contain the expected state name {}.", errorPrefix, m_biasVariableName);
+            return false;
+        }
+    }
+
     return true;
 }
 
 bool RDE::ZeroVelocityStateDynamics::update()
 {
-    m_updatedVariable = m_currentState;
+    if (m_useBias)
+    {
+        m_updatedVariable = m_currentState + m_bias;
+    }
+    else
+    {
+        m_updatedVariable = m_currentState;
+    }
 
     return true;
 }
@@ -120,9 +160,15 @@ void RDE::ZeroVelocityStateDynamics::setState(const Eigen::Ref<const Eigen::Vect
 {
     m_currentState = ukfState.segment(m_stateVariableHandler.getVariable(m_name).offset,
                                       m_stateVariableHandler.getVariable(m_name).size);
+
+    if (m_useBias)
+    {
+        m_bias = ukfState.segment(m_stateVariableHandler.getVariable(m_biasVariableName).offset,
+                                  m_stateVariableHandler.getVariable(m_biasVariableName).size);
+    }
 }
 
-void RDE::ZeroVelocityStateDynamics::setInput(const UKFInput& /*ukfInput*/)
+void RDE::ZeroVelocityStateDynamics::setInput(const UKFInput& ukfInput)
 {
     return;
 }

@@ -1,0 +1,2 @@
+include/BipedalLocomotion/YarpUtilities/VectorsCollection.h
+src/VectorsCollection.cpp

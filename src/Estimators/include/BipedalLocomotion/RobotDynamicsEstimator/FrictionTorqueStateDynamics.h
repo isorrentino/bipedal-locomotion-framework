@@ -8,8 +8,9 @@
 #ifndef BIPEDAL_LOCOMOTION_ESTIMATORS_FRICTION_TORQUE_STATE_DYNAMICS_H
 #define BIPEDAL_LOCOMOTION_ESTIMATORS_FRICTION_TORQUE_STATE_DYNAMICS_H
 
-#include <BipedalLocomotion/RobotDynamicsEstimator/Dynamics.h>
 #include <memory>
+#include <BipedalLocomotion/RobotDynamicsEstimator/Dynamics.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/SubModelDynamics.h>
 
 namespace BipedalLocomotion
 {
@@ -34,20 +35,18 @@ namespace RobotDynamicsEstimator
  * \tau_{F,k+1} = \tau_{F,k} + \Delta T \ddot{s} ( k_{2} + k_{0} k_{1} / cosh^{2}(k_{1} \dot{s,k}) )
  * \f]
  */
+
 class FrictionTorqueStateDynamics : public Dynamics
 {
     Eigen::VectorXd m_jointVelocityFullModel; /**< Vector of joint velocities. */
-    Eigen::VectorXd m_Fc, m_Fs, m_Fv; /**< Friction parameters (see class description). */
+    Eigen::VectorXd m_k0, m_k1, m_k2; /**< Friction parameters (see class description). */
     double m_dT; /**< Sampling time. */
     Eigen::VectorXd m_frictionTorqueFullModel; /**< Friction torque vector of full-model. */
-    UKFInput m_ukfInput;
-    std::string m_name; /**< Name of dynamics. */
-    std::vector<std::string> m_elements = {}; /**< Elements composing the variable vector. */
-    System::VariablesHandler m_stateVariableHandler; /**< Variable handler describing the variables
-                                                        and the sizes in the ukf state vector. */
+
+protected:
     Eigen::VectorXd m_coshArgument;
     Eigen::VectorXd m_coshsquared;
-    Eigen::VectorXd m_FcFs;
+    Eigen::VectorXd m_k0k1;
     Eigen::VectorXd m_dotTauF;
 
 public:
@@ -78,33 +77,27 @@ public:
      * |                `dT`                | `double` |                                Sampling time.                                                           |    Yes    |
      * @return True in case of success, false otherwise.
      */
-    bool
-    initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler) override;
+    bool initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler) override;
 
     /**
      * Finalize the Dynamics.
      * @param stateVariableHandler object describing the variables in the state vector.
-     * @note You should call this method after you add ALL the state dynamics to the state variable
-     * handler.
+     * @note You should call this method after you add ALL the state dynamics to the state variable handler.
      * @return true in case of success, false otherwise.
      */
     bool finalize(const System::VariablesHandler& stateVariableHandler) override;
 
     /**
      * Set the SubModelKinDynWrapper object.
-     * @param subModelList list of SubModel objects
-     * @param kinDynWrapperList list of pointers to SubModelKinDynWrapper objects.
+     * @param kinDynWrapper pointer to a SubModelKinDynWrapper object.
      * @return True in case of success, false otherwise.
      */
-    bool setSubModels(
-        const std::vector<SubModel>& subModelList,
-        const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList) override;
+    bool setSubModels(const std::vector<SubModel>& subModelList, const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList) override;
 
     /**
-     * Controls whether the variable handler contains the variables on which the dynamics depend.
-     * @return True in case all the dependencies are contained in the variable handler, false
-     * otherwise.
-     */
+      * Controls whether the variable handler contains the variables on which the dynamics depend.
+      * @return True in case all the dependencies are contained in the variable handler, false otherwise.
+      */
     bool checkStateVariableHandler() override;
 
     /**
@@ -114,21 +107,19 @@ public:
     bool update() override;
 
     /**
-     * Set the state of the ukf needed to update the dynamics of the state variable associated to
-     * ths object.
+     * Set the state of the ukf needed to update the dynamics.
      * @param ukfState reference to the ukf state.
      */
-    void setState(const Eigen::Ref<const Eigen::VectorXd> ukfState) override;
+     void setState(const Eigen::Ref<const Eigen::VectorXd> ukfState) override;
 
-    /**
-     * Set a `UKFInput` object.
-     * @param ukfInput reference to the UKFInput struct.
-     */
-    void setInput(const UKFInput& ukfInput) override;
+     /**
+      * Set a `UKFInput` object.
+      * @param ukfInput reference to the UKFInput struct.
+      */
+      void setInput(const UKFInput & ukfInput) override;
 };
 
-BLF_REGISTER_UKF_DYNAMICS(FrictionTorqueStateDynamics,
-                          ::BipedalLocomotion::Estimators::RobotDynamicsEstimator::Dynamics);
+BLF_REGISTER_DYNAMICS(FrictionTorqueStateDynamics, ::BipedalLocomotion::Estimators::RobotDynamicsEstimator::Dynamics);
 
 } // namespace RobotDynamicsEstimator
 } // namespace Estimators
