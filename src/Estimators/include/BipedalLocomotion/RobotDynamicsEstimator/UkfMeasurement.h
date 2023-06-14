@@ -19,7 +19,7 @@
 #include <BipedalLocomotion/System/VariablesHandler.h>
 #include <BipedalLocomotion/System/Source.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/Dynamics.h>
 
 namespace BipedalLocomotion
@@ -62,7 +62,7 @@ public:
      * @param kinDyn a pointer to an iDynTree::KinDynComputations object that will be shared among
      * all the dynamics.
      * @param subModelList a vector of SubModel objects.
-     * @param kinDynWrapperList a vector of pointers to SubModelKinDynWrapper objects
+     * @param kinDynWrapperList a vector of pointers to KinDynWrapper objects
      * @param handler pointer to the IParametersHandler interface.
      * @param stateVariableHandler a variable handler describing the variables in the state vector of the ukf.
      * @note the following parameters are required by the class
@@ -126,7 +126,7 @@ public:
                                                  System::VariablesHandler& stateVariableHandler,
                                                  std::shared_ptr<iDynTree::KinDynComputations> kinDynFullModel,
                                                  const std::vector<SubModel>& subModelList,
-                                                 const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList);
+                                                 const std::vector<std::shared_ptr<KinDynWrapper>>& kinDynWrapperList);
 
     /**
      * Initialize the ukf measurement model.

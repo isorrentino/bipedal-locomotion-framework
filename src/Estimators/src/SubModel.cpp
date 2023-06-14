@@ -28,8 +28,7 @@ bool RDE::SubModel::isValid() const
 bool RDE::SubModelCreator::splitModel(const std::vector<std::string>& ftFrameList,
                                       std::vector<iDynTree::Model>& idynSubModels)
 {
-    constexpr auto logPrefix = "[BipedalLocomotion::RobotDynamicsEstimator::SubModelCreator::"
-                               "splitModel]";
+    constexpr auto logPrefix = "[SubModelCreator::splitModel]";
 
     iDynTree::SubModelDecomposition subModelDecomp;
     iDynTree::Traversal fullModelTraversal;
@@ -70,10 +69,10 @@ bool RDE::SubModelCreator::splitModel(const std::vector<std::string>& ftFrameLis
     return true;
 }
 
-std::vector<RDE::FT>
+std::unordered_map<std::string, RDE::FT>
 RDE::SubModelCreator::attachFTsToSubModel(iDynTree::Model& idynSubModel)
 {
-    std::vector<RDE::FT> ftList;
+    std::unordered_map<std::string, RDE::FT> ftList;
 
     for (int ftIdx = 0; ftIdx < this->m_sensorList.getNrOfSensors(iDynTree::SIX_AXIS_FORCE_TORQUE);
          ftIdx++)
@@ -107,7 +106,9 @@ RDE::SubModelCreator::attachFTsToSubModel(iDynTree::Model& idynSubModel)
                 ft.forceDirection = RDE::FT::Direction::Negative;
             }
 
-            ftList.push_back(ft);
+            ft.index = idynSubModel.getFrameIndex(ft.frame);
+
+            ftList[ftName] = std::move(ft);
         } else
         {
             const std::string firstLink = sensorFTFromModel->getFirstLinkName();
@@ -146,6 +147,8 @@ RDE::SubModelCreator::attachFTsToSubModel(iDynTree::Model& idynSubModel)
                 ft.name = ftName;
                 ft.frame = ftName;
 
+                ft.index = idynSubModel.getFrameIndex(ft.frame);
+
                 if (idynSubModel.isLinkNameUsed(linkAppliedWrenchName))
                 {
                     ft.forceDirection = RDE::FT::Direction::Positive;
@@ -154,7 +157,7 @@ RDE::SubModelCreator::attachFTsToSubModel(iDynTree::Model& idynSubModel)
                     ft.forceDirection = RDE::FT::Direction::Negative;
                 }
 
-                ftList.push_back(std::move(ft));
+                ftList[ftName] = std::move(ft);
             }
         }
     }
@@ -162,10 +165,10 @@ RDE::SubModelCreator::attachFTsToSubModel(iDynTree::Model& idynSubModel)
     return ftList;
 }
 
-std::vector<RDE::Sensor> RDE::SubModelCreator::attachAccelerometersToSubModel(
+std::unordered_map<std::string, RDE::Sensor> RDE::SubModelCreator::attachAccelerometersToSubModel(
         const std::vector<RDE::Sensor>& accListFromConfig, const iDynTree::Model& subModel)
 {
-    std::vector<RDE::Sensor> accList;
+    std::unordered_map<std::string, RDE::Sensor> accList;
 
     for (int idx = 0; idx < accListFromConfig.size(); idx++)
     {
@@ -174,17 +177,18 @@ std::vector<RDE::Sensor> RDE::SubModelCreator::attachAccelerometersToSubModel(
             RDE::Sensor acc;
             acc.name = accListFromConfig[idx].name;
             acc.frame = accListFromConfig[idx].frame;
-            accList.push_back(std::move(acc));
+            acc.index = subModel.getFrameIndex(acc.frame);
+            accList[acc.name] = std::move(acc);
         }
     }
 
     return accList;
 }
 
-std::vector<RDE::Sensor> RDE::SubModelCreator::attachGyroscopesToSubModel(
+std::unordered_map<std::string, RDE::Sensor> RDE::SubModelCreator::attachGyroscopesToSubModel(
         const std::vector<RDE::Sensor>& gyroListFromConfig, const iDynTree::Model& subModel)
 {
-    std::vector<RDE::Sensor> gyroList;
+    std::unordered_map<std::string, RDE::Sensor> gyroList;
 
     for (int idx = 0; idx < gyroListFromConfig.size(); idx++)
     {
@@ -193,23 +197,24 @@ std::vector<RDE::Sensor> RDE::SubModelCreator::attachGyroscopesToSubModel(
             RDE::Sensor gyro;
             gyro.name = gyroListFromConfig[idx].name;
             gyro.frame = gyroListFromConfig[idx].frame;
-            gyroList.push_back(std::move(gyro));
+            gyro.index = subModel.getFrameIndex(gyro.frame);
+            gyroList[gyro.name] = std::move(gyro);
         }
     }
 
     return gyroList;
 }
 
-std::vector<std::string> RDE::SubModelCreator::attachExternalContactsToSubModel(
+std::unordered_map<std::string, int> RDE::SubModelCreator::attachExternalContactsToSubModel(
         const std::vector<std::string>& contactsFromConfig, const iDynTree::Model& subModel)
 {
-    std::vector<std::string> contactList;
+    std::unordered_map<std::string, int> contactList;
 
     for (int idx = 0; idx < contactsFromConfig.size(); idx++)
     {
         if (subModel.isFrameNameUsed(contactsFromConfig[idx]))
         {
-            contactList.push_back(contactsFromConfig[idx]);
+            contactList[contactsFromConfig[idx]] = subModel.getFrameIndex(contactsFromConfig[idx]);
         }
     }
 
@@ -262,8 +267,7 @@ bool RDE::SubModelCreator::createSubModels(const std::vector<RDE::FT>& ftSensorL
                                            const std::vector<RDE::Sensor>& gyroList,
                                            const std::vector<std::string>& externalContacts)
 {
-    constexpr auto logPrefix = "[BipedalLocomotion::RobotDynamicsEstimator::SubModelCreator::"
-                               "createSubModels]";
+    constexpr auto logPrefix = "[SubModelCreator::createSubModels]";
 
     // Split model in submodels
     std::vector<std::string> ftList;
@@ -305,8 +309,7 @@ bool RDE::SubModelCreator::createSubModels(const std::vector<RDE::FT>& ftSensorL
 bool RDE::SubModelCreator::createSubModels(
     std::weak_ptr<const blf::ParametersHandler::IParametersHandler> parameterHandler)
 {
-    constexpr auto logPrefix = "[BipedalLocomotion::Estimators::RobotDynamicsEstimator::"
-                               "getSubModels]";
+    constexpr auto logPrefix = "[SubModelCreator::getSubModels]";
 
     auto ptr = parameterHandler.lock();
     if (ptr == nullptr)
@@ -424,7 +427,7 @@ bool RDE::SubModelCreator::setKinDyn(std::shared_ptr<iDynTree::KinDynComputation
 {
     if ((kinDyn == nullptr) || (!kinDyn->isValid()))
     {
-        log()->error("[FeasibleContactWrenchTask::setKinDyn] Invalid kinDyn object.");
+        log()->error("[SubModelCreator::setKinDyn] Invalid kinDyn object.");
         return false;
     }
 
@@ -458,22 +461,22 @@ const std::vector<int>& RDE::SubModel::getJointMapping() const
     return this->m_jointListMapping;
 }
 
-const std::vector<RDE::FT>& RDE::SubModel::getFTList() const
+const std::unordered_map<std::string, RDE::FT>& RDE::SubModel::getFTList() const
 {
     return this->m_ftList;
 }
 
-const std::vector<RDE::Sensor>& RDE::SubModel::getAccelerometerList() const
+const std::unordered_map<std::string, RDE::Sensor>& RDE::SubModel::getAccelerometerList() const
 {
     return this->m_accelerometerList;
 }
 
-const std::vector<RDE::Sensor>& RDE::SubModel::getGyroscopeList() const
+const std::unordered_map<std::string, RDE::Sensor>& RDE::SubModel::getGyroscopeList() const
 {
     return this->m_gyroscopeList;
 }
 
-const std::vector<std::string>& RDE::SubModel::getExternalContactList() const
+const std::unordered_map<std::string, int>& RDE::SubModel::getExternalContactList() const
 {
     return this->m_externalContactList;
 }
@@ -498,106 +501,67 @@ std::size_t RDE::SubModel::getNrOfExternalContact() const
     return m_externalContactList.size();
 }
 
-const RDE::FT& RDE::SubModel::getFTSensor(const int index) const
+const RDE::FT& RDE::SubModel::getFTSensor(const std::string& name)
 {
-    return m_ftList.at(index);
-}
+    auto ftIterator = m_ftList.find(name);
 
-const RDE::FT& RDE::SubModel::getFTSensor(const std::string name) const
-{
-    for (int ftIndex = 0; ftIndex < m_ftList.size(); ftIndex++)
+    if (ftIterator != m_ftList.end())
     {
-        if (m_ftList[ftIndex].name == name)
-        {
-            return m_ftList[ftIndex];
-        }
+        return ftIterator->second;
     }
 
-    static const RDE::FT ft;
+    log()->error("[SubModel::getFTSensor] Sensor `{}` not found.", name);
+    static const RDE::FT ft{};
 
     return ft;
 }
 
-bool RDE::SubModel::hasFTSensor(const std::string name) const
+bool RDE::SubModel::hasFTSensor(const std::string& name) const
 {
-    for (int ftIndex = 0; ftIndex < m_ftList.size(); ftIndex++)
-    {
-        if (m_ftList[ftIndex].name == name)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return m_ftList.find(name) != m_ftList.end();
 }
 
-const RDE::Sensor& RDE::SubModel::getAccelerometer(const int index) const
+const RDE::Sensor& RDE::SubModel::getAccelerometer(const std::string& name)
 {
-    return m_accelerometerList.at(index);
-}
+    auto accIterator = m_accelerometerList.find(name);
 
-const RDE::Sensor& RDE::SubModel::getAccelerometer(const std::string name) const
-{
-    for (int accIndex = 0; accIndex < m_accelerometerList.size(); accIndex++)
+    if (accIterator != m_accelerometerList.end())
     {
-        if (m_accelerometerList[accIndex].name == name)
-        {
-            return m_accelerometerList[accIndex];
-        }
+        return accIterator->second;
     }
 
-    static const RDE::Sensor acc;
+    log()->error("[SubModel::getAccelerometer] Sensor `{}` not found.", name);
+    static const RDE::Sensor acc{};
 
     return acc;
 }
 
-bool RDE::SubModel::hasAccelerometer(const std::string name) const
+bool RDE::SubModel::hasAccelerometer(const std::string& name) const
 {
-    for (int accIndex = 0; accIndex < m_accelerometerList.size(); accIndex++)
-    {
-        if (m_accelerometerList[accIndex].name == name)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return m_accelerometerList.find(name) != m_accelerometerList.end();
 }
 
-const RDE::Sensor& RDE::SubModel::getGyroscope(const int index) const
+const RDE::Sensor& RDE::SubModel::getGyroscope(const std::string& name)
 {
-    return m_gyroscopeList.at(index);
-}
+    auto gyroIterator = m_gyroscopeList.find(name);
 
-const RDE::Sensor& RDE::SubModel::getGyroscope(const std::string name) const
-{
-    for (int gyroIndex = 0; gyroIndex < m_gyroscopeList.size(); gyroIndex++)
+    if (gyroIterator != m_gyroscopeList.end())
     {
-        if (m_gyroscopeList[gyroIndex].name == name)
-        {
-            return m_gyroscopeList[gyroIndex];
-        }
+        return gyroIterator->second;
     }
 
-    static const RDE::Sensor gyro;
+    log()->error("[SubModel::getGyroscope] Sensor `{}` not found.", name);
+    static const RDE::Sensor gyro{};
 
     return gyro;
 }
 
-bool RDE::SubModel::hasGyroscope(const std::string name) const
+bool RDE::SubModel::hasGyroscope(const std::string& name) const
 {
-    for (int gyroIndex = 0; gyroIndex < m_gyroscopeList.size(); gyroIndex++)
-    {
-        if (m_gyroscopeList[gyroIndex].name == name)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return m_gyroscopeList.find(name) != m_gyroscopeList.end();
 }
 
-const std::string& RDE::SubModel::getExternalContact(const int index) const
+int RDE::SubModel::getExternalContactIndex(const std::string& name)
 {
-    return m_externalContactList.at(index);
+    return m_externalContactList[name];
 }

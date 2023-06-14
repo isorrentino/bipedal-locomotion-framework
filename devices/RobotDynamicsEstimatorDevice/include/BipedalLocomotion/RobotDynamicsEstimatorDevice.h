@@ -12,7 +12,7 @@
 #include <BipedalLocomotion/ParametersHandler/YarpImplementation.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/RobotDynamicsEstimator.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>
 #include <BipedalLocomotion/RobotInterface/YarpSensorBridge.h>
 #include <BipedalLocomotion/YarpUtilities/VectorsCollection.h>
 
@@ -105,7 +105,7 @@ private:
         std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler,
         iDynTree::ModelLoader& modelLoader,
         std::vector<Estimators::RobotDynamicsEstimator::SubModel>& subModelList,
-        std::vector<std::shared_ptr<Estimators::RobotDynamicsEstimator::SubModelKinDynWrapper>>&
+        std::vector<std::shared_ptr<Estimators::RobotDynamicsEstimator::KinDynWrapper>>&
             kinDynWrapperList);
     bool setupRobotDynamicsEstimator(
         std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler);

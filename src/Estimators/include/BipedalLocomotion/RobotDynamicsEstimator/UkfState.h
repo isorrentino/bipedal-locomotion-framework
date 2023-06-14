@@ -18,7 +18,7 @@
 // BLF
 #include <BipedalLocomotion/System/VariablesHandler.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/Dynamics.h>
 
 namespace BipedalLocomotion
@@ -62,7 +62,7 @@ public:
      * Build the ukf state model
      * @param kinDyn a pointer to an iDynTree::KinDynComputations object that will be shared among
      * all the dynamics.
-     * @param subModelList a vector of pairs (SubModel, SubModelKinDynWrapper) that will be shared among all the dynamics.
+     * @param subModelList a vector of pairs (SubModel, KinDynWrapper) that will be shared among all the dynamics.
      * @param handler pointer to the IParametersHandler interface.
      * @note the following parameters are required by the class
      * |         Parameter Name         |       Type      |                                           Description                                          | Mandatory |
@@ -125,7 +125,7 @@ public:
     static std::unique_ptr<UkfState> build(std::weak_ptr<const ParametersHandler::IParametersHandler> handler,
                                            std::shared_ptr<iDynTree::KinDynComputations> kinDynFullModel,
                                            const std::vector<SubModel>& subModelList,
-                                           const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList);
+                                           const std::vector<std::shared_ptr<KinDynWrapper>>& kinDynWrapperList);
 
     /**
      * Initialize the ukf state model.

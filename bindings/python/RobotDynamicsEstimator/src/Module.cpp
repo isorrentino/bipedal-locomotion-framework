@@ -23,7 +23,7 @@ void CreateModule(pybind11::module& module)
     CreateRobotDynamicsEstimator(module);
     CreateSubModel(module);
     CreateSubModelCreator(module);
-    CreateSubModelKinDynWrapper(module);
+    CreateKinDynWrapper(module);
 
 }
 } // namespace RobotDynamicsEstimator

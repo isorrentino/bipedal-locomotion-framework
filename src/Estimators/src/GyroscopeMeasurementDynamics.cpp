@@ -7,9 +7,9 @@
 
 #include <Eigen/Dense>
 
-#include <BipedalLocomotion/TextLogging/Logger.h>
 #include <BipedalLocomotion/Math/Constants.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/GyroscopeMeasurementDynamics.h>
+#include <BipedalLocomotion/TextLogging/Logger.h>
 
 namespace RDE = BipedalLocomotion::Estimators::RobotDynamicsEstimator;
 
@@ -17,7 +17,8 @@ RDE::GyroscopeMeasurementDynamics::GyroscopeMeasurementDynamics() = default;
 
 RDE::GyroscopeMeasurementDynamics::~GyroscopeMeasurementDynamics() = default;
 
-bool RDE::GyroscopeMeasurementDynamics::initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
+bool RDE::GyroscopeMeasurementDynamics::initialize(
+    std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
 {
     constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::initialize]";
 
@@ -42,32 +43,11 @@ bool RDE::GyroscopeMeasurementDynamics::initialize(std::weak_ptr<const Parameter
         return false;
     }
 
-    // Set the dynamic model type
-    if (!ptr->getParameter("dynamic_model", m_dynamicModel))
-    {
-        log()->error("{} Error while retrieving the dynamic_model variable.", errorPrefix);
-        return false;
-    }
-
-    // Set the list of elements if it exists
-    if (!ptr->getParameter("elements", m_elements))
-    {
-        log()->info("{} Variable elements not found.", errorPrefix);
-        m_elements = {};
-    }
-
-    if (!ptr->getParameter("sampling_time", m_dT))
-    {
-        log()->error("{} Error while retrieving the sampling_time variable.", errorPrefix);
-        return false;
-    }
-
     // Set the bias related variables if use_bias is true
     if (!ptr->getParameter("use_bias", m_useBias))
     {
         log()->info("{} Variable use_bias not found. Set to false by default.", errorPrefix);
-    }
-    else
+    } else
     {
         m_biasVariableName = m_name + "_bias";
     }
@@ -79,7 +59,8 @@ bool RDE::GyroscopeMeasurementDynamics::initialize(std::weak_ptr<const Parameter
     return true;
 }
 
-bool RDE::GyroscopeMeasurementDynamics::finalize(const System::VariablesHandler &stateVariableHandler)
+bool RDE::GyroscopeMeasurementDynamics::finalize(
+    const System::VariablesHandler& stateVariableHandler)
 {
     constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::finalize]";
 
@@ -106,16 +87,17 @@ bool RDE::GyroscopeMeasurementDynamics::finalize(const System::VariablesHandler 
     // Search and save all the submodels containing the sensor
     for (int submodelIndex = 0; submodelIndex < m_nrOfSubDynamics; submodelIndex++)
     {
-       if (m_subModelList[submodelIndex].hasGyroscope(m_name))
-       {
+        if (m_subModelList[submodelIndex].hasGyroscope(m_name))
+        {
             m_subModelWithGyro.push_back(submodelIndex);
-       }
+        }
     }
 
     m_covariances.resize(m_covSingleVar.size() * m_subModelWithGyro.size());
     for (int index = 0; index < m_subModelWithGyro.size(); index++)
     {
-        m_covariances.segment(index*m_covSingleVar.size(), m_covSingleVar.size()) = m_covSingleVar;
+        m_covariances.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
+            = m_covSingleVar;
     }
 
     m_size = m_covariances.size();
@@ -140,14 +122,17 @@ bool RDE::GyroscopeMeasurementDynamics::finalize(const System::VariablesHandler 
     return true;
 }
 
-bool RDE::GyroscopeMeasurementDynamics::setSubModels(const std::vector<SubModel>& subModelList, const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList)
+bool RDE::GyroscopeMeasurementDynamics::setSubModels(
+    const std::vector<SubModel>& subModelList,
+    const std::vector<std::shared_ptr<KinDynWrapper>>& kinDynWrapperList)
 {
     constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::setSubModels]";
 
     m_subModelList = subModelList;
     m_subModelKinDynList = kinDynWrapperList;
 
-    if (m_subModelList.size() == 0 || m_subModelKinDynList.size() == 0 || m_subModelList.size() != m_subModelKinDynList.size())
+    if (m_subModelList.size() == 0 || m_subModelKinDynList.size() == 0
+        || m_subModelList.size() != m_subModelKinDynList.size())
     {
         log()->error("{} Wrong size of input parameters", errorPrefix);
         return false;
@@ -164,25 +149,23 @@ bool RDE::GyroscopeMeasurementDynamics::checkStateVariableHandler()
 {
     constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::checkStateVariableHandler]";
 
-    if (!m_isSubModelListSet)
-    {
-        log()->error("{} Set the sub-model list before setting the variable handler", errorPrefix);
-        return false;
-    }
-
     if (!m_stateVariableHandler.getVariable("ds").isValid())
     {
-        log()->error("{} The variable handler does not contain the expected state with name `ds`.", errorPrefix);
+        log()->error("{} The variable handler does not contain the expected state with name `ds`.",
+                     errorPrefix);
         return false;
     }
 
-    if (m_useBias)
+    if (!m_useBias)
     {
-        if (!m_stateVariableHandler.getVariable(m_biasVariableName).isValid())
-        {
-            log()->error("{} The variable handler does not contain the expected state with name `{}`.", errorPrefix, m_biasVariableName);
-            return false;
-        }
+        return true;
+    }
+    if (!m_stateVariableHandler.getVariable(m_biasVariableName).isValid())
+    {
+        log()->error("{} The variable handler does not contain the expected state with name `{}`.",
+                     errorPrefix,
+                     m_biasVariableName);
+        return false;
     }
 
     return true;
@@ -190,28 +173,19 @@ bool RDE::GyroscopeMeasurementDynamics::checkStateVariableHandler()
 
 bool RDE::GyroscopeMeasurementDynamics::update()
 {
-    constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::update]";
-
-    // base_J v_base + joint_J s_dot + bias
     for (int index = 0; index < m_subModelWithGyro.size(); index++)
     {
-        m_subModelBaseVel = m_subModelKinDynList[m_subModelWithGyro[index]]->getBaseVelocity();
+        m_accelerometerVelocity = Conversions::toManifTwist(
+            m_subModelKinDynList[m_subModelWithGyro[index]]->getFrameVel(
+                m_subModelList[m_subModelWithGyro[index]].getGyroscope(m_name).index));
 
-        m_JvBase = m_subModelKinDynList[m_subModelWithGyro[index]]->getGyroscopeJacobian(m_name).block(0, 0, 6, 6) * m_subModelBaseVel.coeffs();
-
-        m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) = m_JvBase.segment(3, 3);
+        m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
+            = m_accelerometerVelocity.ang();
 
         if (m_useBias)
         {
-            m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) += m_bias;
-        }
-
-        if (m_subModelList[m_subModelWithGyro[index]].getJointMapping().size() > 0)
-        {
-            m_Jsdot = m_subModelKinDynList[m_subModelWithGyro[index]]->getGyroscopeJacobian(m_name).block(0, 6, 6, m_subModelList[m_subModelWithGyro[index]].getModel().getNrOfDOFs()) *
-                    m_subModelJointVel[m_subModelWithGyro[index]];
-
-            m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size()) += m_Jsdot.segment(3, 3);
+            m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
+                += m_bias;
         }
     }
 
@@ -225,10 +199,11 @@ void RDE::GyroscopeMeasurementDynamics::setState(const Eigen::Ref<const Eigen::V
 
     for (int smIndex = 0; smIndex < m_subModelList.size(); smIndex++)
     {
-        for (int jntIndex = 0; jntIndex < m_subModelList[smIndex].getModel().getNrOfDOFs(); jntIndex++)
+        for (int jntIndex = 0; jntIndex < m_subModelList[smIndex].getModel().getNrOfDOFs();
+             jntIndex++)
         {
-            m_subModelJointVel[smIndex][jntIndex] =
-                    m_jointVelocityFullModel[m_subModelList[smIndex].getJointMapping()[jntIndex]];
+            m_subModelJointVel[smIndex][jntIndex]
+                = m_jointVelocityFullModel[m_subModelList[smIndex].getJointMapping()[jntIndex]];
         }
     }
 

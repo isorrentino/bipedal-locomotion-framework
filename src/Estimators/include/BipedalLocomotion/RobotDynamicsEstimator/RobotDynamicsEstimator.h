@@ -17,7 +17,7 @@
 #include <BipedalLocomotion/Conversions/ManifConversions.h>
 #include <BipedalLocomotion/System/Advanceable.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>
 
 namespace BipedalLocomotion
 {
@@ -120,7 +120,7 @@ public:
      * @param kinDynFullModel a pointer to an iDynTree::KinDynComputations object that will be shared among
      * all the dynamics.
      * @param subModelList a list of SubModel objects
-     * @param kinDynWrapperList a list of pointers to a `SubModelKinDynWrapper` objects that will be shared among
+     * @param kinDynWrapperList a list of pointers to a `KinDynWrapper` objects that will be shared among
      * all the dynamics
      * @return a RobotDynamicsEstimator. In case of issues an invalid RobotDynamicsEstimator
      * will be returned.
@@ -129,7 +129,7 @@ public:
     build(std::weak_ptr<const ParametersHandler::IParametersHandler> handler,
           std::shared_ptr<iDynTree::KinDynComputations> kinDynFullModel,
           const std::vector<SubModel>& subModelList,
-          const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList);
+          const std::vector<std::shared_ptr<KinDynWrapper>>& kinDynWrapperList);
 
     /**
      * @brief set the initial state of the estimator.

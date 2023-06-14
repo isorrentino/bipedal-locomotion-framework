@@ -100,7 +100,7 @@ bool RDE::ConstantMeasurementModel::finalize(const System::VariablesHandler &sta
     return true;
 }
 
-bool RDE::ConstantMeasurementModel::setSubModels(const std::vector<RDE::SubModel>& /*subModelList*/, const std::vector<std::shared_ptr<RDE::SubModelKinDynWrapper>>& /*kinDynWrapperList*/)
+bool RDE::ConstantMeasurementModel::setSubModels(const std::vector<RDE::SubModel>& /*subModelList*/, const std::vector<std::shared_ptr<RDE::KinDynWrapper>>& /*kinDynWrapperList*/)
 {
     return true;
 }

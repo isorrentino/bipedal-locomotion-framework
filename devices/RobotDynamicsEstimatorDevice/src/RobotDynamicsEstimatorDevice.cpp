@@ -111,7 +111,7 @@ bool RobotDynamicsEstimatorDevice::createSubModels(
     std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler,
     iDynTree::ModelLoader& modelLoader,
     std::vector<SubModel>& subModelList,
-    std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList)
+    std::vector<std::shared_ptr<KinDynWrapper>>& kinDynWrapperList)
 {
     constexpr auto logPrefix = "[RobotDynamicsEstimatorDevice::createSubModels]";
 
@@ -134,15 +134,10 @@ bool RobotDynamicsEstimatorDevice::createSubModels(
 
     for (int idx = 0; idx < subModelList.size(); idx++)
     {
-        kinDynWrapperList.emplace_back(std::make_shared<SubModelKinDynWrapper>());
-        if (!kinDynWrapperList.at(idx)->setKinDyn(m_kinDyn))
+        kinDynWrapperList.emplace_back(std::make_shared<KinDynWrapper>());
+        if (!kinDynWrapperList[idx]->setModel(subModelList[idx]))
         {
-            log()->error("{} Failed while setting the kindyn object.", logPrefix);
-            return false;
-        }
-        if (!kinDynWrapperList.at(idx)->initialize(subModelList[idx]))
-        {
-            log()->error("{} Failed while initializing the `SubModelKinDynWrapper` object "
+            log()->error("{} Failed while initializing the `KinDynWrapper` object "
                          "associated to the submodel with index `{}`.",
                          logPrefix,
                          idx);
@@ -422,7 +417,7 @@ bool RobotDynamicsEstimatorDevice::setupRobotDynamicsEstimator(
     }
 
     std::vector<SubModel> subModelList;
-    std::vector<std::shared_ptr<SubModelKinDynWrapper>> kinDynWrapperList;
+    std::vector<std::shared_ptr<KinDynWrapper>> kinDynWrapperList;
     if (!createSubModels(modelGroupHandler, modelLoader, subModelList, kinDynWrapperList))
     {
         log()->error("{} Failed while creating the objects needed to handle the sub-models.",

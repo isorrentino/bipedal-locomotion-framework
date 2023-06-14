@@ -9,11 +9,13 @@
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 
+#include <iDynTree/Model/Model.h>
+
 #include <BipedalLocomotion/System/Advanceable.h>
 #include <BipedalLocomotion/ParametersHandler/IParametersHandler.h>
 #include <BipedalLocomotion/System/VariablesHandler.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/RobotDynamicsEstimator.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
 #include <BipedalLocomotion/Conversions/ManifConversions.h>
 
@@ -102,7 +104,7 @@ void CreateRobotDynamicsEstimator(pybind11::module& module)
                         [](std::shared_ptr<const IParametersHandler> handler,
                         py::object& obj,
                         const std::vector<SubModel>& subModelList,
-                        const std::vector<std::shared_ptr<SubModelKinDynWrapper>>& kinDynWrapperList) ->
+                        const std::vector<std::shared_ptr<KinDynWrapper>>& kinDynWrapperList) ->
             std::unique_ptr<BipedalLocomotion::Estimators::RobotDynamicsEstimator::RobotDynamicsEstimator> {
         // get the kindyn computation object from the swig bindings
         std::shared_ptr<iDynTree::KinDynComputations>* cls
@@ -204,32 +206,15 @@ void CreateSubModelCreator(pybind11::module& module)
              py::arg("index"));
 }
 
-void CreateSubModelKinDynWrapper(pybind11::module& module)
+void CreateKinDynWrapper(pybind11::module& module)
 {
     namespace py = ::pybind11;
     using namespace BipedalLocomotion::Estimators::RobotDynamicsEstimator;
     using namespace BipedalLocomotion::System;
 
-    py::class_<SubModelKinDynWrapper, std::shared_ptr<SubModelKinDynWrapper>>(module, "SubModelKinDynWrapper")
+    py::class_<KinDynWrapper, std::shared_ptr<KinDynWrapper>>(module, "KinDynWrapper")
         .def(py::init())
-        .def("setKinDyn",
-             BipedalLocomotion::bindings::RobotDynamicsEstimator::setKinDyn<SubModelKinDynWrapper>,
-             py::arg("kinDyn"))
-        .def("initialize", &SubModelKinDynWrapper::initialize)
-        .def("updateState", &SubModelKinDynWrapper::updateState)
-        .def("forwardDynamics", &SubModelKinDynWrapper::forwardDynamics)
-        .def("getBaseAcceleration", &SubModelKinDynWrapper::getBaseAcceleration)
-        .def("getBaseVelocity", &SubModelKinDynWrapper::getBaseVelocity)
-        .def("getBaseFrameName", &SubModelKinDynWrapper::getBaseFrameName)
-        .def("getMassMatrix", &SubModelKinDynWrapper::getMassMatrix)
-        .def("getGeneralizedForces", &SubModelKinDynWrapper::getGeneralizedForces)
-        .def("getFTJacobian", &SubModelKinDynWrapper::getFTJacobian)
-        .def("getAccelerometerJacobian", &SubModelKinDynWrapper::getAccelerometerJacobian)
-        .def("getGyroscopeJacobian", &SubModelKinDynWrapper::getGyroscopeJacobian)
-        .def("getExtContactJacobian", &SubModelKinDynWrapper::getExtContactJacobian)
-        .def("getAccelerometerBiasAcceleration", &SubModelKinDynWrapper::getAccelerometerBiasAcceleration)
-        .def("getAccelerometerRotation", &SubModelKinDynWrapper::getAccelerometerRotation);
-//        .def("getnudot", &SubModelKinDynWrapper::getnudot);
+        .def("setModel", &BipedalLocomotion::Estimators::RobotDynamicsEstimator::KinDynWrapper::setModel);
 }
 
 } // namespace RobotDynamicsEstimator

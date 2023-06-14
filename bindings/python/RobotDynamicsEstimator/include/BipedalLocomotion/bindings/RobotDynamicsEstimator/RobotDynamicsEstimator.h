@@ -36,7 +36,7 @@ template <class T> bool setKinDyn(T& myclass, ::pybind11::object& obj)
 void CreateRobotDynamicsEstimator(pybind11::module& module);
 void CreateSubModel(pybind11::module& module);
 void CreateSubModelCreator(pybind11::module& module);
-void CreateSubModelKinDynWrapper(pybind11::module& module);
+void CreateKinDynWrapper(pybind11::module& module);
 
 } // namespace RobotDynamicsEstimator
 } // namespace bindings
