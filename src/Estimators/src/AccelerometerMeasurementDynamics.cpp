@@ -180,13 +180,14 @@ bool RDE::AccelerometerMeasurementDynamics::update()
         }
     }
 
-    for (const int index : m_subModelsWithAccelerometer)
-    {
-        m_subModelBaseAcceleration = m_kinDynWrapperList[index]->getNuDot().head(6);
 
-        if (!m_kinDynWrapperList[index]->getFrameAcc(m_accelerometerFrameName,
+    for (int index = 0; index < m_subModelsWithAccelerometer.size(); index++)
+    {
+        m_subModelBaseAcceleration = m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getNuDot().head(6);
+
+        if (!m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getFrameAcc(m_accelerometerFrameName,
                                                      m_subModelBaseAcceleration,
-                                                     m_subModelJointAcc[index],
+                                                     m_subModelJointAcc[m_subModelsWithAccelerometer[index]],
                                                      iDynTree::make_span(
                                                          m_accelerometerFameAcceleration)))
         {
@@ -195,11 +196,11 @@ bool RDE::AccelerometerMeasurementDynamics::update()
             return false;
         }
 
-        m_imuRworld = Conversions::toManifRot(m_kinDynWrapperList[index]->getWorldTransform(m_accelerometerFrameName).getRotation().inverse());
+        m_imuRworld = Conversions::toManifRot(m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getWorldTransform(m_accelerometerFrameName).getRotation().inverse());
 
         m_accRg = m_imuRworld.act(m_gravity);
 
-        m_accelerometerFameVelocity = Conversions::toManifTwist(m_kinDynWrapperList[index]->getFrameVel(m_accelerometerFrameName));
+        m_accelerometerFameVelocity = Conversions::toManifTwist(m_kinDynWrapperList[m_subModelsWithAccelerometer[index]]->getFrameVel(m_accelerometerFrameName));
 
         m_vCrossW = m_accelerometerFameVelocity.lin().cross(m_accelerometerFameVelocity.ang());
 
