@@ -16,6 +16,7 @@
 #include <BayesFilters/AdditiveMeasurementModel.h>
 
 // BLF
+#include <BipedalLocomotion/RobotDynamicsEstimator/UkfModel.h>
 #include <BipedalLocomotion/System/VariablesHandler.h>
 #include <BipedalLocomotion/System/Source.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
@@ -202,7 +203,7 @@ public:
      * Set a `System::VariableHandler` describing the variables composing the state.
      * @param stateVariableHandler is the variable handler
      */
-    void setStateVariableHandler(System::VariablesHandler stateVariableHandler) const;
+    void setStateVariableHandler(System::VariablesHandler stateVariableHandler);
 
     /**
      * @brief innovation computes the innovation step of the ukf update as the difference between the predicted_measurement

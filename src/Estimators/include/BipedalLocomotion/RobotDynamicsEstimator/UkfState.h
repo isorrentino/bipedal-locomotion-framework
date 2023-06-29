@@ -17,6 +17,7 @@
 
 // BLF
 #include <BipedalLocomotion/System/VariablesHandler.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/UkfModel.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/Dynamics.h>
@@ -36,28 +37,14 @@ namespace RobotDynamicsEstimator
  * associated to the state. The user should set also a ukf input provider
  * which provides the inputs needed to update the ukf process dynamics.
  */
-class UkfState : public bfl::AdditiveStateModel
+class UkfState : public bfl::AdditiveStateModel, UkfModel
 {
-    /**
-     * Private implementation
-     */
-    struct Impl;
-    std::unique_ptr<Impl> m_pimpl;
-
-//    void unpackState();
-//    void updateJointAccelerationState();
+    Eigen::MatrixXd m_covarianceQ; /**< Covariance matrix. */
+    Eigen::MatrixXd  m_initialCovariance; /**< Initial covariance matrix. */
+    std::size_t m_stateSize; /**< Length of the state vector. */
+    Eigen::VectorXd m_nextState; /**< Vector containing all the updated states. */
 
 public:
-    /**
-     * Constructor.
-     */
-    UkfState();
-
-    /**
-     * Destructor.
-     */
-    virtual ~UkfState();
-
     /**
      * Build the ukf state model
      * @param kinDyn a pointer to an iDynTree::KinDynComputations object that will be shared among
