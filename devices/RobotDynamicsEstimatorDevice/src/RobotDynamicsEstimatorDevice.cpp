@@ -226,8 +226,6 @@ bool RobotDynamicsEstimatorDevice::resizeEstimatorInitialState(
 
 bool RobotDynamicsEstimatorDevice::setEstimatorInitialState()
 {
-    //    std::lock_guard<std::mutex> lock(m_estimatorOutput.mutex);
-
     Eigen::VectorXd s(m_kinDyn->model().getNrOfDOFs());
     Eigen::VectorXd dds(m_kinDyn->model().getNrOfDOFs());
 
@@ -317,14 +315,16 @@ bool RobotDynamicsEstimatorDevice::setEstimatorInitialState()
         m_ftOffset[key] = m_estimatorOutput.output.ftWrenches[key] - ftFromModel[key];
         m_estimatorOutput.output.ftWrenches[key] = ftFromModel[key];
         std::string ftBias = key + "_bias";
-        m_estimatorOutput.output.ftWrenchesBiases[ftBias] = m_ftOffset[key]; // FT bias
+        m_estimatorOutput.output.ftWrenchesBiases[ftBias].setZero(); // FT bias
     }
 
     if (!m_robotSensorBridge->getMotorCurrents(m_estimatorOutput.output.tau_m))
     {
         return false;
     }
-    m_estimatorOutput.output.tau_m = (m_estimatorOutput.output.tau_m * m_gearboxRatio * m_torqueConstant).eval();
+    Eigen::VectorXd temp(m_gearboxRatio.size());
+    temp = m_gearboxRatio.array() * m_torqueConstant.array();
+    m_estimatorOutput.output.tau_m = m_estimatorOutput.output.tau_m.array() * temp.array();
 
     if (!m_estimator->setInitialState(m_estimatorOutput.output))
     {
@@ -624,21 +624,24 @@ bool RobotDynamicsEstimatorDevice::updateMeasurements()
 
     for (auto& [key, value] : m_estimatorInput.input.linearAccelerations)
     {
-        if (!m_robotSensorBridge->getLinearAccelerometerMeasurement(key,
-                                                                    m_estimatorInput.input
-                                                                        .linearAccelerations[key]))
+        if (!m_robotSensorBridge->getLinearAccelerometerMeasurement(key, m_temp3DMeasurement))
         {
             return false;
         }
+        m_estimatorInput.input.linearAccelerations[key][0] = - m_temp3DMeasurement[1];
+        m_estimatorInput.input.linearAccelerations[key][1] = - m_temp3DMeasurement[0];
+        m_estimatorInput.input.linearAccelerations[key][2] = - m_temp3DMeasurement[2];
     }
 
     for (auto& [key, value] : m_estimatorInput.input.angularVelocities)
     {
-        if (!m_robotSensorBridge->getGyroscopeMeasure(key,
-                                                      m_estimatorInput.input.angularVelocities[key]))
+        if (!m_robotSensorBridge->getGyroscopeMeasure(key, m_temp3DMeasurement))
         {
             return false;
         }
+        m_estimatorInput.input.angularVelocities[key][0] = - m_temp3DMeasurement[1];
+        m_estimatorInput.input.angularVelocities[key][1] = - m_temp3DMeasurement[0];
+        m_estimatorInput.input.angularVelocities[key][2] = - m_temp3DMeasurement[2];
     }
 
     m_robotSensorBridge->getJointTorques(m_measuredTauj);
@@ -672,71 +675,77 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
         }
         wakeUpTime += publishOutputPeriod;
 
-                std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
-                std::lock_guard<std::mutex> lockInput(m_estimatorInput.mutex);
+        {
+            std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
 
-        data.vectors["ds::estimated"].assign(m_estimatorOutput.output.ds.data(),
-                                             m_estimatorOutput.output.ds.data()
-                                                 + m_estimatorOutput.output.ds.size());
-        data.vectors["tau_m::estimated"].assign(m_estimatorOutput.output.tau_m.data(),
-                                                m_estimatorOutput.output.tau_m.data()
-                                                    + m_estimatorOutput.output.tau_m.size());
-        data.vectors["tau_F::estimated"].assign(m_estimatorOutput.output.tau_F.data(),
-                                                m_estimatorOutput.output.tau_F.data()
-                                                    + m_estimatorOutput.output.tau_F.size());
+            data.vectors["ds::estimated"].assign(m_estimatorOutput.output.ds.data(),
+                                                 m_estimatorOutput.output.ds.data()
+                                                     + m_estimatorOutput.output.ds.size());
+            data.vectors["tau_m::estimated"].assign(m_estimatorOutput.output.tau_m.data(),
+                                                    m_estimatorOutput.output.tau_m.data()
+                                                        + m_estimatorOutput.output.tau_m.size());
+            data.vectors["tau_F::estimated"].assign(m_estimatorOutput.output.tau_F.data(),
+                                                    m_estimatorOutput.output.tau_F.data()
+                                                        + m_estimatorOutput.output.tau_F.size());
 
-        m_estimatedTauj = m_estimatorOutput.output.tau_m - m_estimatorOutput.output.tau_F;
-        data.vectors["tau_j::estimated"].assign(m_estimatedTauj.data(),
-                                                m_estimatedTauj.data() + m_estimatedTauj.size());
-        data.vectors["tau_j::measured"].assign(m_measuredTauj.data(),
-                                               m_measuredTauj.data() + m_measuredTauj.size());
+            m_estimatedTauj = m_estimatorOutput.output.tau_m - m_estimatorOutput.output.tau_F;
+            data.vectors["tau_j::estimated"].assign(m_estimatedTauj.data(),
+                                                    m_estimatedTauj.data()
+                                                        + m_estimatedTauj.size());
+            data.vectors["tau_j::measured"].assign(m_measuredTauj.data(),
+                                                   m_measuredTauj.data() + m_measuredTauj.size());
 
-        for (auto& [key, value] : m_estimatorOutput.output.ftWrenches)
-        {
-            data.vectors["fts::" + key + "::estimated"].assign(value.data(),
-                                                               value.data() + value.size());
+            for (auto& [key, value] : m_estimatorOutput.output.ftWrenches)
+            {
+                data.vectors["fts::" + key + "::estimated"].assign(value.data(),
+                                                                   value.data() + value.size());
+            }
+            for (auto& [key, value] : m_estimatorOutput.output.ftWrenchesBiases)
+            {
+                data.vectors["fts_biases::" + key + "::estimated"].assign(value.data(),
+                                                                          value.data()
+                                                                              + value.size());
+            }
+            for (auto& [key, value] : m_estimatorOutput.output.accelerometerBiases)
+            {
+                data.vectors["accelerometer_biases::" + key + "::estimated"]
+                    .assign(value.data(), value.data() + value.size());
+            }
         }
-        for (auto& [key, value] : m_estimatorOutput.output.ftWrenchesBiases)
+        //        for (auto& [key, value] : m_estimatorOutput.output.gyroscopeBiases)
+        //        {
+        //            data.vectors["gyroscope_biases::" + key + "::estimated"].assign(value.data(),
+        //                                                                            value.data()
+        //                                                                                +
+        //                                                                                value.size());
+        //        }
         {
-            data.vectors["fts_biases::" + key + "::estimated"].assign(value.data(),
-                                                                      value.data() + value.size());
-        }
-        for (auto& [key, value] : m_estimatorOutput.output.accelerometerBiases)
-        {
-            data.vectors["accelerometer_biases::" + key + "::estimated"].assign(value.data(),
-                                                                                value.data()
-                                                                                    + value.size());
-        }
-        for (auto& [key, value] : m_estimatorOutput.output.gyroscopeBiases)
-        {
-            data.vectors["gyroscope_biases::" + key + "::estimated"].assign(value.data(),
-                                                                            value.data()
-                                                                                + value.size());
-        }
+            std::lock_guard<std::mutex> lockInput(m_estimatorInput.mutex);
 
-        data.vectors["im::measured"].assign(m_estimatorInput.input.motorCurrents.data(),
-                                            m_estimatorInput.input.motorCurrents.data()
-                                                + m_estimatorInput.input.motorCurrents.size());
-        data.vectors["ds::measured"].assign(m_estimatorInput.input.jointVelocities.data(),
-                                            m_estimatorInput.input.jointVelocities.data()
-                                                + m_estimatorInput.input.jointVelocities.size());
-        for (auto& [key, value] : m_estimatorInput.input.ftWrenches)
-        {
-            data.vectors["fts::" + key + "::measured"].assign(value.data(),
-                                                              value.data() + value.size());
-        }
-        for (auto& [key, value] : m_estimatorInput.input.linearAccelerations)
-        {
-            data.vectors["accelerometers::" + key + "::measured"].assign(value.data(),
+            data.vectors["im::measured"].assign(m_estimatorInput.input.motorCurrents.data(),
+                                                m_estimatorInput.input.motorCurrents.data()
+                                                    + m_estimatorInput.input.motorCurrents.size());
+            data.vectors["ds::measured"].assign(m_estimatorInput.input.jointVelocities.data(),
+                                                m_estimatorInput.input.jointVelocities.data()
+                                                    + m_estimatorInput.input.jointVelocities.size());
+            for (auto& [key, value] : m_estimatorInput.input.ftWrenches)
+            {
+                data.vectors["fts::" + key + "::measured"].assign(value.data(),
+                                                                  value.data() + value.size());
+            }
+            for (auto& [key, value] : m_estimatorInput.input.linearAccelerations)
+            {
+                data.vectors["accelerometers::" + key + "::measured"].assign(value.data(),
+                                                                             value.data()
+                                                                                 + value.size());
+            }
+            for (auto& [key, value] : m_estimatorInput.input.angularVelocities)
+            {
+                data.vectors["gyroscopes::" + key + "::measured"].assign(value.data(),
                                                                          value.data()
                                                                              + value.size());
+            }
         }
-        for (auto& [key, value] : m_estimatorInput.input.angularVelocities)
-        {
-            data.vectors["gyroscopes::" + key + "::measured"].assign(value.data(),
-                                                                     value.data() + value.size());
-        }
-
         m_loggerPort.write();
 
         // Publish on WBD ports
@@ -747,10 +756,10 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
         // release the CPU
         BipedalLocomotion::clock().yield();
 
-        if (wakeUpTime < BipedalLocomotion::clock().now())
-        {
-            log()->info("{} The data writing spent more time than expected.", logPrefix);
-        }
+        //        if (wakeUpTime < BipedalLocomotion::clock().now())
+        //        {
+        //            log()->info("{} The data writing spent more time than expected.", logPrefix);
+        //        }
 
         // sleep
         BipedalLocomotion::clock().sleepUntil(wakeUpTime);
@@ -760,6 +769,8 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
 void RobotDynamicsEstimatorDevice::run()
 {
     constexpr auto logPrefix = "[RobotDynamicsEstimatorDevice::run]";
+
+    auto tic = BipedalLocomotion::clock().now();
 
     // advance sensor bridge
     if (!m_robotSensorBridge->advance())
@@ -782,19 +793,19 @@ void RobotDynamicsEstimatorDevice::run()
     }
 
     // update estimator measurements
-    std::lock_guard<std::mutex> lockInput(m_estimatorInput.mutex);
-    if (!updateMeasurements())
     {
-        log()->error("{} Measurement updates failed.", logPrefix);
-        return;
-    }
+        std::lock_guard<std::mutex> lockInput(m_estimatorInput.mutex);
+        if (!updateMeasurements())
+        {
+            log()->error("{} Measurement updates failed.", logPrefix);
+            return;
+        }
 
-    auto tic = BipedalLocomotion::clock().now();
-
-    if (!m_estimator->setInput(m_estimatorInput.input))
-    {
-        log()->error("{} Could not set estimator input.", logPrefix);
-        return;
+        if (!m_estimator->setInput(m_estimatorInput.input))
+        {
+            log()->error("{} Could not set estimator input.", logPrefix);
+            return;
+        }
     }
 
     if (!m_estimator->advance())
@@ -803,11 +814,13 @@ void RobotDynamicsEstimatorDevice::run()
         return;
     }
 
+    {
+        std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
+        m_estimatorOutput.output = m_estimator->getOutput();
+    }
+
     auto toc = BipedalLocomotion::clock().now();
     BipedalLocomotion::log()->info("{}", toc - tic);
-
-    //    std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
-    m_estimatorOutput.output = m_estimator->getOutput();
 
     return;
 }

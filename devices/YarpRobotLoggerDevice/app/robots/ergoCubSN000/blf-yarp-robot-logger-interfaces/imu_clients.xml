@@ -54,12 +54,12 @@
     <param name="carrier">fast_tcp</param>
   </device>
 
-  <device xmlns:xi="http://www.w3.org/2001/XInclude" name="xsens_imu_client" type="multipleanalogsensorsclient">
+  <!--<device xmlns:xi="http://www.w3.org/2001/XInclude" name="xsens_imu_client" type="multipleanalogsensorsclient">
     <param name="remote">/xsens_imu</param>
     <param name="local">/yarp_robot_logger/xsens/inertials</param>
     <param name="timeout">0.5</param>
     <param name="carrier">fast_tcp</param>
-  </device>
+  </device>-->
 
 </devices>
 

@@ -97,6 +97,7 @@ private:
         yarp::dev::IMultipleWrapper* multwrap;
     } m_remappedVirtualAnalogSensorsInterfaces;
     yarp::sig::Vector m_estimatedJointTorquesYARP;
+    Eigen::Vector3d m_temp3DMeasurement;
 
     // class methods
     bool setupRobotModel(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler,

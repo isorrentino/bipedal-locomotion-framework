@@ -6,14 +6,22 @@ BSD-3-Clause license. -->
 <device  xmlns:xi="http://www.w3.org/2001/XInclude" name="yarp-robot-logger" type="YarpRobotLoggerDevice">
   <param name="robot">ergocub</param>
   <param name="sampling_period_in_s">0.01</param>
-  <param name="rgb_cameras_fps">(30)</param>
+
+  <param name="rgb_cameras_fps">()</param>
+  <param name="rgb_cameras_rgb_save_mode">()</param>
+
+  <param name="rgbd_cameras_fps">(30)</param>
+  <param name="rgbd_cameras_depth_scale">(1000)</param>
+  <param name="rgbd_cameras_depth_save_mode">("frame")</param>
+  <param name="rgbd_cameras_rgb_save_mode">("frame")</param>
+
   <param name="video_codec_code">mp4v</param>
   <param name="port_prefix">/yarp-robot-logger</param>
   <param name="text_logging_subnames">("ergoCubSN000/yarprobotinterface")</param>
   <param name="code_status_cmd_prefixes">("ssh ergocub@10.0.2.2" "ssh ergocub@10.0.2.1")</param>
 
   <group name="Telemetry">
-    <param name="save_period">600.0</param>
+    <param name="save_period">1800.0</param>
   </group>
 
   <group name="ExogenousSignals">
@@ -33,12 +41,20 @@ BSD-3-Clause license. -->
       <param name="signal_name">"rde"</param>
       <param name="carrier">"udp"</param>
     </group>
+
+    <group name="RobotDynamicsEstimator">
+      <param name="local">"/yarp-robot-logger/exogenous_signals/rde:i"</param>
+      <param name="remote">"/robot-dynamics-estimator/data:o"</param>
+      <param name="signal_name">"rde"</param>
+      <param name="carrier">"udp"</param>
+    </group>
   </group>
 
   <group name="RobotCameraBridge">
       <param name="stream_cameras">false</param>
       <group name="Cameras">
-        <param name="rgb_cameras_list">("jabra")</param>
+        <param name="rgb_cameras_list">()</param>
+        <param name="rgbd_cameras_list">("realsense")</param>
       </group>
   </group>
 
@@ -70,10 +86,10 @@ BSD-3-Clause license. -->
     </group>
 
     <group name="InertialSensors">
-      <param name="accelerometers_list">(rfeimu_acc, l_arm_ft_acc, r_arm_ft_acc, l_foot_front_ft_acc, l_foot_rear_ft_acc, r_foot_front_ft_acc, r_foot_rear_ft_acc, l_leg_ft_acc, r_leg_ft_acc, sensor_imu_xsensmt_acc)</param>
-      <param name="gyroscopes_list">(rfeimu_gyro, l_arm_ft_gyro, r_arm_ft_gyro, l_foot_front_ft_gyro, l_foot_rear_ft_gyro, r_foot_front_ft_gyro, r_foot_rear_ft_gyro, l_leg_ft_gyro, r_leg_ft_gyro, sensor_imu_xsensmt_gyro)</param>
-      <param name="magnetometers_list">(rfeimu_mag, l_arm_ft_mag, r_arm_ft_mag, l_foot_front_ft_mag, l_foot_rear_ft_mag, r_foot_front_ft_mag, r_foot_rear_ft_mag, l_leg_ft_mag, r_leg_ft_mag, sensor_imu_xsensmt_mag)</param>
-      <param name="orientation_sensors_list">(rfeimu_eul, l_arm_ft_eul, r_arm_ft_eul, l_foot_front_ft_eul, l_foot_rear_ft_eul, r_foot_front_ft_eul, r_foot_rear_ft_eul, l_leg_ft_eul, r_leg_ft_eul, sensor_imu_xsensmt_eul)</param>
+      <param name="accelerometers_list">(rfeimu_acc, l_arm_ft_acc, r_arm_ft_acc, l_foot_front_ft_acc, l_foot_rear_ft_acc, r_foot_front_ft_acc, r_foot_rear_ft_acc, l_leg_ft_acc, r_leg_ft_acc)</param>
+      <param name="gyroscopes_list">(rfeimu_gyro, l_arm_ft_gyro, r_arm_ft_gyro, l_foot_front_ft_gyro, l_foot_rear_ft_gyro, r_foot_front_ft_gyro, r_foot_rear_ft_gyro, l_leg_ft_gyro, r_leg_ft_gyro)</param>
+      <param name="magnetometers_list">(rfeimu_mag, l_arm_ft_mag, r_arm_ft_mag, l_foot_front_ft_mag, l_foot_rear_ft_mag, r_foot_front_ft_mag, r_foot_rear_ft_mag, l_leg_ft_mag, r_leg_ft_mag)</param>
+      <param name="orientation_sensors_list">(rfeimu_eul, l_arm_ft_eul, r_arm_ft_eul, l_foot_front_ft_eul, l_foot_rear_ft_eul, r_foot_front_ft_eul, r_foot_rear_ft_eul, l_leg_ft_eul, r_leg_ft_eul)</param>
     </group>
 
   </group>
@@ -89,8 +105,8 @@ BSD-3-Clause license. -->
       <elem name="right_arm_wrench_client">right_arm_wrench_client</elem>
       <elem name="left_arm_wrench_client">left_arm_wrench_client</elem>
       <elem name="mas-remapper">mas-remapper</elem>
+<!--      <elem name="realsense">realsense</elem>-->
       <!-- <elem name="jabra">jabra</elem> -->
-
     </paramlist>
   </action>
 
