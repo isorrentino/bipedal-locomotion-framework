@@ -25,7 +25,7 @@
 #include <iDynTree/Estimation/ExtWrenchesAndJointTorquesEstimator.h>
 
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/SubModelKinDynWrapper.h>
+#include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>
 
 using namespace BipedalLocomotion;
 using namespace BipedalLocomotion::ParametersHandler;

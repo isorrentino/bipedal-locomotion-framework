@@ -45,7 +45,8 @@ class KinDynWrapper : public iDynTree::KinDynComputations
 
 public:
     /**
-     * @brief setModel set the model and resize variables.
+     * @brief setModel set the model and resize variables. The default frame velocity representation
+     * is BODY FIXED.
      * @param model a SubModel object describing the robot model.
      * @return a boolean value saying if all the variables are initialized correctly.
      */

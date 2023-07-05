@@ -33,7 +33,7 @@ namespace RobotDynamicsEstimator
  */
 class UkfModel
 {
-public:
+protected:
     bool m_isInitialized{false};
     bool m_isFinalized{false};
     Eigen::Vector3d m_gravity{0, 0, -Math::StandardAccelerationOfGravitation}; /**< Gravity vector. */
@@ -87,6 +87,7 @@ public:
     int m_offsetMeasurement; /**< Offset used to fill the measurement vector. */
 //    Eigen::VectorXd m_prediction; /**< Vector containing the predicted state or measurement. */
 
+public:
     /**
      * @brief unpackState splits the state vector in all the variables composing the state.
      */

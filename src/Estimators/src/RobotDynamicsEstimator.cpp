@@ -9,6 +9,7 @@
 #include <BayesFilters/UKFCorrection.h>
 #include <BayesFilters/Gaussian.h>
 
+#include <BipedalLocomotion/System/Clock.h>
 #include <BipedalLocomotion/TextLogging/Logger.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/SubModel.h>
 #include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>

@@ -39,24 +39,32 @@ namespace RobotDynamicsEstimator
  * which provides the inputs needed to update the ukf measurement dynamics.
  */
 
-class UkfMeasurement : public bfl::AdditiveMeasurementModel
+class UkfMeasurement : public bfl::AdditiveMeasurementModel, UkfModel
 {
     /**
      * Private implementation
      */
-    struct Impl;
-    std::unique_ptr<Impl> m_pimpl;
+//    struct Impl;
+//    std::unique_ptr<Impl> m_pimpl;
+    bfl::VectorDescription m_measurementDescription;
+    bfl::VectorDescription m_inputDescription;
+    Eigen::MatrixXd m_covarianceR; /**< Covariance matrix. */
+    int m_measurementSize{0}; /**< Length of the measurement vector. */
+    System::VariablesHandler m_measurementVariableHandler; /**< Variable handler describing the
+                                                            measurement vector. */
+    Eigen::VectorXd m_tempPredictedMeas;
+    Eigen::MatrixXd m_predictedMeasurement; /**< Vector containing the updated measurement. */
 
 public:
-    /**
-     * Constructor.
-     */
-    UkfMeasurement();
+//    /**
+//     * Constructor.
+//     */
+//    UkfMeasurement();
 
-    /**
-     * Destructor.
-     */
-    virtual ~UkfMeasurement();
+//    /**
+//     * Destructor.
+//     */
+//    virtual ~UkfMeasurement();
 
     /**
      * Build the ukf measurement model
