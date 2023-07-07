@@ -195,6 +195,17 @@ bool RobotDynamicsEstimatorDevice::resizeEstimatorInitialState(
         m_estimatorOutput.output.ftWrenchesBiases[ftBias] = Eigen::VectorXd(6).setZero(); // FT bias
     }
 
+    std::vector<std::string> contactList;
+    auto contactGroup = modelHandler.lock()->getGroup("EXTERNAL_CONTACT").lock();
+    if (!ftGroup->getParameter("frames", contactList))
+    {
+        return false;
+    }
+    for (const auto& contact : contactList)
+    {
+        m_estimatorOutput.output.ftWrenches[contact] = Eigen::VectorXd::Zero(6);
+    }
+
     std::vector<std::string> accList;
     auto accGroup = modelHandler.lock()->getGroup("ACCELEROMETER").lock();
     if (!accGroup->getParameter("names", accList))
@@ -699,6 +710,11 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
             {
                 data.vectors["fts::" + key + "::estimated"].assign(value.data(),
                                                                    value.data() + value.size());
+            }
+            for (auto& [key, value] : m_estimatorOutput.output.contactWrenches)
+            {
+                data.vectors["contacts::" + key + "::estimated"]
+                    .assign(value.data(), value.data() + value.size());
             }
             for (auto& [key, value] : m_estimatorOutput.output.ftWrenchesBiases)
             {
