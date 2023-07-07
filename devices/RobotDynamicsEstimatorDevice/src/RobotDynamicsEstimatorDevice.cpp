@@ -197,7 +197,7 @@ bool RobotDynamicsEstimatorDevice::resizeEstimatorInitialState(
 
     std::vector<std::string> contactList;
     auto contactGroup = modelHandler.lock()->getGroup("EXTERNAL_CONTACT").lock();
-    if (!ftGroup->getParameter("frames", contactList))
+    if (!contactGroup->getParameter("frames", contactList))
     {
         return false;
     }
