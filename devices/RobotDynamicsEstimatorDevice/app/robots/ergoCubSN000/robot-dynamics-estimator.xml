@@ -190,7 +190,7 @@ BSD-3-Clause license. -->
              </group>
              <group name="RIGHT_SOLE">
                 <param name="name">r_sole</param>
-                <param name="covariance">(1e-0, 1e-0, 1e-0, 1e-0, 1e-0, 1e-0)</param>
+                <param name="covariance">(1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1)</param>
                 <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
