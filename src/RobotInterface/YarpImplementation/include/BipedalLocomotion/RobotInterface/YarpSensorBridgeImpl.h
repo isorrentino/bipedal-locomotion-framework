@@ -525,7 +525,7 @@ struct YarpSensorBridge::Impl
     {
         constexpr auto logPrefix = "[YarpSensorBridge::Impl::attachAndCheckMASSensors]";
 
-        if (!attachRemappedMASSensor(devList, sensorInterface))
+        if (!attachRemappedMASSensor(devList, sensorInterface, sensorList))
         {
             log()->error("{} Could not find {} interface.", logPrefix, interfaceName);
             return false;
@@ -546,7 +546,8 @@ struct YarpSensorBridge::Impl
      */
     template <typename MASSensorType>
     bool attachRemappedMASSensor(const yarp::dev::PolyDriverList& devList,
-                                 MASSensorType*& masSensorInterface)
+                                 MASSensorType*& masSensorInterface,
+				 const std::vector<std::string>& sensorList)
     {
         constexpr auto logPrefix = "[YarpSensorBridge::Impl::attachRemappedMASSensor]";
         bool broken{false};
@@ -554,7 +555,7 @@ struct YarpSensorBridge::Impl
         {
             MASSensorType* sensorInterface{nullptr};
             devList[devIdx]->poly->view(sensorInterface);
-            if (sensorInterface == nullptr)
+            if (sensorInterface == nullptr || sensorList.size() != getNumberOfMASSensors(sensorInterface))
             {
                 continue;
             }
@@ -921,6 +922,7 @@ struct YarpSensorBridge::Impl
 
         if (metaData.bridgeOptions.isGyroscopeEnabled)
         {
+	     
             std::string_view interfaceType{"IThreeAxisGyroscopes"};
             if (!attachAndCheckMASSensors(devList,
                                           wholeBodyMASInertialsInterface.gyroscopes,
@@ -1226,7 +1228,7 @@ struct YarpSensorBridge::Impl
         std::vector<std::string> analogFTSensors;
         std::vector<std::string> masFTSensors;
         // attach MAS sensors
-        if (attachRemappedMASSensor(devList, wholeBodyMASForceTorquesInterface.sixAxisFTSensors))
+        if (attachRemappedMASSensor(devList, wholeBodyMASForceTorquesInterface.sixAxisFTSensors, metaData.sensorsList.sixAxisForceTorqueSensorsList))
         {
             // get MAS FT sensor names
             masFTSensors

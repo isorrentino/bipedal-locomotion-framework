@@ -687,7 +687,8 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
         wakeUpTime += publishOutputPeriod;
 
         {
-            std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
+
+	    std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
 
             data.vectors["ds::estimated"].assign(m_estimatorOutput.output.ds.data(),
                                                  m_estimatorOutput.output.ds.data()
@@ -794,6 +795,7 @@ void RobotDynamicsEstimatorDevice::run()
         log()->warn("{} Advance Sensor bridge failed.", logPrefix);
         return;
     }
+    
 
     if (m_isFirstRun)
     {
@@ -836,7 +838,7 @@ void RobotDynamicsEstimatorDevice::run()
     }
 
     auto toc = BipedalLocomotion::clock().now();
-    BipedalLocomotion::log()->info("{}", toc - tic);
+    // BipedalLocomotion::log()->info("{}", toc - tic);
 
     return;
 }
