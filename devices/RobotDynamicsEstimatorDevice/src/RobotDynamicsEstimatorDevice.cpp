@@ -203,7 +203,7 @@ bool RobotDynamicsEstimatorDevice::resizeEstimatorInitialState(
     }
     for (const auto& contact : contactList)
     {
-        m_estimatorOutput.output.ftWrenches[contact] = Eigen::VectorXd::Zero(6);
+        m_estimatorOutput.output.contactWrenches[contact] = Eigen::VectorXd::Zero(6);
     }
 
     std::vector<std::string> accList;
@@ -688,7 +688,7 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
 
         {
 
-	    std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
+        std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
 
             data.vectors["ds::estimated"].assign(m_estimatorOutput.output.ds.data(),
                                                  m_estimatorOutput.output.ds.data()
@@ -795,7 +795,7 @@ void RobotDynamicsEstimatorDevice::run()
         log()->warn("{} Advance Sensor bridge failed.", logPrefix);
         return;
     }
-    
+
 
     if (m_isFirstRun)
     {
