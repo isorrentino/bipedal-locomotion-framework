@@ -528,7 +528,7 @@ bool RobotDynamicsEstimatorDevice::open(yarp::os::Searchable& config)
 
 bool RobotDynamicsEstimatorDevice::openCommunications()
 {
-    if (!m_loggerPort.open(m_portPrefix + "/data:o"))
+    if (!m_loggerPort.open(m_portPrefix + "/data_laptop:o"))
     {
         return false;
     }

@@ -56,7 +56,7 @@ public:
 
 private:
     // class members
-    std::string m_portPrefix{"/robot-dynamics-estimator"};
+    std::string m_portPrefix{"/rde"};
     std::string m_robot{"ergocubSim"};
     std::string m_baseLink{"root_link"};
     std::vector<std::string> m_jointNameList{};
