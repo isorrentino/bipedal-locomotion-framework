@@ -12,32 +12,32 @@ BSD-3-Clause license. -->
     <group name="MODEL">
         <param name="model_file">model.urdf</param>
         <param name="base_link">root_link</param>
-        <param name="joint_list">("r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
-        <param name="gear_ratio">(100.0, -160.0, 100.0, 100.0, 100.0, 160.0)</param>
-        <param name="torque_constant">(0.111, 0.047, 0.047, 0.111, 0.111, 0.025)</param>
+        <param name="joint_list">("l_hip_pitch", "l_hip_roll", "l_hip_yaw", "l_knee", "l_ankle_pitch", "l_ankle_roll", "r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
+        <param name="gear_ratio">(100.0, -160.0, 100.0, 100.0, 100.0, 160.0, 100.0, -160.0, 100.0, 100.0, 100.0, 160.0)</param>
+        <param name="torque_constant">(0.111, 0.047, 0.047, 0.111, 0.111, 0.025, 0.111, 0.047, 0.047, 0.111, 0.111, 0.025)</param>
 
         <group name="FT">
-            <param name="names">("r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
-            <param name="frames">("r_foot_front_ft", "r_foot_rear_ft")</param>
-            <param name="associated_joints">("r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
+            <param name="names">("l_foot_front_ft_sensor", "l_foot_rear_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
+            <param name="frames">("l_foot_front_ft", "l_foot_rear_ft", "r_foot_front_ft", "r_foot_rear_ft")</param>
+            <param name="associated_joints">("l_foot_front_ft_sensor", "l_foot_rear_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
         </group>
 
         <group name="ACCELEROMETER">
 <!--            <param name="names">()</param>
             <param name="frames">()</param>-->
-            <param name="names">("r_leg_ft_acc", "r_foot_front_ft_acc", "r_foot_rear_ft_acc")</param>
-            <param name="frames">("r_leg_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
+            <param name="names">("l_leg_ft_acc", "l_foot_front_ft_acc", "l_foot_rear_ft_acc", "r_leg_ft_acc", "r_foot_front_ft_acc", "r_foot_rear_ft_acc")</param>
+            <param name="frames">("l_leg_ft_sensor", "l_foot_front_ft_sensor", "l_foot_rear_ft_sensor", "r_leg_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
         </group>
 
         <group name="GYROSCOPE">
 <!--            <param name="names">()</param>
             <param name="frames">()</param>-->
-            <param name="names">("r_leg_ft_gyro", "r_foot_front_ft_gyro", "r_foot_rear_ft_gyro")</param>
-            <param name="frames">("r_leg_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
+            <param name="names">("l_leg_ft_gyro", "l_foot_front_ft_gyro", "l_foot_rear_ft_gyro", "r_leg_ft_gyro", "r_foot_front_ft_gyro", "r_foot_rear_ft_gyro")</param>
+            <param name="frames">("l_leg_ft_sensor", "l_foot_front_ft_sensor", "l_foot_rear_ft_sensor", "r_leg_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
         </group>
 
         <group name="EXTERNAL_CONTACT">
-            <param name="frames">("r_upper_leg", "r_sole")</param>
+            <param name="frames">("l_upper_leg", "l_sole", "r_upper_leg", "r_sole")</param>
         </group>
     </group>
 
@@ -49,11 +49,11 @@ BSD-3-Clause license. -->
         <param name="stream_motor_states">true</param>
 
         <group name="RemoteControlBoardRemapper">
-          <param name="joints_list">("r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
+          <param name="joints_list">("l_hip_pitch", "l_hip_roll", "l_hip_yaw", "l_knee", "l_ankle_pitch", "l_ankle_roll", "r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
         </group>
 
         <group name="SixAxisForceTorqueSensors">
-          <param name="sixaxis_forcetorque_sensors_list">("r_leg_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
+          <param name="sixaxis_forcetorque_sensors_list">("l_leg_ft_sensor", "l_foot_front_ft_sensor", "l_foot_rear_ft_sensor", "r_leg_ft_sensor", "r_foot_front_ft_sensor", "r_foot_rear_ft_sensor")</param>
         </group>
 
         <!--group name="TemperatureSensors">
@@ -61,8 +61,8 @@ BSD-3-Clause license. -->
         </group-->
 
         <group name="InertialSensors">
-          <param name="accelerometers_list">(r_leg_ft_acc, r_foot_front_ft_acc, r_foot_rear_ft_acc)</param>
-          <param name="gyroscopes_list">(r_leg_ft_gyro, r_foot_front_ft_gyro, r_foot_rear_ft_gyro)</param>
+          <param name="accelerometers_list">(l_leg_ft_acc, l_foot_front_ft_acc, l_foot_rear_ft_acc, r_leg_ft_acc, r_foot_front_ft_acc, r_foot_rear_ft_acc)</param>
+          <param name="gyroscopes_list">(l_leg_ft_gyro, l_foot_front_ft_gyro, l_foot_rear_ft_gyro, r_leg_ft_gyro, r_foot_front_ft_gyro, r_foot_rear_ft_gyro)</param>
           <!--param name="magnetometers_list">(r_leg_ft_mag, r_foot_front_ft_mag, r_foot_rear_ft_mag)</param>
           <param name="orientation_sensors_list">(r_leg_ft_eul, r_foot_front_ft_eul, r_foot_rear_ft_eul)</param-->
         </group>
@@ -81,38 +81,56 @@ BSD-3-Clause license. -->
              </param-->
              <param name="dynamics_list">
                  ("JOINT_VELOCITY", "MOTOR_TORQUE", "FRICTION_TORQUE",
-                  "RIGHT_FOOT_FRONT_FT", "RIGHT_FOOT_REAR_FT",
-                  "RIGHT_LEG", "RIGHT_SOLE",
-                  "RIGHT_LEG_ACC_BIAS", "RIGHT_FOOT_FRONT_ACC_BIAS", "RIGHT_FOOT_REAR_ACC_BIAS")
+                  "LEFT_FOOT_FRONT_FT", "LEFT_FOOT_REAR_FT", "RIGHT_FOOT_FRONT_FT", "RIGHT_FOOT_REAR_FT",
+                  "LEFT_LEG", "LEFT_SOLE", "RIGHT_LEG", "RIGHT_SOLE",
+                  "LEFT_LEG_ACC_BIAS", "RIGHT_LEG_ACC_BIAS")
               </param>
              <!-- Available models = ["ZeroVelocityStateDynamics", "JointVelocityStateDynamics", "FrictionTorqueStateDynamics"] -->
              <group name="JOINT_VELOCITY">
                 <param name="name">ds</param>
-                <param name="elements">("r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
-                <param name="covariance">(1e-3, 1e-4, 1e-2, 1e-4, 1e-4, 1e-4)</param>
-                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
+                <param name="elements">("l_hip_pitch", "l_hip_roll", "l_hip_yaw", "l_knee", "l_ankle_pitch", "l_ankle_roll", "r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
+                <param name="covariance">(1e-3, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-3, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">JointVelocityStateDynamics</param>
              </group>
              <group name="MOTOR_TORQUE">
                 <param name="name">tau_m</param>
-                <param name="elements">("r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
-                <param name="covariance">(1e-3, 1e-3, 1e-4, 1e-3, 1e-3, 1e-4)</param>
-                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
+                <param name="elements">("l_hip_pitch", "l_hip_roll", "l_hip_yaw", "l_knee", "l_ankle_pitch", "l_ankle_roll", "r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
+                <param name="covariance">(1e-3, 1e-3, 1e-4, 1e-3, 1e-3, 1e-4, 1e-3, 1e-3, 1e-4, 1e-3, 1e-3, 1e-4)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
              <group name="FRICTION_TORQUE">
                 <param name="name">tau_F</param>
-                <param name="elements">("r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
-                <param name="covariance">(1e-2, 1e-1, 1e-2, 1e-2, 1e-2, 1e-3)</param>
-                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
-                <param name="friction_k0">(7.5, 8.9, 4.4, 9.8, 1.3, 1.6)</param>
-                <param name="friction_k1">(1.2, 2.1, 0.5, 2.1, 1.1, 0.6)</param>
-                <param name="friction_k2">(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)</param>
+                <param name="elements">("l_hip_pitch", "l_hip_roll", "l_hip_yaw", "l_knee", "l_ankle_pitch", "l_ankle_roll", "r_hip_pitch", "r_hip_roll", "r_hip_yaw", "r_knee", "r_ankle_pitch", "r_ankle_roll")</param>
+                <param name="covariance">(1e-2, 1e-1, 1e-2, 1e-2, 1e-2, 1e-3, 1e-2, 1e-1, 1e-2, 1e-2, 1e-2, 1e-3)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
+                <param name="friction_k0">(7.5, 8.9, 4.4, 9.8, 1.3, 1.6, 7.5, 8.9, 4.4, 9.8, 1.3, 1.6)</param>
+                <param name="friction_k1">(1.2, 2.1, 0.5, 2.1, 1.1, 0.6, 1.2, 2.1, 0.5, 2.1, 1.1, 0.6)</param>
+                <param name="friction_k2">(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)</param>
                 <param name="dynamic_model">FrictionTorqueStateDynamics</param>
+             </group>
+             <group name="LEFT_LEG_FT">
+                <param name="name">l_leg_ft_sensor</param>
+                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-5, 1e-5, 1e-5)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
+                <param name="dynamic_model">ZeroVelocityStateDynamics</param>
+             </group>
+             <group name="LEFT_FOOT_FRONT_FT">
+                <param name="name">l_foot_front_ft_sensor</param>
+                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-5, 1e-5, 1e-5)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
+                <param name="dynamic_model">ZeroVelocityStateDynamics</param>
+             </group>
+             <group name="LEFT_FOOT_REAR_FT">
+                <param name="name">l_foot_rear_ft_sensor</param>
+                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-5, 1e-5, 1e-5)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
+                <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
              <group name="RIGHT_LEG_FT">
                 <param name="name">r_leg_ft_sensor</param>
-                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3)</param>
+                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-5, 1e-5, 1e-5)</param>
                 <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
@@ -146,6 +164,24 @@ BSD-3-Clause license. -->
                 <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
+             <group name="LEFT_LEG_ACC_BIAS">
+                <param name="name">l_leg_ft_acc_bias</param>
+                <param name="covariance">(1e-6, 1e-6, 1e-6)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01)</param>
+                <param name="dynamic_model">ZeroVelocityStateDynamics</param>
+             </group>
+             <group name="LEFT_FOOT_FRONT_ACC_BIAS">
+                <param name="name">l_foot_front_ft_acc_bias</param>
+                <param name="covariance">(1e-6, 1e-6, 1e-6)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01)</param>
+                <param name="dynamic_model">ZeroVelocityStateDynamics</param>
+             </group>
+             <group name="LEFT_FOOT_REAR_ACC_BIAS">
+                <param name="name">l_foot_rear_ft_acc_bias</param>
+                <param name="covariance">(1e-6, 1e-6, 1e-6)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01)</param>
+                <param name="dynamic_model">ZeroVelocityStateDynamics</param>
+             </group>
              <group name="RIGHT_LEG_ACC_BIAS">
                 <param name="name">r_leg_ft_acc_bias</param>
                 <param name="covariance">(1e-6, 1e-6, 1e-6)</param>
@@ -164,27 +200,21 @@ BSD-3-Clause license. -->
                 <param name="initial_covariance">(0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
-             <group name="RIGHT_LEG_GYRO_BIAS">
-                <param name="name">r_leg_ft_gyro_bias</param>
-                <param name="covariance">(4e-4, 4.7e-4, 4.7e-4)</param>
-                <param name="initial_covariance">(0.01, 0.01, 0.01)</param>
+             <group name="LEFT_LEG">
+                <param name="name">l_upper_leg</param>
+                <param name="covariance">(1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
-             <group name="RIGHT_FOOT_FRONT_GYRO_BIAS">
-                <param name="name">r_foot_front_ft_gyro_bias</param>
-                <param name="covariance">(1.3e-2, 9.9e-3, 9e-3)</param>
-                <param name="initial_covariance">(0.01, 0.01, 0.01)</param>
-                <param name="dynamic_model">ZeroVelocityStateDynamics</param>
-             </group>
-             <group name="RIGHT_FOOT_REAR_GYRO_BIAS">
-                <param name="name">r_foot_rear_ft_gyro_bias</param>
-                <param name="covariance">(8.2e-8, 1e-2, 9.3e-3)</param>
-                <param name="initial_covariance">(0.01, 0.01, 0.01)</param>
+             <group name="LEFT_SOLE">
+                <param name="name">l_sole</param>
+                <param name="covariance">(1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1)</param>
+                <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
              <group name="RIGHT_LEG">
                 <param name="name">r_upper_leg</param>
-                <param name="covariance">(1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4)</param>
+                <param name="covariance">(1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1)</param>
                 <param name="initial_covariance">(0.01, 0.01, 0.01, 0.01, 0.01, 0.01)</param>
                 <param name="dynamic_model">ZeroVelocityStateDynamics</param>
              </group>
@@ -205,41 +235,77 @@ BSD-3-Clause license. -->
              </param-->
              <param name="dynamics_list">
                  ("JOINT_VELOCITY", "MOTOR_CURRENT",
-                  "RIGHT_FOOT_FRONT_FT", "RIGHT_FOOT_REAR_FT",
-                  "RIGHT_LEG_ACC", "RIGHT_FOOT_FRONT_ACC", "RIGHT_FOOT_REAR_ACC",
-                  "RIGHT_LEG_GYRO", "RIGHT_FOOT_FRONT_GYRO", "RIGHT_FOOT_REAR_GYRO")
+                  "LEFT_FOOT_FRONT_FT", "LEFT_FOOT_REAR_FT", "RIGHT_FOOT_FRONT_FT", "RIGHT_FOOT_REAR_FT",
+                  "LEFT_LEG_ACC", "LEFT_FOOT_FRONT_ACC", "LEFT_FOOT_REAR_ACC", "RIGHT_LEG_ACC", "RIGHT_FOOT_FRONT_ACC", "RIGHT_FOOT_REAR_ACC",
+                  "LEFT_LEG_GYRO", "LEFT_FOOT_FRONT_GYRO", "LEFT_FOOT_REAR_GYRO", "RIGHT_LEG_GYRO", "RIGHT_FOOT_FRONT_GYRO", "RIGHT_FOOT_REAR_GYRO")
               </param>
              <!-- Available models = ["ConstantMeasurementModel", "AccelerometerMeasurementDynamics",
                                       "GyroscopeMeasurementDynamics", "MotorCurrentMeasurementDynamics"] -->
              <group name="JOINT_VELOCITY">
                 <param name="name">ds</param>
-                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-4)</param>
+                <param name="covariance">(1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-4, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-4)</param>
                 <param name="dynamic_model">ConstantMeasurementModel</param>
              </group>
              <group name="MOTOR_CURRENT">
                 <param name="name">i_m</param>
-                <param name="covariance">(1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2)</param>
-                <param name="gear_ratio">(100.0, -160.0, 100.0, 100.0, 100.0, 160.0)</param>
-                <param name="torque_constant">(0.111, 0.047, 0.047, 0.111, 0.111, 0.025)</param>
+                <param name="covariance">(1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2)</param>
+                <param name="gear_ratio">(100.0, -160.0, 100.0, 100.0, 100.0, 160.0, 100.0, -160.0, 100.0, 100.0, 100.0, 160.0)</param>
+                <param name="torque_constant">(0.111, 0.047, 0.047, 0.111, 0.111, 0.025, 0.111, 0.047, 0.047, 0.111, 0.111, 0.025)</param>
                 <param name="dynamic_model">MotorCurrentMeasurementDynamics</param>
+             </group>
+             <group name="LEFT_LEG_FT">
+                <param name="name">l_leg_ft_sensor</param>
+                <param name="covariance">(1e1, 1e1, 1e1, 1e1, 1e1, 1e1)</param>
+                <param name="use_bias">false</param>
+                <param name="dynamic_model">ConstantMeasurementModel</param>
+             </group>
+             <group name="LEFT_FOOT_FRONT_FT">
+                <param name="name">l_foot_front_ft_sensor</param>
+                <param name="covariance">(1e1, 1e1, 1e1, 1e1, 1e1, 1e1)</param>
+                <param name="use_bias">false</param>
+                <param name="dynamic_model">ConstantMeasurementModel</param>
+             </group>
+             <group name="LEFT_FOOT_REAR_FT">
+                <param name="name">l_foot_rear_ft_sensor</param>
+                <param name="covariance">(1e1, 1e1, 1e1, 1e1, 1e1, 1e1)</param>
+                <param name="use_bias">false</param>
+                <param name="dynamic_model">ConstantMeasurementModel</param>
              </group>
              <group name="RIGHT_LEG_FT">
                 <param name="name">r_leg_ft_sensor</param>
-                <param name="covariance">(1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1)</param>
+                <param name="covariance">(1e1, 1e1, 1e1, 1e1, 1e1, 1e1)</param>
                 <param name="use_bias">false</param>
                 <param name="dynamic_model">ConstantMeasurementModel</param>
              </group>
              <group name="RIGHT_FOOT_FRONT_FT">
                 <param name="name">r_foot_front_ft_sensor</param>
-                <param name="covariance">(1e1, 1e1, 1e1, 1e0, 1e0, 1e0)</param>
+                <param name="covariance">(1e1, 1e1, 1e1, 1e1, 1e1, 1e1)</param>
                 <param name="use_bias">false</param>
                 <param name="dynamic_model">ConstantMeasurementModel</param>
              </group>
              <group name="RIGHT_FOOT_REAR_FT">
                 <param name="name">r_foot_rear_ft_sensor</param>
-                <param name="covariance">(1e1, 1e1, 1e1, 1e0, 1e0, 1e0)</param>
+                <param name="covariance">(1e1, 1e1, 1e1, 1e1, 1e1, 1e1)</param>
                 <param name="use_bias">false</param>
                 <param name="dynamic_model">ConstantMeasurementModel</param>
+             </group>
+             <group name="LEFT_LEG_ACC">
+                <param name="name">l_leg_ft_acc</param>
+                <param name="covariance">(1e-0, 1e-0, 1e-0)</param>
+                <param name="use_bias">true</param>
+                <param name="dynamic_model">AccelerometerMeasurementDynamics</param>
+             </group>
+             <group name="LEFT_FOOT_FRONT_ACC">
+                <param name="name">l_foot_front_ft_acc</param>
+                <param name="covariance">(1e1, 1e1, 1e1)</param>
+                <param name="use_bias">false</param>
+                <param name="dynamic_model">AccelerometerMeasurementDynamics</param>
+             </group>
+             <group name="LEFT_FOOT_REAR_ACC">
+                <param name="name">l_foot_rear_ft_acc</param>
+                <param name="covariance">(1e1, 1e1, 1e1)</param>
+                <param name="use_bias">false</param>
+                <param name="dynamic_model">AccelerometerMeasurementDynamics</param>
              </group>
              <group name="RIGHT_LEG_ACC">
                 <param name="name">r_leg_ft_acc</param>
@@ -250,14 +316,32 @@ BSD-3-Clause license. -->
              <group name="RIGHT_FOOT_FRONT_ACC">
                 <param name="name">r_foot_front_ft_acc</param>
                 <param name="covariance">(1e1, 1e1, 1e1)</param>
-                <param name="use_bias">true</param>
+                <param name="use_bias">false</param>
                 <param name="dynamic_model">AccelerometerMeasurementDynamics</param>
              </group>
              <group name="RIGHT_FOOT_REAR_ACC">
                 <param name="name">r_foot_rear_ft_acc</param>
                 <param name="covariance">(1e1, 1e1, 1e1)</param>
-                <param name="use_bias">true</param>
+                <param name="use_bias">false</param>
                 <param name="dynamic_model">AccelerometerMeasurementDynamics</param>
+             </group>
+             <group name="LEFT_LEG_GYRO">
+                <param name="name">l_leg_ft_gyro</param>
+                <param name="covariance">(1e-2, 1e-2, 1e-2)</param>
+                <param name="use_bias">false</param>
+                <param name="dynamic_model">GyroscopeMeasurementDynamics</param>
+             </group>
+             <group name="LEFT_FOOT_FRONT_GYRO">
+                <param name="name">l_foot_front_ft_gyro</param>
+                <param name="covariance">(1e-2, 1e-2, 1e-2)</param>
+                <param name="use_bias">false</param>
+                <param name="dynamic_model">GyroscopeMeasurementDynamics</param>
+             </group>
+             <group name="LEFT_FOOT_REAR_GYRO">
+                <param name="name">l_foot_rear_ft_gyro</param>
+                <param name="covariance">(1e-2, 1e-2, 1e-2)</param>
+                <param name="use_bias">false</param>
+                <param name="dynamic_model">GyroscopeMeasurementDynamics</param>
              </group>
              <group name="RIGHT_LEG_GYRO">
                 <param name="name">r_leg_ft_gyro</param>

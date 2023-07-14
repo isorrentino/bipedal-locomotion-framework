@@ -406,10 +406,10 @@ bool RobotDynamicsEstimator::advance()
     // Step 1 --> Predict
     m_pimpl->ukfPrediction->predict(m_pimpl->correctedState, m_pimpl->predictedState);
 
-    log()->info("Covariance/n {}", m_pimpl->predictedState.covariance().block(m_pimpl->stateHandler.getVariable("r_upper_leg").offset,
-                m_pimpl->stateHandler.getVariable("r_upper_leg").offset,
-            m_pimpl->stateHandler.getVariable("r_upper_leg").size,
-            m_pimpl->stateHandler.getVariable("r_upper_leg").size));
+//    log()->info("Covariance/n {}", m_pimpl->predictedState.covariance().block(m_pimpl->stateHandler.getVariable("r_upper_leg").offset,
+//                m_pimpl->stateHandler.getVariable("r_upper_leg").offset,
+//            m_pimpl->stateHandler.getVariable("r_upper_leg").size,
+//            m_pimpl->stateHandler.getVariable("r_upper_leg").size));
 
 //    log()->info("################# Predicted state ###################");
 //    log()->info("ds\n{}", m_pimpl->predictedState.mean().segment(m_pimpl->stateHandler.getVariable("ds").offset, m_pimpl->stateHandler.getVariable("ds").size));

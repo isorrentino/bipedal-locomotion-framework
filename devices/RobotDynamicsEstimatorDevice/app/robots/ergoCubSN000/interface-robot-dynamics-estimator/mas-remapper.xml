@@ -6,13 +6,13 @@
 <device  xmlns:xi="http://www.w3.org/2001/XInclude" name="mas-remapper" type="multipleanalogsensorsremapper">
   <param name="period">10</param>
   <param name="ThreeAxisGyroscopesNames">
-    (r_leg_ft_gyro, r_foot_front_ft_gyro, r_foot_rear_ft_gyro)
+    (l_leg_ft_gyro, l_foot_front_ft_gyro, l_foot_rear_ft_gyro, r_leg_ft_gyro, r_foot_front_ft_gyro, r_foot_rear_ft_gyro)
   </param>
   <param name="ThreeAxisLinearAccelerometersNames">
-    (r_leg_ft_acc, r_foot_front_ft_acc, r_foot_rear_ft_acc)
+    (l_leg_ft_acc, l_foot_front_ft_acc, l_foot_rear_ft_acc, r_leg_ft_acc, r_foot_front_ft_acc, r_foot_rear_ft_acc)
   </param>
   <param name="SixAxisForceTorqueSensorsNames">
-    (r_leg_ft_sensor, r_foot_front_ft_sensor, r_foot_rear_ft_sensor)
+    (l_leg_ft_sensor, l_foot_front_ft_sensor, l_foot_rear_ft_sensor, r_leg_ft_sensor, r_foot_front_ft_sensor, r_foot_rear_ft_sensor)
   </param>
   <!--param name="TemperatureSensorsNames">
     (r_foot_front_ft_sensor, r_foot_rear_ft_sensor)
@@ -20,6 +20,9 @@
 
   <action phase="startup" level="5" type="attach">
     <paramlist name="networks">
+      <elem name="left_leg_ft_client">left_leg_ft_client</elem>
+      <elem name="left_leg_imu_client">left_leg_imu_client</elem>
+      <elem name="left_foot_imu_client">left_foot_imu_client</elem>
       <elem name="right_leg_ft_client">right_leg_ft_client</elem>
       <elem name="right_leg_imu_client">right_leg_imu_client</elem>
       <elem name="right_foot_imu_client">right_foot_imu_client</elem>

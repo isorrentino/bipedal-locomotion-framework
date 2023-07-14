@@ -838,7 +838,7 @@ void RobotDynamicsEstimatorDevice::run()
     }
 
     auto toc = BipedalLocomotion::clock().now();
-    // BipedalLocomotion::log()->info("{}", toc - tic);
+    BipedalLocomotion::log()->info("{}", toc - tic);
 
     return;
 }
