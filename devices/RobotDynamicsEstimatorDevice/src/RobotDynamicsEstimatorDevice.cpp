@@ -528,7 +528,8 @@ bool RobotDynamicsEstimatorDevice::open(yarp::os::Searchable& config)
 
 bool RobotDynamicsEstimatorDevice::openCommunications()
 {
-    if (!m_loggerPort.open(m_portPrefix + "/data_laptop:o"))
+    log()->info("Port RDE = {}", m_portPrefix);
+    if (!m_loggerPort.open(m_portPrefix + "/data:o"))
     {
         return false;
     }
@@ -773,11 +774,6 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
         // release the CPU
         BipedalLocomotion::clock().yield();
 
-        //        if (wakeUpTime < BipedalLocomotion::clock().now())
-        //        {
-        //            log()->info("{} The data writing spent more time than expected.", logPrefix);
-        //        }
-
         // sleep
         BipedalLocomotion::clock().sleepUntil(wakeUpTime);
     }
@@ -787,7 +783,7 @@ void RobotDynamicsEstimatorDevice::run()
 {
     constexpr auto logPrefix = "[RobotDynamicsEstimatorDevice::run]";
 
-    auto tic = BipedalLocomotion::clock().now();
+    //auto tic = BipedalLocomotion::clock().now();
 
     // advance sensor bridge
     if (!m_robotSensorBridge->advance())
@@ -837,8 +833,8 @@ void RobotDynamicsEstimatorDevice::run()
         m_estimatorOutput.output = m_estimator->getOutput();
     }
 
-    auto toc = BipedalLocomotion::clock().now();
-    BipedalLocomotion::log()->info("{}", toc - tic);
+    //auto toc = BipedalLocomotion::clock().now();
+    //BipedalLocomotion::log()->info("{}", toc - tic);
 
     return;
 }
