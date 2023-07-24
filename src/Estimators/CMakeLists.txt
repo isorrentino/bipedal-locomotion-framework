@@ -30,13 +30,13 @@ if(FRAMEWORK_COMPILE_RobotDynamicsEstimator)
         SOURCES                 src/SubModel.cpp src/KinDynWrapper.cpp src/Dynamics.cpp src/ZeroVelocityStateDynamics.cpp src/JointVelocityStateDynamics.cpp
         src/AccelerometerMeasurementDynamics.cpp src/GyroscopeMeasurementDynamics.cpp src/ConstantMeasurementModel.cpp
         src/FrictionTorqueStateDynamics.cpp src/MotorCurrentMeasurementDynamics.cpp src/UkfState.cpp src/UkfMeasurement.cpp
-        src/RobotDynamicsEstimator.cpp src/BaseAccelerationMeasurementDynamics.cpp src/UkfModel.cpp
+        src/RobotDynamicsEstimator.cpp src/BaseAccelerationMeasurementDynamics.cpp src/UkfModel.cpp src/FrictionTorqueMeasurementModel.cpp
         SUBDIRECTORIES          tests/RobotDynamicsEstimator
         PUBLIC_HEADERS          ${H_PREFIX}/SubModel.h ${H_PREFIX}/KinDynWrapper.h ${H_PREFIX}/Dynamics.h ${H_PREFIX}/ZeroVelocityStateDynamics.h
         ${H_PREFIX}/JointVelocityStateDynamics.h ${H_PREFIX}/AccelerometerMeasurementDynamics.h ${H_PREFIX}/ConstantMeasurementModel.h
         ${H_PREFIX}/GyroscopeMeasurementDynamics.h ${H_PREFIX}/FrictionTorqueStateDynamics.h ${H_PREFIX}/MotorCurrentMeasurementDynamics.h
         ${H_PREFIX}/UkfState.h ${H_PREFIX}/UkfMeasurement.h ${H_PREFIX}/RobotDynamicsEstimator.h ${H_PREFIX}/BaseAccelerationMeasurementDynamics.h
-        ${H_PREFIX}/UkfModel.h
+        ${H_PREFIX}/UkfModel.h ${H_PREFIX}/FrictionTorqueMeasurementModel.h
         PUBLIC_LINK_LIBRARIES   BipedalLocomotion::ParametersHandler MANIF::manif BipedalLocomotion::System BipedalLocomotion::Math iDynTree::idyntree-high-level
         iDynTree::idyntree-core iDynTree::idyntree-model iDynTree::idyntree-modelio Eigen3::Eigen BayesFilters::BayesFilters
         PRIVATE_LINK_LIBRARIES  BipedalLocomotion::TextLogging BipedalLocomotion::ManifConversions
