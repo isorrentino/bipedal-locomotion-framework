@@ -639,9 +639,6 @@ bool RobotDynamicsEstimatorDevice::updateMeasurements()
         {
             return false;
         }
-//        m_estimatorInput.input.linearAccelerations[key][0] = - m_temp3DMeasurement[1];
-//        m_estimatorInput.input.linearAccelerations[key][1] = - m_temp3DMeasurement[0];
-//        m_estimatorInput.input.linearAccelerations[key][2] = - m_temp3DMeasurement[2];
     }
 
     for (auto& [key, value] : m_estimatorInput.input.angularVelocities)
@@ -650,9 +647,6 @@ bool RobotDynamicsEstimatorDevice::updateMeasurements()
         {
             return false;
         }
-//        m_estimatorInput.input.angularVelocities[key][0] = - m_temp3DMeasurement[1];
-//        m_estimatorInput.input.angularVelocities[key][1] = - m_temp3DMeasurement[0];
-//        m_estimatorInput.input.angularVelocities[key][2] = - m_temp3DMeasurement[2];
     }
 
     m_robotSensorBridge->getJointTorques(m_measuredTauj);
