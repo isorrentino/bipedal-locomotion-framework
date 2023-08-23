@@ -635,7 +635,7 @@ bool RobotDynamicsEstimatorDevice::updateMeasurements()
 
     for (auto& [key, value] : m_estimatorInput.input.linearAccelerations)
     {
-        if (!m_robotSensorBridge->getLinearAccelerometerMeasurement(key, m_temp3DMeasurement))
+        if (!m_robotSensorBridge->getLinearAccelerometerMeasurement(key, m_estimatorInput.input.linearAccelerations[key]))
         {
             return false;
         }
@@ -643,7 +643,7 @@ bool RobotDynamicsEstimatorDevice::updateMeasurements()
 
     for (auto& [key, value] : m_estimatorInput.input.angularVelocities)
     {
-        if (!m_robotSensorBridge->getGyroscopeMeasure(key, m_temp3DMeasurement))
+        if (!m_robotSensorBridge->getGyroscopeMeasure(key, m_estimatorInput.input.angularVelocities[key]))
         {
             return false;
         }
@@ -749,14 +749,12 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
                 data.vectors["accelerometers::" + key + "::measured"].assign(value.data(),
                                                                              value.data()
                                                                                  + value.size());
-                log()->info("{} {}", key, value.transpose());
             }
             for (auto& [key, value] : m_estimatorInput.input.angularVelocities)
             {
                 data.vectors["gyroscopes::" + key + "::measured"].assign(value.data(),
                                                                          value.data()
                                                                              + value.size());
-                log()->info("{} {}", key, value.transpose());
             }
         }
         m_loggerPort.write();
