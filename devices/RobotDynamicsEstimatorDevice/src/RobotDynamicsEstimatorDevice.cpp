@@ -749,12 +749,14 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
                 data.vectors["accelerometers::" + key + "::measured"].assign(value.data(),
                                                                              value.data()
                                                                                  + value.size());
+                log()->info("{} {}", key, value.transpose());
             }
             for (auto& [key, value] : m_estimatorInput.input.angularVelocities)
             {
                 data.vectors["gyroscopes::" + key + "::measured"].assign(value.data(),
                                                                          value.data()
                                                                              + value.size());
+                log()->info("{} {}", key, value.transpose());
             }
         }
         m_loggerPort.write();
