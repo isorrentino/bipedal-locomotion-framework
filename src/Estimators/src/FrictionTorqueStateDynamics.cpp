@@ -199,14 +199,6 @@ bool RDE::FrictionTorqueStateDynamics::update()
 
     m_updatedVariable = m_frictionTorqueFullModel.array() + m_dT * m_dotTauF.array();
 
-    for (int i = 0; i < m_updatedVariable.size(); i++)
-    {
-        if (std::abs(m_jointVelocityFullModel(i)) < 0.01)
-        {
-            m_updatedVariable(i) = 0;
-        }
-    }
-
 //    log()->info("m_updatedVariable = m_frictionTorqueFullModel + m_dT * m_dotTauF --> {} = {} + {} * {}", m_updatedVariable, m_frictionTorqueFullModel, m_dT, m_dotTauF);
 
     return true;
