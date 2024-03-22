@@ -2,6 +2,7 @@
 
 # This software may be modified and distributed under the terms of the BSD-3-Clause license.
 
+import signal
 import numpy as np
 import datetime
 import h5py
@@ -165,7 +166,7 @@ def main():
 
     trajectory = []
     for index in range(len(joints_to_control)):
-        trajectory[index, :] = generate_trajectory_for_joint(
+        trajectory.append(generate_trajectory_for_joint(
             joint_torques[index],
             dt.total_seconds(),
             min_delta_current[index],
@@ -174,10 +175,13 @@ def main():
             min_frequency[index],
             max_frequency[index],
             frequency_increment[index],
-        )
+        ))
         print(joints_to_control[index])
 
-    print(trajectory.shape)
+    print(np.array(trajectory).shape)
+    print(np.array(trajectory).T.shape)
+
+    trajectory = np.array(trajectory).T
 
     gear_ratio = [100.0, 160.0]
     ktau = [0.0581, 0.0288]
@@ -186,6 +190,10 @@ def main():
     # ktau = [0.1079, 0.0433, 0.0425, 0.0960, 0.0581, 0.0288]
 
     delta_index = 1
+
+    ctrl_c_handler = create_ctrl_c_handler(sensor_bridge=sensor_bridge, robot_control=robot_control)
+
+    signal.signal(signal.SIGINT, ctrl_c_handler)
 
     while True:
         tic = blf.clock().now()
@@ -203,7 +211,7 @@ def main():
             raise RuntimeError("Unable to get the joint positions")
 
         torque_ref = (
-            np.array(trajectory[index]) * np.array(ktau) * np.array(gear_ratio)
+            trajectory[index] * np.array(ktau) * np.array(gear_ratio)
         )
         print(torque_ref)
 
