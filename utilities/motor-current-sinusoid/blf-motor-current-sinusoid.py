@@ -160,14 +160,14 @@ def main():
     input()
     blf.log().info("Starting the trajectory")
 
-    are_joints_ok, joint_torques, _ = sensor_bridge.get_joint_torques()
+    are_joints_ok, motor_currents, _ = sensor_bridge.get_motor_currents()
     if not are_joints_ok:
         raise RuntimeError("Unable to get the joint torques")
 
     trajectory = []
     for index in range(len(joints_to_control)):
         trajectory.append(generate_trajectory_for_joint(
-            joint_torques[index],
+            motor_currents[index],
             dt.total_seconds(),
             min_delta_current[index],
             max_delta_current[index],
@@ -180,6 +180,20 @@ def main():
 
     print(np.array(trajectory).shape)
     print(np.array(trajectory).T.shape)
+
+    vectors_collection_server = blf.yarp_utilities.VectorsCollectionServer()
+    if not vectors_collection_server.initialize(
+        param_handler.get_group("DATA_LOGGING")
+    ):
+        raise RuntimeError("Unable to initialize the vectors collection server")
+
+    vectors_collection_server.populate_metadata(
+        "motors::desired::current",
+        param_handler.get_group("ROBOT_CONTROL").get_parameter_vector_string(
+            "joints_list"
+        ),
+    )
+    vectors_collection_server.finalize_metadata()
 
     trajectory = np.array(trajectory).T
 
@@ -198,28 +212,26 @@ def main():
     while True:
         tic = blf.clock().now()
 
-        # if sample < 5:
-        #     continue
-
         # get the feedback
         if not sensor_bridge.advance():
             raise RuntimeError("Unable to advance the sensor bridge")
 
-        are_joints_ok, joint_positions, _ = sensor_bridge.get_joint_positions()
-
-        if not are_joints_ok:
-            raise RuntimeError("Unable to get the joint positions")
-
-        torque_ref = (
-            trajectory[index] * np.array(ktau) * np.array(gear_ratio)
-        )
-        print(torque_ref)
+        current_ref = trajectory[index]
 
         # send the motor current
         if not robot_control.set_references(
-            torque_ref, blf.robot_interface.YarpRobotControl.Torque
+            current_ref, blf.robot_interface.YarpRobotControl.Current
         ):
             raise RuntimeError("Unable to set the references")
+
+        vectors_collection_server.prepare_data()
+
+        if not vectors_collection_server.clear_data():
+            raise RuntimeError("Unable to clear the data")
+
+        vectors_collection_server.populate_data("motors::desired::current", current_ref)
+
+        vectors_collection_server.send_data()
 
         toc = blf.clock().now()
         delta_time = toc - tic
@@ -228,10 +240,26 @@ def main():
 
         index = index + delta_index
 
-        if index == 0:
-            delta_index = 1
-        elif index == trajectory.shape[1]-1:
-            delta_index = -1
+        # Print percentage of the trajectory only when the percentage is multiple of 0.1
+        if index % int(trajectory.shape[0]/10) == 0:
+            print(f"Percentage of the trajectory: {int(100*index/trajectory.shape[0])}")
+            
+        if index >= trajectory.shape[0]:
+            break
+    
+    # get the feedback
+    if not sensor_bridge.advance():
+        raise RuntimeError("Unable to advance the sensor bridge")
+
+    are_joints_ok, joint_positions, _ = sensor_bridge.get_joint_positions()
+
+    if not are_joints_ok:
+        raise RuntimeError("Unable to get the joint positions")
+
+    if not robot_control.set_references(
+        joint_positions, blf.robot_interface.YarpRobotControl.Position
+    ):
+        raise RuntimeError("Unable to set the references")
 
 
 if __name__ == "__main__":

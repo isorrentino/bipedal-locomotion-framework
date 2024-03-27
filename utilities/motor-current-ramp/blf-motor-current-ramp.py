@@ -5,6 +5,7 @@
 import signal
 import numpy as np
 import datetime
+import h5py
 import scipy
 
 import bipedal_locomotion_framework.bindings as blf
@@ -36,7 +37,6 @@ def build_remote_control_board_driver(
     param_handler.set_parameter_string("local_prefix", local_prefix)
     return blf.robot_interface.construct_remote_control_board_remapper(param_handler)
 
-
 def create_ctrl_c_handler(sensor_bridge, robot_control):
     def ctrl_c_handler(sig, frame):
         print("Ctrl+C pressed. Exiting gracefully.")
@@ -63,29 +63,27 @@ def create_ctrl_c_handler(sensor_bridge, robot_control):
 
 def main():
     param_handler = blf.parameters_handler.YarpParametersHandler()
-    if not param_handler.set_from_filename(
-        "blf-motor-current-trajectory-player-options.ini"
-    ):
+    if not param_handler.set_from_filename("blf-motor-current-ramp-options.ini"):
         raise RuntimeError("Unable to load the parameters")
+
+    ramp_group = param_handler.get_group("RAMP")
+    max_delta_current = ramp_group.get_parameter_vector_float("max_delta_current_increment")
+    delta_current_increment = ramp_group.get_parameter_vector_float(
+        "delta_current_increment"
+    )
+    delta_time = ramp_group.get_parameter_float("delta_time")
 
     # Load joints to control
     robot_control_handler = param_handler.get_group("ROBOT_CONTROL")
     joints_to_control = robot_control_handler.get_parameter_vector_string("joints_list")
 
     dt = param_handler.get_parameter_datetime("dt")
-    dataset = param_handler.get_parameter_string("dataset_trajectory")
-    joints_trajectory = param_handler.get_parameter_vector_string("joints_trajectory")
-
-    data = scipy.io.loadmat(dataset, squeeze_me=True)
-
-    print(data)
-    print(data.keys())
 
     poly_drivers = dict()
 
     poly_drivers["REMOTE_CONTROL_BOARD"] = build_remote_control_board_driver(
         param_handler=robot_control_handler,
-        local_prefix="motor_current_trajectory_player",
+        local_prefix="motor_current_ramp",
     )
     if not poly_drivers["REMOTE_CONTROL_BOARD"].is_valid():
         raise RuntimeError("Unable to create the remote control board driver")
@@ -115,6 +113,18 @@ def main():
     if not are_joints_ok:
         raise RuntimeError("Unable to get the joint positions")
 
+    blf.log().info("Waiting for your input")
+    blf.log().info("Press enter to start the trajectory")
+    input()
+    blf.log().info("Starting the trajectory")
+
+    are_joints_ok, motor_currents, _ = sensor_bridge.get_motor_currents()
+    if not are_joints_ok:
+        raise RuntimeError("Unable to get the joint torques")
+    
+    # motor_currents = motor_currents * 0.0
+    motor_currents_init = motor_currents
+
     vectors_collection_server = blf.yarp_utilities.VectorsCollectionServer()
     if not vectors_collection_server.initialize(
         param_handler.get_group("DATA_LOGGING")
@@ -129,117 +139,62 @@ def main():
     )
     vectors_collection_server.finalize_metadata()
 
-    # Find joint to control in joint trajectory indeces
-    joints_to_control_idx = []
-    for joint in joints_to_control:
-        joints_to_control_idx.append(joints_trajectory.index(joint))
+    gear_ratio = [100.0, 160.0]
+    ktau = [0.0581, 0.0288]
 
-    initial_sample = int(4 / 0.005)
-    initial_positions = data["joint_position"][0, joints_to_control_idx]
-    if len(joints_to_control) != len(initial_positions):
-        raise RuntimeError(
-            "The number of joints to control is different from the number of knots"
-        )
+    # gear_ratio = [100.0, 160.0, 100.0, 100.0, 100.0, 160.0]
+    # ktau = [0.1079, 0.0433, 0.0425, 0.0960, 0.0581, 0.0288]
 
-    blf.log().info("Waiting for your input")
-    blf.log().info("Press enter to move to the initial position")
-    input()
-    blf.log().info("Positioning")
-
-    if not robot_control.set_references(
-        initial_positions, blf.robot_interface.YarpRobotControl.Position
-    ):
-        raise RuntimeError("Unable to set the references")
-
-    # Read joint positions and check if the position is reached
-    while True:
-        if not sensor_bridge.advance():
-            raise RuntimeError("Unable to advance the sensor bridge")
-
-        are_joints_ok, joint_positions, _ = sensor_bridge.get_joint_positions()
-
-        if not are_joints_ok:
-            raise RuntimeError("Unable to get the joint positions")
-
-        if np.allclose(joint_positions, initial_positions, atol=1e-2):
-            break
-
-    # switch to position direct
-    blf.log().info("Waiting for your input")
-    blf.log().info("Press enter to start the motor current trajectory")
-    input()
-    blf.log().info("Starting the trajectory")
-
-    # gear_ratio = [
-    #     -100.0,
-    #     160.0,
-    #     -100.0,
-    #     100.0,
-    #     100.0,
-    #     160.0
-    # ]
-    # ktau = [
-    #     0.1079,
-    #     0.0433,
-    #     0.0425,
-    #     0.0960,
-    #     0.0581,
-    #     0.0288
-    # ]
-    gear_ratio = [-100.0, -100.0]
-    ktau = [0.1079, 0.0960]
-
-    ctrl_c_handler = create_ctrl_c_handler(
-        sensor_bridge=sensor_bridge, robot_control=robot_control
-    )
+    ctrl_c_handler = create_ctrl_c_handler(sensor_bridge=sensor_bridge, robot_control=robot_control)
 
     signal.signal(signal.SIGINT, ctrl_c_handler)
 
-    # Plot the trajectory
-    # import matplotlib.pyplot as plt
-    # plt.figure()
-    # for joint in range(len(joints_to_control)):
-    #     plt.plot(data["motor_current_resampled"][:, joint])
-    # plt.show()
+    delta_time_ramp = 0.0
 
-    scale_factor = [0.4, 0.4, 0.4, 0.4, 0.2, 0.2]
+    end_loop = False
 
-    for sample in range(initial_sample, len(data["motor_current_resampled"])):
+    while not end_loop:
         tic = blf.clock().now()
 
-        current_ref = (
-            np.array(data["motor_current_resampled"][sample][joints_to_control_idx])
-            * scale_factor
-        )
-        
-        # current_ref = current_ref * gear_ratio * ktau / 3
-
-        print(current_ref)
+        # get the feedback
+        if not sensor_bridge.advance():
+            raise RuntimeError("Unable to advance the sensor bridge")
 
         # send the motor current
-        # if not robot_control.set_references(
-        #     current_ref, blf.robot_interface.YarpRobotControl.Torque
-        # ):
-        #     raise RuntimeError("Unable to set the references")
         if not robot_control.set_references(
-            current_ref, blf.robot_interface.YarpRobotControl.Current
+            motor_currents, blf.robot_interface.YarpRobotControl.Current
         ):
             raise RuntimeError("Unable to set the references")
-
-        toc = blf.clock().now()
-        delta_time = toc - tic
-        if delta_time < dt:
-            blf.clock().sleep_for(dt - delta_time)
-
+        
         vectors_collection_server.prepare_data()
 
         if not vectors_collection_server.clear_data():
             raise RuntimeError("Unable to clear the data")
 
-        vectors_collection_server.populate_data("motors::desired::current", current_ref)
+        vectors_collection_server.populate_data("motors::desired::current", motor_currents)
 
         vectors_collection_server.send_data()
 
+        toc = blf.clock().now()
+        delta_time_loop = toc - tic
+        if delta_time_loop < dt:
+            blf.clock().sleep_for(dt - delta_time_loop)
+
+        delta_time_ramp = delta_time_ramp + dt.total_seconds()
+
+        print("delta time")
+        print(delta_time_ramp)
+
+        print("desired current")
+        print(motor_currents)
+        
+        if delta_time_ramp > delta_time:
+            delta_time_ramp = 0.0
+            motor_currents = motor_currents + delta_current_increment
+            for i in range(len(motor_currents)):
+                if np.abs(motor_currents[i] - motor_currents_init[i]) > max_delta_current[i]:
+                    end_loop = True
+    
     # get the feedback
     if not sensor_bridge.advance():
         raise RuntimeError("Unable to advance the sensor bridge")
