@@ -5,10 +5,10 @@ BSD-3-Clause license. -->
 <?xml version="1.0" encoding="UTF-8" ?>
 <device  xmlns:xi="http://www.w3.org/2001/XInclude" name="yarp-robot-logger" type="YarpRobotLoggerDevice">
   <param name="robot">ergocub</param>
-  <param name="sampling_period_in_s">0.01</param>
+  <param name="sampling_period_in_s">0.002</param>
 
-  <param name="rgb_cameras_fps">(20)</param>
-  <param name="rgb_cameras_rgb_save_mode">("video")</param>
+  <!--param name="rgb_cameras_fps">(20)</param>
+  <param name="rgb_cameras_rgb_save_mode">("video")</param-->
 
   <param name="rgbd_cameras_fps">()</param>
   <param name="rgbd_cameras_depth_scale">()</param>
@@ -71,13 +71,13 @@ BSD-3-Clause license. -->
     </group>
   </group>
 
-  <group name="RobotCameraBridge">
+  <!--group name="RobotCameraBridge">
       <param name="stream_cameras">true</param>
       <group name="Cameras">
         <param name="rgb_cameras_list">("jabra")</param>
         <param name="rgbd_cameras_list">()</param>
       </group>
-  </group>
+  </group-->
 
   <group name="RobotSensorBridge">
     <param name="check_for_nan">false</param>
@@ -128,7 +128,7 @@ BSD-3-Clause license. -->
       <elem name="left_arm_wrench_client">left_arm_wrench_client</elem-->
       <elem name="mas-remapper">mas-remapper</elem>
       <!-- <elem name="realsense">realsense</elem> -->
-      <elem name="jabra">jabra</elem>
+      <!--elem name="jabra">jabra</elem-->
     </paramlist>
   </action>
 
