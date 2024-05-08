@@ -152,6 +152,11 @@ def main():
     delta_time_ramp = 0.0
 
     end_loop = False
+    
+    motor_currents = motor_currents + delta_current_increment
+    for i in range(len(motor_currents)):
+        if np.abs(motor_currents[i] - motor_currents_init[i]) > max_delta_current[i]:
+            end_loop = True
 
     while not end_loop:
         tic = blf.clock().now()
@@ -193,6 +198,12 @@ def main():
             motor_currents = motor_currents + delta_current_increment
             for i in range(len(motor_currents)):
                 if np.abs(motor_currents[i] - motor_currents_init[i]) > max_delta_current[i]:
+                    print("motor current")
+                    print(motor_currents)
+                    print("motor current init")
+                    print(motor_currents_init)
+                    print("max delta current")
+                    print(max_delta_current)
                     end_loop = True
     
     # get the feedback

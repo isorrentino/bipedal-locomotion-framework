@@ -46,7 +46,7 @@ def generate_trajectory_for_joint(
     f_end = max_frequency
     delta_f = frequency_increment
 
-    while A <= max_delta_current:
+    while np.abs(A) <= np.abs(max_delta_current):
         print(type(delta_t))
         print(delta_t)
 
@@ -67,9 +67,9 @@ def generate_trajectory_for_joint(
 
     # Concatenate trajectories and plot the final trajectory
     trajectory = np.concatenate(trajectory)
-    import matplotlib.pyplot as plt
-    plt.plot(trajectory)
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.plot(trajectory)
+    # plt.show()
 
     return trajectory
 
@@ -167,7 +167,7 @@ def main():
     trajectory = []
     for index in range(len(joints_to_control)):
         trajectory.append(generate_trajectory_for_joint(
-            motor_currents[index],
+            motor_currents[index]*0 + 0.08,
             dt.total_seconds(),
             min_delta_current[index],
             max_delta_current[index],
@@ -217,6 +217,7 @@ def main():
             raise RuntimeError("Unable to advance the sensor bridge")
 
         current_ref = trajectory[index]
+        print(current_ref)
 
         # send the motor current
         if not robot_control.set_references(
@@ -241,7 +242,7 @@ def main():
         index = index + delta_index
 
         # Print percentage of the trajectory only when the percentage is multiple of 0.1
-        if index % int(trajectory.shape[0]/10) == 0:
+        if index % int(trajectory.shape[0]/5) == 0:
             print(f"Percentage of the trajectory: {int(100*index/trajectory.shape[0])}")
             
         if index >= trajectory.shape[0]:
