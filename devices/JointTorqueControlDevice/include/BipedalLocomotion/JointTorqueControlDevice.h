@@ -9,6 +9,11 @@
 #define BIPEDAL_LOCOMOTION_FRAMEWORK_JOINT_TORQUE_CONTROL_DEVICE_H
 
 #include <BipedalLocomotion/PassThroughControlBoard.h>
+#include <BipedalLocomotion/ParametersHandler/IParametersHandler.h>
+#include <BipedalLocomotion/ParametersHandler/YarpImplementation.h>
+#include <BipedalLocomotion/TextLogging/Logger.h>
+#include <BipedalLocomotion/JointFrictionTorqueEstimator.h>
+#include <BipedalLocomotion/YarpUtilities/VectorsCollection.h>
 
 #include <iostream>
 
@@ -47,14 +52,65 @@ struct CouplingMatrices
 struct MotorTorqueCurrentParameters
 {
     double kt; ///< motor torque to current gain
-    double kc; ///< coulomb friction parameter
-    double kv; ///< viscous friction parameter
     double kfc; ///< friction compensation weight parameter
-    double max_curr;
+    double maxCurr; ///< maximum current
+    std::string frictionModel; ///< friction model
 
     void reset()
     {
-        kt = kc = kv = kfc = max_curr = 0.0;
+        kt = kfc = maxCurr = 0.0;
+        frictionModel = "";
+    }
+};
+
+/**
+ * Parameters for friction model defined as PINN
+ *
+ */
+struct PINNParameters
+{
+    std::string modelPath; ///< PINN model path
+    int threadNumber; ///< number of threads
+    int historyLength; ///< history length
+
+    void reset()
+    {
+        modelPath = "";
+        threadNumber = 0;
+        historyLength = 0;
+    }
+};
+
+/**
+ * Parameters for friction model defined as coulomb + viscous
+ *
+ */
+struct CoulombViscousParameters
+{
+    double kc; ///< coulomb friction
+    double kv; ///< viscous friction
+
+    void reset()
+    {
+        kc = kv = 0.0;
+    }
+};
+
+/**
+ * Parameters for friction model defined as coulomb + viscous
+ *
+ */
+struct CoulombViscousStribeckParameters
+{
+    double kc; ///< coulomb friction
+    double kv; ///< viscous friction
+    double vs; ///< stiction velocity
+    double ka; ///< tanh gain
+    double ks; ///< stribeck friction
+
+    void reset()
+    {
+        kc = kv = ka = vs = ks = 0.0;
     }
 };
 
@@ -66,11 +122,24 @@ private:
     yarp::os::Property PropertyConfigOptions;
     int axes;
     std::vector<MotorTorqueCurrentParameters> motorTorqueCurrentParameters;
+    std::vector<PINNParameters> pinnParameters;
+    std::vector<CoulombViscousParameters> coulombViscousParameters;
+    std::vector<CoulombViscousStribeckParameters> coulombViscousStribeckParameters;
+    std::vector<std::unique_ptr<JointFrictionTorqueEstimator>> frictionEstimators;
     yarp::sig::Vector desiredJointTorques;
     yarp::sig::Vector desiredMotorCurrents;
     yarp::sig::Vector measuredJointVelocities;
     yarp::sig::Vector measuredMotorVelocities;
     yarp::sig::Vector measuredJointTorques;
+    yarp::sig::Vector measuredJointPositions;
+    yarp::sig::Vector measuredMotorPositions;
+    yarp::sig::Vector estimatedFrictionTorques;
+    std::string m_portPrefix{"/hijackingTrqCrl"}; /**< Default port prefix. */
+    yarp::os::BufferedPort<BipedalLocomotion::YarpUtilities::VectorsCollection>
+        m_loggerPort; /**<
+                         Logger
+                         port.
+                       */
 
     CouplingMatrices couplingMatrices;
 
@@ -87,10 +156,12 @@ private:
     void startHijackingTorqueControlIfNecessary(int j);
     void stopHijackingTorqueControlIfNecessary(int j);
     bool isHijackingTorqueControl(int j);
+    double computeFrictionTorque(int joint);
 
     void computeDesiredCurrents();
     void readStatus();
-    bool loadGains(yarp::os::Searchable& config);
+    // bool loadGains(yarp::os::Searchable& config);
+    bool loadFrictionParams(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler);
 
     /**
      * Load the coupling matrices from the group whose name
@@ -107,6 +178,12 @@ private:
     // Method that actually executes one control loop
     double timeOfLastControlLoop{-1.0};
     void controlLoop();
+
+    /**
+     * Open the communication ports.
+     * @return true/false on success/failure.
+     */
+    bool openCommunications();
 
 public:
     // CONSTRUCTOR/DESTRUCTOR

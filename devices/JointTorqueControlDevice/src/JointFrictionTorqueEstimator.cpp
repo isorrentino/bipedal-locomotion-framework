@@ -58,8 +58,8 @@ JointFrictionTorqueEstimator::~JointFrictionTorqueEstimator() = default;
 
 bool JointFrictionTorqueEstimator::initialize(const std::string& networkModelPath,
                                               const std::size_t historyLength,
-                                              const int intraOpNumThreads = 1,
-                                              const int interOpNumThreads = 1)
+                                              const int intraOpNumThreads,
+                                              const int interOpNumThreads)
 {
     std::basic_string<ORTCHAR_T> networkModelPathAsOrtString(networkModelPath.begin(),
                                                              networkModelPath.end());
@@ -94,6 +94,9 @@ bool JointFrictionTorqueEstimator::initialize(const std::string& networkModelPat
     m_pimpl->structuredInput.shape[0] = 1; // batch
     m_pimpl->structuredInput.shape[1] = historyLength * 2;
 
+    m_pimpl->jointPositionBuffer.resize(historyLength);
+    m_pimpl->motorPositionBuffer.resize(historyLength);
+
     // create tensor required by onnx
     m_pimpl->structuredInput.tensor
         = Ort::Value::CreateTensor<float>(m_pimpl->memoryInfo,
@@ -121,10 +124,23 @@ bool JointFrictionTorqueEstimator::initialize(const std::string& networkModelPat
     return true;
 }
 
+void JointFrictionTorqueEstimator::resetEstimator()
+{
+    m_pimpl->jointPositionBuffer.clear();
+    m_pimpl->motorPositionBuffer.clear();
+}
+
 bool JointFrictionTorqueEstimator::estimate(const double inputJointPosition,
                                             const double inputMotorPosition,
                                             double& output)
 {
+    if (m_pimpl->jointPositionBuffer.size() > m_pimpl->historyLength)
+    {
+        // The buffer is full, remove the oldest element
+        m_pimpl->jointPositionBuffer.pop_front();
+        m_pimpl->motorPositionBuffer.pop_front();
+    }
+
     // Push element into the queue
     m_pimpl->jointPositionBuffer.push_back(inputJointPosition);
     m_pimpl->motorPositionBuffer.push_back(inputMotorPosition);
@@ -134,13 +150,6 @@ bool JointFrictionTorqueEstimator::estimate(const double inputJointPosition,
     {
         // The buffer is not full yet
         return false;
-    }
-
-    if (m_pimpl->jointPositionBuffer.size() > m_pimpl->historyLength)
-    {
-        // The buffer is full, remove the oldest element
-        m_pimpl->jointPositionBuffer.pop_front();
-        m_pimpl->motorPositionBuffer.pop_front();
     }
 
     // Fill the input

@@ -98,6 +98,11 @@ void JointTorqueControlDevice::startHijackingTorqueControlIfNecessary(int j)
                                                           // considering the measured current
         this->hijackingTorqueControl[j] = true;
         hijackedMotors.push_back(j);
+
+        if (motorTorqueCurrentParameters[j].frictionModel == "FRICTION_PINN")
+        {
+            frictionEstimators[j]->resetEstimator();
+        }
     }
 }
 
@@ -116,8 +121,58 @@ bool JointTorqueControlDevice::isHijackingTorqueControl(int j)
     return this->hijackingTorqueControl[j];
 }
 
+double JointTorqueControlDevice::computeFrictionTorque(int joint)
+{
+    double frictionTorque = 0.0;
+    if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_COULOMB_VISCOUS")
+    {
+        frictionTorque = coulombViscousParameters[joint].kc * sign(measuredMotorVelocities[joint])
+                         + coulombViscousParameters[joint].kv * measuredMotorVelocities[joint];
+    }
+    else if (motorTorqueCurrentParameters[joint].frictionModel
+               == "FRICTION_COULOMB_VISCOUS_STRIBECK")
+    {
+        double velOverVs
+            = measuredMotorVelocities[joint] / coulombViscousStribeckParameters[joint].vs;
+        double velOverVsPow2 = std::pow(velOverVs, 2);
+        double exp = std::exp(-velOverVsPow2);
+        double stribeckcoulomb = (coulombViscousStribeckParameters[joint].ks
+                                  - coulombViscousStribeckParameters[joint].kc)
+                                 * exp;
+        double kaTimesVel
+            = coulombViscousStribeckParameters[joint].ka * measuredMotorVelocities[joint];
+        double tanh = std::tanh(kaTimesVel);
+        double visc = coulombViscousStribeckParameters[joint].kv * measuredMotorVelocities[joint];
+        frictionTorque
+            = visc + tanh * (coulombViscousStribeckParameters[joint].kc + stribeckcoulomb);
+    } 
+    else if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_PINN")
+    {
+        if (!frictionEstimators[joint]->estimate(measuredJointPositions[joint],
+                                                 measuredMotorPositions[joint],
+                                                 frictionTorque))
+        {
+            frictionTorque = 0.0;
+        }
+    }
+    return frictionTorque;
+}
+
+bool JointTorqueControlDevice::openCommunications()
+{
+    if (!m_loggerPort.open(m_portPrefix + "/data:o"))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 void JointTorqueControlDevice::computeDesiredCurrents()
 {
+    auto& data = m_loggerPort.prepare();
+    data.vectors.clear();
+
     // compute timestep
     double dt;
     if (timeOfLastControlLoop < 0.0)
@@ -131,20 +186,37 @@ void JointTorqueControlDevice::computeDesiredCurrents()
     toEigenVector(desiredJointTorques)
         = couplingMatrices.fromJointTorquesToMotorTorques * toEigenVector(desiredJointTorques);
 
+    estimatedFrictionTorques.zero();
+
     for (int j = 0; j < this->axes; j++)
     {
         if (this->hijackingTorqueControl[j])
         {
-            MotorTorqueCurrentParameters& gains = motorTorqueCurrentParameters[j];
+            if (motorTorqueCurrentParameters[j].kfc > 0.0)
+            {
+                estimatedFrictionTorques[j] = computeFrictionTorque(j);
+            }
 
-            desiredMotorCurrents[j] = gains.kt * desiredJointTorques[j]
-                                      + gains.kfc
-                                            * (gains.kc * sign(measuredMotorVelocities[j])
-                                               + gains.kv * measuredMotorVelocities[j]);
-            desiredMotorCurrents[j]
-                = saturation(desiredMotorCurrents[j], gains.max_curr, -gains.max_curr);
+            desiredMotorCurrents[j] = motorTorqueCurrentParameters[j].kt * desiredJointTorques[j]
+                                      + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j];
+
+            desiredMotorCurrents[j] = saturation(desiredMotorCurrents[j],
+                                                 motorTorqueCurrentParameters[j].maxCurr,
+                                                 -motorTorqueCurrentParameters[j].maxCurr);
         }
     }
+
+    data.vectors["motor_currents::desired"].assign(desiredMotorCurrents.data(),
+                                                   desiredMotorCurrents.data()
+                                                       + desiredMotorCurrents.size());
+    data.vectors["joint_torques::desired"].assign(desiredJointTorques.data(),
+                                                  desiredJointTorques.data()
+                                                      + desiredJointTorques.size());
+    data.vectors["friction_torques::estimated"].assign(estimatedFrictionTorques.data(),
+                                                       estimatedFrictionTorques.data()
+                                                           + estimatedFrictionTorques.size());
+
+    m_loggerPort.write();
 
     bool isNaNOrInf = false;
     for (int j = 0; j < this->axes; j++)
@@ -184,47 +256,53 @@ void JointTorqueControlDevice::readStatus()
     {
         std::cerr << "Failed to get joint torque" << std::endl;
     }
+    if (!this->PassThroughControlBoard::getEncoders(measuredJointPositions.data()))
+    {
+        std::cerr << "Failed to get joint position" << std::endl;
+    }
+    if (!this->PassThroughControlBoard::getMotorEncoders(measuredMotorPositions.data()))
+    {
+        std::cerr << "Failed to get motor position" << std::endl;
+    }
 }
 
-bool JointTorqueControlDevice::loadGains(Searchable& config)
-{
-    if (!config.check("TORQUE_CURRENT_GAINS"))
-    {
-        yError("No TORQUE_CURRENT_GAINS group find in configuration file, initialization failed");
-        return false;
-    }
+// bool JointTorqueControlDevice::loadGains(Searchable& config)
+// {
+//     if (!config.check("TORQUE_CURRENT_GAINS"))
+//     {
+//         yError("No TORQUE_CURRENT_GAINS group find in configuration file, initialization failed");
+//         return false;
+//     }
 
-    yarp::os::Bottle& bot = config.findGroup("TORQUE_CURRENT_GAINS");
-    std::cerr << "Number of axes " << this->axes << std::endl;
-    // Check if each gains exist for each axes (nAxis==nGain)
-    bool gains_ok = true;
-    gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "kt", this->axes);
-    gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "kc", this->axes);
-    gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "kv", this->axes);
-    gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "kfc", this->axes);
-    gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "max_curr", this->axes);
+//     yarp::os::Bottle& bot = config.findGroup("TORQUE_CURRENT_PARAMS");
+//     std::cerr << "Number of axes " << this->axes << std::endl;
+//     // Check if each gains exist for each axes (nAxis==nGain)
+//     bool gains_ok = true;
+//     gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "kt", this->axes);
+//     gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "kfc", this->axes);
+//     gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "max_curr", this->axes);
+//     gains_ok = gains_ok
+//                && checkVectorExistInConfiguration(bot, "use_friction_compensation", this->axes);
 
-    if (!gains_ok)
-    {
-        yError("TORQUE_CURRENT_GAINS group is missing some information, initialization failed");
-        return false;
-    }
+//     if (!gains_ok)
+//     {
+//         yError("TORQUE_CURRENT_PARAMS group is missing some information, initialization failed");
+//         return false;
+//     }
 
-    for (int j = 0; j < this->axes; j++)
-    {
-        // reset the gains
-        motorTorqueCurrentParameters[j].reset();
+//     for (int j = 0; j < this->axes; j++)
+//     {
+//         // reset the gains
+//         motorTorqueCurrentParameters[j].reset();
 
-        // store new gains
-        motorTorqueCurrentParameters[j].kt = bot.find("kt").asList()->get(j).asFloat64();
-        motorTorqueCurrentParameters[j].kc = bot.find("kc").asList()->get(j).asFloat64();
-        motorTorqueCurrentParameters[j].kv = bot.find("kv").asList()->get(j).asFloat64();
-        motorTorqueCurrentParameters[j].kfc = bot.find("kfc").asList()->get(j).asFloat64();
-        motorTorqueCurrentParameters[j].max_curr
-            = bot.find("max_curr").asList()->get(j).asFloat64();
-    }
-    return true;
-}
+//         // store new gains
+//         motorTorqueCurrentParameters[j].kt = bot.find("kt").asList()->get(j).asFloat64();
+//         motorTorqueCurrentParameters[j].kfc = bot.find("kfc").asList()->get(j).asFloat64();
+//         motorTorqueCurrentParameters[j].max_curr
+//             = bot.find("max_curr").asList()->get(j).asFloat64();
+//     }
+//     return true;
+// }
 
 bool JointTorqueControlDevice::loadCouplingMatrix(Searchable& config,
                                                   CouplingMatrices& coupling_matrix,
@@ -332,9 +410,137 @@ bool JointTorqueControlDevice::loadCouplingMatrix(Searchable& config,
     }
 }
 
+bool JointTorqueControlDevice::loadFrictionParams(
+    std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
+{
+    constexpr auto logPrefix = "[JointTorqueControlDevice::loadFrictionModel]";
+
+    auto ptr = paramHandler.lock();
+
+    if (ptr == nullptr)
+    {
+        log()->error("{} Invalid parameter handler", logPrefix);
+        return false;
+    }
+
+    auto frictionGroup = ptr->getGroup("FRICTION_COULOMB_VISCOUS").lock();
+    if (frictionGroup == nullptr)
+    {
+        log()->info("{} Group `FRICTION_COULOMB_VISCOUS` not found in configuration.", logPrefix);
+    }
+    else
+    {
+        Eigen::VectorXd kc;
+        if (!frictionGroup->getParameter("kc", kc))
+        {
+            log()->error("{} Parameter `kc` not found", logPrefix);
+            return false;
+        }
+        Eigen::VectorXd kv;
+        if (!frictionGroup->getParameter("kv", kv))
+        {
+            log()->error("{} Parameter `kv` not found", logPrefix);
+            return false;
+        }
+
+        for (int i = 0; i < kc.size(); i++)
+        {
+            coulombViscousParameters[i].kc = kc(i);
+            coulombViscousParameters[i].kv = kv(i);
+        }
+    }
+
+    frictionGroup = ptr->getGroup("FRICTION_COULOMB_VISCOUS_STRIBECK").lock();
+    if (frictionGroup == nullptr)
+    {
+        log()->info("{} Group `FRICTION_COULOMB_VISCOUS_STRIBECK` not found in configuration.",
+                    logPrefix);
+    }
+    else
+    {
+        Eigen::VectorXd kc;
+        if (!frictionGroup->getParameter("kc", kc))
+        {
+            log()->error("{} Parameter `kc` not found", logPrefix);
+            return false;
+        }
+        Eigen::VectorXd kv;
+        if (!frictionGroup->getParameter("kv", kv))
+        {
+            log()->error("{} Parameter `kv` not found", logPrefix);
+            return false;
+        }
+        Eigen::VectorXd vs;
+        if (!frictionGroup->getParameter("vs", vs))
+        {
+            log()->error("{} Parameter `vs` not found", logPrefix);
+            return false;
+        }
+        Eigen::VectorXd ka;
+        if (!frictionGroup->getParameter("ka", ka))
+        {
+            log()->error("{} Parameter `ka` not found", logPrefix);
+            return false;
+        }
+        Eigen::VectorXd ks;
+        if (!frictionGroup->getParameter("ks", ks))
+        {
+            log()->error("{} Parameter `ks` not found", logPrefix);
+            return false;
+        }
+
+        for (int i = 0; i < kc.size(); i++)
+        {
+            coulombViscousStribeckParameters[i].kc = kc(i);
+            coulombViscousStribeckParameters[i].kv = kv(i);
+            coulombViscousStribeckParameters[i].vs = vs(i);
+            coulombViscousStribeckParameters[i].ka = ka(i);
+            coulombViscousStribeckParameters[i].ks = ks(i);
+        }
+    }
+
+    frictionGroup = ptr->getGroup("FRICTION_PINN").lock();
+    if (frictionGroup == nullptr)
+    {
+        log()->info("{} Group `FRICTION_PINN` not found in configuration.", logPrefix);
+    }
+    else
+    {
+        std::vector<std::string> models;
+        if (!frictionGroup->getParameter("model", models))
+        {
+            log()->error("{} Parameter `model` not found", logPrefix);
+            return false;
+        }
+        Eigen::VectorXi historySize;
+        if (!frictionGroup->getParameter("history_size", historySize))
+        {
+            log()->error("{} Parameter `history_size` not found", logPrefix);
+            return false;
+        }
+        int threads;
+        if (!frictionGroup->getParameter("thread_number", threads))
+        {
+            log()->error("{} Parameter `thread_number` not found", logPrefix);
+            return false;
+        }
+
+        for (int i = 0; i < models.size(); i++)
+        {
+            pinnParameters[i].modelPath = models[i];
+            pinnParameters[i].historyLength = historySize(i);
+            pinnParameters[i].threadNumber = threads;
+        }
+    }
+
+    return true;
+}
+
 // DEVICE DRIVER
 bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
 {
+    constexpr auto logPrefix = "[JointTorqueControlDevice::open]";
+
     // Call open of PassThroughControlBoard
     bool ret = PassThroughControlBoard::open(config);
 
@@ -344,8 +550,89 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
     }
 
     PropertyConfigOptions.fromString(config.toString().c_str());
-
     openCalledCorrectly = ret;
+
+    auto params = std::make_shared<ParametersHandler::YarpImplementation>(config);
+
+    int rate = 10;
+    if (!params->getParameter("period", rate))
+    {
+        log()->info("{} Parameter `period` not found", logPrefix);
+    }
+    this->setPeriod(rate * 0.001);
+
+    auto torqueGroup = params->getGroup("TORQUE_CURRENT_PARAMS").lock();
+    if (torqueGroup == nullptr)
+    {
+        log()->error("{} Group `TORQUE_CURRENT_PARAMS` not found in configuration.", logPrefix);
+        return false;
+    }
+
+    Eigen::VectorXd kt;
+    if (!torqueGroup->getParameter("kt", kt))
+    {
+        log()->error("{} Parameter `kt` not found", logPrefix);
+        return false;
+    }
+    Eigen::VectorXd kfc;
+    if (!torqueGroup->getParameter("kfc", kfc))
+    {
+        log()->error("{} Parameter `kfc` not found", logPrefix);
+        return false;
+    }
+    Eigen::VectorXd maxCurr;
+    if (!torqueGroup->getParameter("max_curr", maxCurr))
+    {
+        log()->error("{} Parameter `max_curr` not found", logPrefix);
+        return false;
+    }
+
+    std::vector<std::string> frictionModels;
+    if (!torqueGroup->getParameter("friction_model", frictionModels))
+    {
+        log()->error("{} Parameter `friction_model` not found", logPrefix);
+        return false;
+    }
+
+    motorTorqueCurrentParameters.resize(kt.size());
+    pinnParameters.resize(kt.size());
+    coulombViscousParameters.resize(kt.size());
+    coulombViscousStribeckParameters.resize(kt.size());
+    frictionEstimators.resize(kt.size());
+    for (int i = 0; i < kt.size(); i++)
+    {
+        motorTorqueCurrentParameters[i].kt = kt[i];
+        motorTorqueCurrentParameters[i].kfc = kfc[i];
+        motorTorqueCurrentParameters[i].maxCurr = maxCurr[i];
+        motorTorqueCurrentParameters[i].frictionModel = frictionModels[i];
+    }
+
+    if (!this->loadFrictionParams(params))
+    {
+        log()->error("{} Failed to load friction model", logPrefix);
+        return false;
+    }
+
+    for (int i = 0; i < kt.size(); i++)
+    {
+        if (motorTorqueCurrentParameters[i].frictionModel == "FRICTION_PINN")
+        {
+            if (motorTorqueCurrentParameters[i].kfc > 0.0)
+            {
+                frictionEstimators[i]
+                    = std::make_unique<JointFrictionTorqueEstimator>();
+
+                if (!frictionEstimators[i]->initialize(pinnParameters[i].modelPath,
+                                                pinnParameters[i].historyLength,
+                                                pinnParameters[i].threadNumber,
+                                                pinnParameters[i].threadNumber))
+                {
+                    log()->error("{} Failed to initialize friction estimator", logPrefix);
+                    return false;
+                }
+            }
+        }
+    }
 
     return ret;
 }
@@ -371,19 +658,21 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
     {
         hijackedMotors.clear();
         hijackingTorqueControl.assign(axes, false);
-        motorTorqueCurrentParameters.resize(axes);
         desiredMotorCurrents.resize(axes);
         desiredJointTorques.resize(axes);
         measuredJointVelocities.resize(axes, 0.0);
         measuredMotorVelocities.resize(axes, 0.0);
         measuredJointTorques.resize(axes, 0.0);
+        measuredJointPositions.resize(axes, 0.0);
+        measuredMotorPositions.resize(axes, 0.0);
+        estimatedFrictionTorques.resize(axes, 0.0);
     }
 
     // Load Gains configurations
-    if (ret)
-    {
-        ret = ret && this->loadGains(PropertyConfigOptions);
-    }
+    // if (ret)
+    // {
+    //     ret = ret && this->loadGains(PropertyConfigOptions);
+    // }
 
     // Load coupling matrices
     if (ret)
@@ -402,6 +691,11 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
                           "update period of the current control thread (ms)")
                    .asInt32();
     this->setPeriod(rate * 0.001);
+
+    if (ret)
+    {
+        ret = ret && this->openCommunications();
+    }
 
     if (ret)
     {

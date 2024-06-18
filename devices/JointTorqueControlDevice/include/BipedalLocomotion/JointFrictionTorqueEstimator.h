@@ -9,7 +9,7 @@
 #define BIPEDAL_LOCOMOTION_FRAMEWORK_JOINT_FRICTION_ESTIMATOR_H
 
 #include <memory>
-
+#include <mutex>
 #include <yarp/sig/Vector.h>
 
 /**
@@ -41,17 +41,27 @@ public:
                     const int interOpNumThreads = 1);
 
     /**
+     * Reset the estimator
+     * This function clears the buffers
+     * and resets the internal state of the estimator
+     * @return void
+     */
+    void resetEstimator();
+
+    /**
      * Estimate the joint friction starting from raw data
      * @param[in] inputJointPosition a double representing the joint position
      * @param[in] inputMotorPosition a double representing the motor position
-     *
      * @param[out] output a double representing the joint friction torque
+     * 
+     * @return true if the estimation is successful, false otherwise
      */
     bool estimate(const double inputJointPosition, const double inputMotorPosition, double& output);
 
 private:
     struct Impl;
     std::unique_ptr<Impl> m_pimpl;
+    std::mutex m_mutex;
 };
 
 #endif // BIPEDAL_LOCOMOTION_FRAMEWORK_JOINT_FRICTION_ESTIMATOR_H
