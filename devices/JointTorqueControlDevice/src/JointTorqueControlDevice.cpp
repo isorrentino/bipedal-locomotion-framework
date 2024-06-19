@@ -126,25 +126,29 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
     double frictionTorque = 0.0;
     if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_COULOMB_VISCOUS")
     {
-        frictionTorque = coulombViscousParameters[joint].kc * sign(measuredMotorVelocities[joint])
-                         + coulombViscousParameters[joint].kv * measuredMotorVelocities[joint];
+        frictionTorque = coulombViscousParameters[joint].kc * sign(measuredJointVelocities[joint])
+                         + coulombViscousParameters[joint].kv * measuredJointVelocities[joint];
     }
     else if (motorTorqueCurrentParameters[joint].frictionModel
                == "FRICTION_COULOMB_VISCOUS_STRIBECK")
     {
+        log()->info("Measured velocity for joint {} is {}", joint, measuredJointVelocities[joint]);
+        
         double velOverVs
-            = std::abs(measuredMotorVelocities[joint]) / coulombViscousStribeckParameters[joint].vs;
+            = std::abs(measuredJointVelocities[joint]) / coulombViscousStribeckParameters[joint].vs;
         double velOverVsPow2 = std::pow(velOverVs, 2);
         double exp = std::exp(-velOverVsPow2);
         double stribeckcoulomb = (coulombViscousStribeckParameters[joint].ks
                                   - coulombViscousStribeckParameters[joint].kc)
                                  * exp;
         double kaTimesVel
-            = coulombViscousStribeckParameters[joint].ka * measuredMotorVelocities[joint];
+            = coulombViscousStribeckParameters[joint].ka * measuredJointVelocities[joint];
         double tanh = std::tanh(kaTimesVel);
-        double visc = coulombViscousStribeckParameters[joint].kv * measuredMotorVelocities[joint];
+        double visc = coulombViscousStribeckParameters[joint].kv * measuredJointVelocities[joint];
         frictionTorque
             = visc + tanh * (coulombViscousStribeckParameters[joint].kc + stribeckcoulomb);
+
+        log()->info("Estimated friction for joint {} is {}", joint, frictionTorque);
     } 
     else if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_PINN")
     {
@@ -182,12 +186,8 @@ void JointTorqueControlDevice::computeDesiredCurrents()
         dt = yarp::os::Time::now() - timeOfLastControlLoop;
     }
 
-    log()->info("desiredJointTorques before coupling: {}", toEigenVector(desiredJointTorques));
-
     toEigenVector(desiredJointTorques)
         = couplingMatrices.fromJointTorquesToMotorTorques * toEigenVector(desiredJointTorques);
-
-    log()->info("desiredJointTorques after coupling: {}", toEigenVector(desiredJointTorques));
 
     estimatedFrictionTorques.zero();
 
@@ -237,6 +237,10 @@ void JointTorqueControlDevice::computeDesiredCurrents()
 
 void JointTorqueControlDevice::readStatus()
 {
+    if (!this->PassThroughControlBoard::getEncoderSpeeds(measuredJointVelocities.data()))
+    {
+        std::cerr << "Failed to get Motor encoders speed" << std::endl;
+    }
     if (!this->PassThroughControlBoard::getMotorEncoderSpeeds(measuredMotorVelocities.data()))
     {
         // In case the motor speed can not be directly measured, it tries to estimate it from joint
@@ -731,8 +735,6 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
                 ret = false;
             }
             m_gearRatios[i] = gearRatio;
-            
-            log()->info("Gearbox ratio joint {} is: {}", i, gearRatio);
         }
     }
 
