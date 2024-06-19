@@ -160,18 +160,17 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
 
 bool JointTorqueControlDevice::openCommunications()
 {
-    if (!m_loggerPort.open(m_portPrefix + "/data:o"))
-    {
-        return false;
-    }
+
+
+    
 
     return true;
 }
 
 void JointTorqueControlDevice::computeDesiredCurrents()
 {
-    auto& data = m_loggerPort.prepare();
-    data.vectors.clear();
+    m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
+    m_vectorsCollectionServer.clearData(); // optional see the documentation
 
     // compute timestep
     double dt;
@@ -206,17 +205,11 @@ void JointTorqueControlDevice::computeDesiredCurrents()
         }
     }
 
-    data.vectors["motor_currents::desired"].assign(desiredMotorCurrents.data(),
-                                                   desiredMotorCurrents.data()
-                                                       + desiredMotorCurrents.size());
-    data.vectors["joint_torques::desired"].assign(desiredJointTorques.data(),
-                                                  desiredJointTorques.data()
-                                                      + desiredJointTorques.size());
-    data.vectors["friction_torques::estimated"].assign(estimatedFrictionTorques.data(),
-                                                       estimatedFrictionTorques.data()
-                                                           + estimatedFrictionTorques.size());
+    m_vectorsCollectionServer.populateData("motor_currents::desired", desiredMotorCurrents);
+    m_vectorsCollectionServer.populateData("joint_torques::desired", desiredJointTorques);
+    m_vectorsCollectionServer.populateData("friction_torques::estimated", estimatedFrictionTorques);
 
-    m_loggerPort.write();
+    m_vectorsCollectionServer.sendData();
 
     bool isNaNOrInf = false;
     for (int j = 0; j < this->axes; j++)
@@ -633,6 +626,23 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
             }
         }
     }
+
+    if (!m_vectorsCollectionServer.initialize(params))
+    {
+        log()->error("[BalancingController::configure] Unable to configure the server.");
+        return false;
+    }
+
+    std::vector<std::string> joint_list;
+    if (!params->getParameter("joint_list", joint_list))
+    {
+        log()->info("{} Parameter `joint_list` not found", logPrefix);
+    }
+
+    m_vectorsCollectionServer.populateMetadata("motor_currents::desired", joint_list);
+    m_vectorsCollectionServer.populateMetadata("joint_torques::desired", joint_list);
+    m_vectorsCollectionServer.populateMetadata("friction_torques::estimated", joint_list);
+    m_vectorsCollectionServer.finalizeMetadata();
 
     return ret;
 }

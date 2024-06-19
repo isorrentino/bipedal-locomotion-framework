@@ -14,6 +14,7 @@
 #include <BipedalLocomotion/TextLogging/Logger.h>
 #include <BipedalLocomotion/JointFrictionTorqueEstimator.h>
 #include <BipedalLocomotion/YarpUtilities/VectorsCollection.h>
+#include <BipedalLocomotion/YarpUtilities/VectorsCollectionServer.h>
 
 #include <iostream>
 
@@ -135,11 +136,7 @@ private:
     yarp::sig::Vector measuredMotorPositions;
     yarp::sig::Vector estimatedFrictionTorques;
     std::string m_portPrefix{"/hijackingTrqCrl"}; /**< Default port prefix. */
-    yarp::os::BufferedPort<BipedalLocomotion::YarpUtilities::VectorsCollection>
-        m_loggerPort; /**<
-                         Logger
-                         port.
-                       */
+    BipedalLocomotion::YarpUtilities::VectorsCollectionServer m_vectorsCollectionServer; /**< Logger server. */
 
     CouplingMatrices couplingMatrices;
 
