@@ -57,6 +57,13 @@ BSD-3-Clause license. -->
       <param name="carrier">"udp"</param>
     </group>
 
+    <group name="Hijacking">
+      <param name="local">"/yarp-robot-logger/exogenous_signals/hijacking"</param>
+      <param name="remote">"/hijackingTrqCrl"</param>
+      <param name="signal_name">"friction"</param>
+      <param name="carrier">"udp"</param>
+    </group>
+
     <group name="GridTracking">
       <param name="local">"/yarp-robot-logger/exogenous_signals/joints_grid_position_tracking"</param>
       <param name="remote">"/joints_grid_position_tracking/logger"</param>
@@ -130,4 +137,3 @@ BSD-3-Clause license. -->
   <!-- FINISH ATTACH-->
 
 </device>
-
