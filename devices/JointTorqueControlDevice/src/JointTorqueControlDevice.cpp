@@ -133,7 +133,7 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
                == "FRICTION_COULOMB_VISCOUS_STRIBECK")
     {
         double velOverVs
-            = measuredMotorVelocities[joint] / coulombViscousStribeckParameters[joint].vs;
+            = std::abs(measuredMotorVelocities[joint]) / coulombViscousStribeckParameters[joint].vs;
         double velOverVsPow2 = std::pow(velOverVs, 2);
         double exp = std::exp(-velOverVsPow2);
         double stribeckcoulomb = (coulombViscousStribeckParameters[joint].ks
@@ -196,8 +196,8 @@ void JointTorqueControlDevice::computeDesiredCurrents()
                 estimatedFrictionTorques[j] = computeFrictionTorque(j);
             }
 
-            desiredMotorCurrents[j] = motorTorqueCurrentParameters[j].kt * desiredJointTorques[j]
-                                      + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j];
+            desiredMotorCurrents[j] = (1/motorTorqueCurrentParameters[j].kt) * (desiredJointTorques[j]
+                                      + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j]);
 
             desiredMotorCurrents[j] = saturation(desiredMotorCurrents[j],
                                                  motorTorqueCurrentParameters[j].maxCurr,
