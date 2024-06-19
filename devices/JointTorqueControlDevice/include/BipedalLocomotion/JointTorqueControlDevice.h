@@ -137,6 +137,7 @@ private:
     yarp::sig::Vector estimatedFrictionTorques;
     std::string m_portPrefix{"/hijackingTrqCrl"}; /**< Default port prefix. */
     BipedalLocomotion::YarpUtilities::VectorsCollectionServer m_vectorsCollectionServer; /**< Logger server. */
+    std::vector<int> m_gearRatios;
 
     CouplingMatrices couplingMatrices;
 

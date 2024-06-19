@@ -182,8 +182,12 @@ void JointTorqueControlDevice::computeDesiredCurrents()
         dt = yarp::os::Time::now() - timeOfLastControlLoop;
     }
 
+    log()->info("desiredJointTorques before coupling: {}", toEigenVector(desiredJointTorques));
+
     toEigenVector(desiredJointTorques)
         = couplingMatrices.fromJointTorquesToMotorTorques * toEigenVector(desiredJointTorques);
+
+    log()->info("desiredJointTorques after coupling: {}", toEigenVector(desiredJointTorques));
 
     estimatedFrictionTorques.zero();
 
@@ -196,8 +200,10 @@ void JointTorqueControlDevice::computeDesiredCurrents()
                 estimatedFrictionTorques[j] = computeFrictionTorque(j);
             }
 
-            desiredMotorCurrents[j] = (1/motorTorqueCurrentParameters[j].kt) * (desiredJointTorques[j]
-                                      + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j]);
+            desiredMotorCurrents[j] = (desiredJointTorques[j]
+                                      + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j]) / motorTorqueCurrentParameters[j].kt;
+
+            desiredMotorCurrents[j] = desiredMotorCurrents[j] / m_gearRatios[j];
 
             desiredMotorCurrents[j] = saturation(desiredMotorCurrents[j],
                                                  motorTorqueCurrentParameters[j].maxCurr,
@@ -676,6 +682,7 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         measuredJointPositions.resize(axes, 0.0);
         measuredMotorPositions.resize(axes, 0.0);
         estimatedFrictionTorques.resize(axes, 0.0);
+        m_gearRatios.resize(axes, 1);
     }
 
     // Load Gains configurations
@@ -711,6 +718,24 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
     {
         ret = ret && this->start();
     }
+
+    // Get gearratio of motors
+    if (ret)
+    {
+        for (int i = 0; i < axes; i++)
+        {
+            double gearRatio;
+            if (!this->getGearboxRatio(i, &gearRatio))
+            {
+                yError("Failed to get gear ratio for joint %d", i);
+                ret = false;
+            }
+            m_gearRatios[i] = gearRatio;
+            
+            log()->info("Gearbox ratio joint {} is: {}", i, gearRatio);
+        }
+    }
+
     return ret;
 }
 
