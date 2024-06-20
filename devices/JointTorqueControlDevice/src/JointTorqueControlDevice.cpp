@@ -21,6 +21,8 @@
 #include <Eigen/Core>
 #include <Eigen/LU>
 
+# define M_PI   3.14159265358979323846	/* pi */
+
 using namespace std;
 using namespace yarp::os;
 using namespace yarp::dev;
@@ -124,20 +126,20 @@ bool JointTorqueControlDevice::isHijackingTorqueControl(int j)
 double JointTorqueControlDevice::computeFrictionTorque(int joint)
 {
     double frictionTorque = 0.0;
+    
     if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_COULOMB_VISCOUS")
     {
+        double velocityRadians = measuredJointVelocities[joint] * M_PI / 180.0;
+
         frictionTorque = coulombViscousParameters[joint].kc * sign(measuredJointVelocities[joint])
                          + coulombViscousParameters[joint].kv * measuredJointVelocities[joint];
     }
     else if (motorTorqueCurrentParameters[joint].frictionModel
                == "FRICTION_COULOMB_VISCOUS_STRIBECK")
     {
-        log()->info("Measured velocity for joint {} is {}", joint, measuredJointVelocities[joint]);
-        
-        double velOverVs
-            = std::abs(measuredJointVelocities[joint]) / coulombViscousStribeckParameters[joint].vs;
-        double velOverVsPow2 = std::pow(velOverVs, 2);
-        double exp = std::exp(-velOverVsPow2);
+        double velocityRadians = measuredJointVelocities[joint] * M_PI / 180.0;
+
+        double exp = std::exp(- std::pow(std::abs(measuredJointVelocities[joint]) / coulombViscousStribeckParameters[joint].vs, 2));
         double stribeckcoulomb = (coulombViscousStribeckParameters[joint].ks
                                   - coulombViscousStribeckParameters[joint].kc)
                                  * exp;
@@ -148,10 +150,13 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
         frictionTorque
             = visc + tanh * (coulombViscousStribeckParameters[joint].kc + stribeckcoulomb);
 
-        log()->info("Estimated friction for joint {} is {}", joint, frictionTorque);
+        log()->info("Velocity {} and friction torque {} for joint {}", measuredJointVelocities[joint], frictionTorque, joint);
     } 
     else if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_PINN")
     {
+        double jointPositionRadians = measuredJointPositions[joint] * M_PI / 180.0;
+        double motorPositionRadians = measuredMotorPositions[joint] * M_PI / 180.0;
+
         if (!frictionEstimators[joint]->estimate(measuredJointPositions[joint],
                                                  measuredMotorPositions[joint],
                                                  frictionTorque))
