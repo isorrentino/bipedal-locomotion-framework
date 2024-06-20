@@ -26,13 +26,20 @@ BSD-3-Clause license. -->
   </group>
 
   <group name="ExogenousSignals">
-    <param name="vectors_collection_exogenous_inputs">("Walking", "GridTracking","cmw")</param>
+    <param name="vectors_collection_exogenous_inputs">("Walking", "GridTracking", "cmw", "Jtcvc")</param>
     <param name="vectors_exogenous_inputs">()</param>
 
     <group name="Walking">
       <param name="local">"/yarp-robot-logger/exogenous_signals/walking"</param>
       <param name="remote">"/walking-coordinator/logger"</param>
       <param name="signal_name">"walking"</param>
+      <param name="carrier">"udp"</param>
+    </group>
+
+    <group name="Jtcvc">
+      <param name="local">"/yarp-robot-logger/exogenous_signals/jtcvc"</param>
+      <param name="remote">"/hijackingTrqCrl"</param>
+      <param name="signal_name">"jtcvc"</param>
       <param name="carrier">"udp"</param>
     </group>
 
