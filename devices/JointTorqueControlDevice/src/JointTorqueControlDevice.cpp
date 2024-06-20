@@ -131,34 +131,34 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
     {
         double velocityRadians = measuredJointVelocities[joint] * M_PI / 180.0;
 
-        frictionTorque = coulombViscousParameters[joint].kc * sign(measuredJointVelocities[joint])
-                         + coulombViscousParameters[joint].kv * measuredJointVelocities[joint];
+        frictionTorque = coulombViscousParameters[joint].kc * sign(velocityRadians)
+                         + coulombViscousParameters[joint].kv * velocityRadians;
     }
     else if (motorTorqueCurrentParameters[joint].frictionModel
                == "FRICTION_COULOMB_VISCOUS_STRIBECK")
     {
         double velocityRadians = measuredJointVelocities[joint] * M_PI / 180.0;
 
-        double exp = std::exp(- std::pow(std::abs(measuredJointVelocities[joint]) / coulombViscousStribeckParameters[joint].vs, 2));
+        double exp = std::exp(- std::pow(std::abs(velocityRadians) / coulombViscousStribeckParameters[joint].vs, 2));
         double stribeckcoulomb = (coulombViscousStribeckParameters[joint].ks
                                   - coulombViscousStribeckParameters[joint].kc)
                                  * exp;
         double kaTimesVel
-            = coulombViscousStribeckParameters[joint].ka * measuredJointVelocities[joint];
+            = coulombViscousStribeckParameters[joint].ka * velocityRadians;
         double tanh = std::tanh(kaTimesVel);
-        double visc = coulombViscousStribeckParameters[joint].kv * measuredJointVelocities[joint];
+        double visc = coulombViscousStribeckParameters[joint].kv * velocityRadians;
         frictionTorque
             = visc + tanh * (coulombViscousStribeckParameters[joint].kc + stribeckcoulomb);
 
-        log()->info("Velocity {} and friction torque {} for joint {}", measuredJointVelocities[joint], frictionTorque, joint);
+        log()->info("Velocity {} and friction torque {} for joint {}", velocityRadians, frictionTorque, joint);
     } 
     else if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_PINN")
     {
         double jointPositionRadians = measuredJointPositions[joint] * M_PI / 180.0;
         double motorPositionRadians = measuredMotorPositions[joint] * M_PI / 180.0;
 
-        if (!frictionEstimators[joint]->estimate(measuredJointPositions[joint],
-                                                 measuredMotorPositions[joint],
+        if (!frictionEstimators[joint]->estimate(jointPositionRadians,
+                                                 motorPositionRadians,
                                                  frictionTorque))
         {
             frictionTorque = 0.0;
