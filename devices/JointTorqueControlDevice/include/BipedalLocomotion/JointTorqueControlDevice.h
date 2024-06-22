@@ -73,12 +73,14 @@ struct PINNParameters
     std::string modelPath; ///< PINN model path
     int threadNumber; ///< number of threads
     int historyLength; ///< history length
+    int inputNumber; ///< number of inputs
 
     void reset()
     {
         modelPath = "";
         threadNumber = 0;
         historyLength = 0;
+        inputNumber = 0;
     }
 };
 
@@ -138,6 +140,10 @@ private:
     std::string m_portPrefix{"/hijackingTrqCrl"}; /**< Default port prefix. */
     BipedalLocomotion::YarpUtilities::VectorsCollectionServer m_vectorsCollectionServer; /**< Logger server. */
     std::vector<int> m_gearRatios;
+    std::vector<double> m_initialDeltaMotorJointRadians;
+    std::vector<double> m_motorPositionError;
+    std::vector<double> m_motorPositionCorrected;
+    std::vector<double> m_motorPositionsRadians;
 
     CouplingMatrices couplingMatrices;
 
@@ -177,11 +183,6 @@ private:
     double timeOfLastControlLoop{-1.0};
     void controlLoop();
 
-    /**
-     * Open the communication ports.
-     * @return true/false on success/failure.
-     */
-    bool openCommunications();
 
 public:
     // CONSTRUCTOR/DESTRUCTOR

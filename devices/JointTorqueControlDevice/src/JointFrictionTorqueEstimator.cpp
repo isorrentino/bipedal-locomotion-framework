@@ -29,6 +29,8 @@ struct JointFrictionTorqueEstimator::Impl
 
     std::deque<float> jointPositionBuffer;
     std::deque<float> motorPositionBuffer;
+    std::deque<float> jointVelocityBuffer;
+    std::deque<float> errorPositionBuffer;
 
     size_t historyLength;
 
@@ -58,8 +60,9 @@ JointFrictionTorqueEstimator::~JointFrictionTorqueEstimator() = default;
 
 bool JointFrictionTorqueEstimator::initialize(const std::string& networkModelPath,
                                               const std::size_t historyLength,
-                                              const int intraOpNumThreads,
-                                              const int interOpNumThreads)
+                                              const std::size_t numInputs,
+                                              const std::size_t intraOpNumThreads,
+                                              const std::size_t interOpNumThreads)
 {
     std::basic_string<ORTCHAR_T> networkModelPathAsOrtString(networkModelPath.begin(),
                                                              networkModelPath.end());
@@ -90,12 +93,14 @@ bool JointFrictionTorqueEstimator::initialize(const std::string& networkModelPat
     m_pimpl->historyLength = historyLength;
 
     // format the input
-    m_pimpl->structuredInput.rawData.resize(historyLength * 2);
+    m_pimpl->structuredInput.rawData.resize(historyLength * numInputs);
     m_pimpl->structuredInput.shape[0] = 1; // batch
-    m_pimpl->structuredInput.shape[1] = historyLength * 2;
+    m_pimpl->structuredInput.shape[1] = historyLength * numInputs;
 
     m_pimpl->jointPositionBuffer.resize(historyLength);
     m_pimpl->motorPositionBuffer.resize(historyLength);
+    m_pimpl->jointVelocityBuffer.resize(historyLength);
+    m_pimpl->errorPositionBuffer.resize(historyLength);
 
     // create tensor required by onnx
     m_pimpl->structuredInput.tensor
@@ -128,6 +133,8 @@ void JointFrictionTorqueEstimator::resetEstimator()
 {
     m_pimpl->jointPositionBuffer.clear();
     m_pimpl->motorPositionBuffer.clear();
+    m_pimpl->jointVelocityBuffer.clear();
+    m_pimpl->errorPositionBuffer.clear();
 }
 
 bool JointFrictionTorqueEstimator::estimate(const double inputJointPosition,
@@ -162,6 +169,63 @@ bool JointFrictionTorqueEstimator::estimate(const double inputJointPosition,
     std::copy(m_pimpl->motorPositionBuffer.cbegin(),
               m_pimpl->motorPositionBuffer.cend(),
               m_pimpl->structuredInput.rawData.begin() + m_pimpl->historyLength);
+
+    // perform the inference
+    const char* inputNames[] = {"input"};
+    const char* outputNames[] = {"output"};
+
+    m_pimpl->session->Run(Ort::RunOptions(),
+                          inputNames,
+                          &(m_pimpl->structuredInput.tensor),
+                          1,
+                          outputNames,
+                          &(m_pimpl->structuredOutput.tensor),
+                          1);
+
+    // copy the output
+    output = static_cast<double>(m_pimpl->structuredOutput.rawData[0]);
+
+    return true;
+}
+
+bool JointFrictionTorqueEstimator::estimate(const double inputDeltaPosition,
+                                            const double inputJointPosition,
+                                            const double inputJointVelocity,
+                                            double& output)
+{
+    if (m_pimpl->jointPositionBuffer.size() > m_pimpl->historyLength)
+    {
+        // The buffer is full, remove the oldest element
+        m_pimpl->errorPositionBuffer.pop_front();
+        m_pimpl->jointPositionBuffer.pop_front();
+        m_pimpl->jointVelocityBuffer.pop_front();
+    }
+
+    // Push element into the queue
+    m_pimpl->errorPositionBuffer.push_back(inputDeltaPosition);
+    m_pimpl->jointPositionBuffer.push_back(inputJointPosition);
+    m_pimpl->jointVelocityBuffer.push_back(inputJointVelocity);
+
+    // Check if the buffer is full
+    if (m_pimpl->jointPositionBuffer.size() < m_pimpl->historyLength)
+    {
+        // The buffer is not full yet
+        return false;
+    }
+
+    // Fill the input
+    // Copy the joint positions and then the motor positions in the
+    // structured input without emptying the buffer
+    // Use iterators to copy the data to the vector
+    std::copy(m_pimpl->errorPositionBuffer.cbegin(),
+              m_pimpl->errorPositionBuffer.cend(),
+              m_pimpl->structuredInput.rawData.begin());
+    std::copy(m_pimpl->jointPositionBuffer.cbegin(),
+              m_pimpl->jointPositionBuffer.cend(),
+              m_pimpl->structuredInput.rawData.begin() + m_pimpl->historyLength);
+    std::copy(m_pimpl->jointVelocityBuffer.cbegin(),
+              m_pimpl->jointVelocityBuffer.cend(),
+              m_pimpl->structuredInput.rawData.begin() + m_pimpl->historyLength*2);
 
     // perform the inference
     const char* inputNames[] = {"input"};

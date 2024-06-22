@@ -30,15 +30,17 @@ public:
      * Initialize the estimator
      * @param[in] modelPath a string representing the path to the ONNX model
      * @param[in] historyLength a size_t representing the length of the history
-	 * @param[in] intraOpNumThreads an int representing the number of threads to be used for intra-op parallelism
-	 * @param[in] interOpNumThreads an int representing the number of threads to be used for inter-op parallelism
+     * @param[in] numInputs a size_t representing the number of inputs variables without considering the history
+	 * @param[in] intraOpNumThreads a std::size_t representing the number of threads to be used for intra-op parallelism
+	 * @param[in] interOpNumThreads a std::size_t representing the number of threads to be used for inter-op parallelism
      *
      * @return true if the initialization is successful, false otherwise
      */
     bool initialize(const std::string& modelPath,
                     const std::size_t historyLength,
-                    const int intraOpNumThreads = 1,
-                    const int interOpNumThreads = 1);
+                    const std::size_t numInputs,
+                    const std::size_t intraOpNumThreads = 1,
+                    const std::size_t interOpNumThreads = 1);
 
     /**
      * Reset the estimator
@@ -57,6 +59,20 @@ public:
      * @return true if the estimation is successful, false otherwise
      */
     bool estimate(const double inputJointPosition, const double inputMotorPosition, double& output);
+
+    /**
+     * Estimate the joint friction starting from raw data
+     * @param[in] inputDeltaPosition a double representing difference between the joint position and the motor position motor side
+     * @param[in] inputJointPosition a double representing the joint position
+     * @param[in] inputJointVelocity a double representing the joint velocity
+     * @param[out] output a double representing the joint friction torque
+     * 
+     * @return true if the estimation is successful, false otherwise
+     */
+    bool estimate(const double inputDeltaPosition,
+                  const double inputJointPosition,
+                  const double inputJointVelocity,
+                  double& output);
 
 private:
     struct Impl;

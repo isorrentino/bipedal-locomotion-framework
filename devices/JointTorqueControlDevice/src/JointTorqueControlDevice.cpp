@@ -98,13 +98,20 @@ void JointTorqueControlDevice::startHijackingTorqueControlIfNecessary(int j)
         desiredJointTorques(j) = measuredJointTorques(j); // TODO check if it is better to
                                                           // initialize the desired joint torque
                                                           // considering the measured current
-        this->hijackingTorqueControl[j] = true;
-        hijackedMotors.push_back(j);
 
         if (motorTorqueCurrentParameters[j].frictionModel == "FRICTION_PINN")
         {
             frictionEstimators[j]->resetEstimator();
+
+            this->readStatus();
+            for (int i = 0; i < axes; i++)
+            {
+                m_initialDeltaMotorJointRadians[i] = (measuredMotorPositions[i] - m_gearRatios[i] * measuredJointPositions[i]) * M_PI / 180.0;
+            }
         }
+
+        this->hijackingTorqueControl[j] = true;
+        hijackedMotors.push_back(j);
     }
 }
 
@@ -112,6 +119,10 @@ void JointTorqueControlDevice::stopHijackingTorqueControlIfNecessary(int j)
 {
     if (this->hijackingTorqueControl[j])
     {
+        if (motorTorqueCurrentParameters[j].frictionModel == "FRICTION_PINN")
+        {
+            frictionEstimators[j]->resetEstimator();
+        }
         this->hijackingTorqueControl[j] = false;
     }
     hijackedMotors.erase(std::remove(hijackedMotors.begin(), hijackedMotors.end(), j),
@@ -155,25 +166,39 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
     else if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_PINN")
     {
         double jointPositionRadians = measuredJointPositions[joint] * M_PI / 180.0;
-        double motorPositionRadians = measuredMotorPositions[joint] * M_PI / 180.0;
+        double jointPositionMotorSideRadians = m_gearRatios[joint] * jointPositionRadians;
+        m_motorPositionsRadians[joint] = measuredMotorPositions[joint] * M_PI / 180.0;
+        m_motorPositionCorrected[joint] = m_motorPositionsRadians[joint] - m_initialDeltaMotorJointRadians[joint];
+        double jointVelocityRadiansSec = measuredJointVelocities[joint] * M_PI / 180.0;
+        m_motorPositionError[joint] = jointPositionMotorSideRadians - m_motorPositionCorrected[joint];
 
-        if (!frictionEstimators[joint]->estimate(jointPositionRadians,
-                                                 motorPositionRadians,
+        // Test network with inputs joint position and motor position (both measured) in radiands
+        // if (!frictionEstimators[joint]->estimate(jointPositionRadians,
+        //                                          motorPositionRadians,
+        //                                          frictionTorque))
+        // {
+        //     frictionTorque = 0.0;
+        // }
+
+        // Test network with inputs position error, joint position motor side, joint velocity
+        // if (!frictionEstimators[joint]->estimate(m_motorPositionError[joint],
+        //                                          jointPositionMotorSideRadians,
+        //                                          jointVelocityRadiansSec,
+        //                                          frictionTorque))
+        // {
+        //     frictionTorque = 0.0;
+        // }
+
+        // Test network with inputs position error motor side, joint velocity
+        if (!frictionEstimators[joint]->estimate(m_motorPositionError[joint],
+                                                 jointVelocityRadiansSec,
                                                  frictionTorque))
         {
             frictionTorque = 0.0;
         }
     }
+
     return frictionTorque;
-}
-
-bool JointTorqueControlDevice::openCommunications()
-{
-
-
-    
-
-    return true;
 }
 
 void JointTorqueControlDevice::computeDesiredCurrents()
@@ -219,6 +244,9 @@ void JointTorqueControlDevice::computeDesiredCurrents()
     m_vectorsCollectionServer.populateData("motor_currents::desired", desiredMotorCurrents);
     m_vectorsCollectionServer.populateData("joint_torques::desired", desiredJointTorques);
     m_vectorsCollectionServer.populateData("friction_torques::estimated", estimatedFrictionTorques);
+    m_vectorsCollectionServer.populateData("position_error::measured", m_motorPositionError);
+    m_vectorsCollectionServer.populateData("motor_position::corrected", m_motorPositionCorrected);
+    m_vectorsCollectionServer.populateData("motor_position::measured", m_motorPositionsRadians);
 
     m_vectorsCollectionServer.sendData();
 
@@ -273,44 +301,6 @@ void JointTorqueControlDevice::readStatus()
         std::cerr << "Failed to get motor position" << std::endl;
     }
 }
-
-// bool JointTorqueControlDevice::loadGains(Searchable& config)
-// {
-//     if (!config.check("TORQUE_CURRENT_GAINS"))
-//     {
-//         yError("No TORQUE_CURRENT_GAINS group find in configuration file, initialization failed");
-//         return false;
-//     }
-
-//     yarp::os::Bottle& bot = config.findGroup("TORQUE_CURRENT_PARAMS");
-//     std::cerr << "Number of axes " << this->axes << std::endl;
-//     // Check if each gains exist for each axes (nAxis==nGain)
-//     bool gains_ok = true;
-//     gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "kt", this->axes);
-//     gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "kfc", this->axes);
-//     gains_ok = gains_ok && checkVectorExistInConfiguration(bot, "max_curr", this->axes);
-//     gains_ok = gains_ok
-//                && checkVectorExistInConfiguration(bot, "use_friction_compensation", this->axes);
-
-//     if (!gains_ok)
-//     {
-//         yError("TORQUE_CURRENT_PARAMS group is missing some information, initialization failed");
-//         return false;
-//     }
-
-//     for (int j = 0; j < this->axes; j++)
-//     {
-//         // reset the gains
-//         motorTorqueCurrentParameters[j].reset();
-
-//         // store new gains
-//         motorTorqueCurrentParameters[j].kt = bot.find("kt").asList()->get(j).asFloat64();
-//         motorTorqueCurrentParameters[j].kfc = bot.find("kfc").asList()->get(j).asFloat64();
-//         motorTorqueCurrentParameters[j].max_curr
-//             = bot.find("max_curr").asList()->get(j).asFloat64();
-//     }
-//     return true;
-// }
 
 bool JointTorqueControlDevice::loadCouplingMatrix(Searchable& config,
                                                   CouplingMatrices& coupling_matrix,
@@ -526,6 +516,12 @@ bool JointTorqueControlDevice::loadFrictionParams(
             log()->error("{} Parameter `history_size` not found", logPrefix);
             return false;
         }
+        Eigen::VectorXi inputNumber;
+        if (!frictionGroup->getParameter("number_of_inputs", inputNumber))
+        {
+            log()->error("{} Parameter `number_of_inputs` not found", logPrefix);
+            return false;
+        }
         int threads;
         if (!frictionGroup->getParameter("thread_number", threads))
         {
@@ -536,7 +532,8 @@ bool JointTorqueControlDevice::loadFrictionParams(
         for (int i = 0; i < models.size(); i++)
         {
             pinnParameters[i].modelPath = models[i];
-            pinnParameters[i].historyLength = historySize(i);
+            pinnParameters[i].historyLength = historySize[i];
+            pinnParameters[i].inputNumber = inputNumber[i];
             pinnParameters[i].threadNumber = threads;
         }
     }
@@ -632,6 +629,7 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
 
                 if (!frictionEstimators[i]->initialize(pinnParameters[i].modelPath,
                                                 pinnParameters[i].historyLength,
+                                                pinnParameters[i].inputNumber,
                                                 pinnParameters[i].threadNumber,
                                                 pinnParameters[i].threadNumber))
                 {
@@ -657,6 +655,9 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
     m_vectorsCollectionServer.populateMetadata("motor_currents::desired", joint_list);
     m_vectorsCollectionServer.populateMetadata("joint_torques::desired", joint_list);
     m_vectorsCollectionServer.populateMetadata("friction_torques::estimated", joint_list);
+    m_vectorsCollectionServer.populateMetadata("position_error::measured", joint_list);
+    m_vectorsCollectionServer.populateMetadata("motor_position::corrected", joint_list);
+    m_vectorsCollectionServer.populateMetadata("motor_position::measured", joint_list);
     m_vectorsCollectionServer.finalizeMetadata();
 
     return ret;
@@ -692,13 +693,11 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         measuredMotorPositions.resize(axes, 0.0);
         estimatedFrictionTorques.resize(axes, 0.0);
         m_gearRatios.resize(axes, 1);
+        m_initialDeltaMotorJointRadians.resize(axes, 1);
+        m_motorPositionError.resize(axes, 1);
+        m_motorPositionCorrected.resize(axes, 1);
+        m_motorPositionsRadians.resize(axes, 1);
     }
-
-    // Load Gains configurations
-    // if (ret)
-    // {
-    //     ret = ret && this->loadGains(PropertyConfigOptions);
-    // }
 
     // Load coupling matrices
     if (ret)
@@ -717,11 +716,6 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
                           "update period of the current control thread (ms)")
                    .asInt32();
     this->setPeriod(rate * 0.001);
-
-    if (ret)
-    {
-        ret = ret && this->openCommunications();
-    }
 
     if (ret)
     {
