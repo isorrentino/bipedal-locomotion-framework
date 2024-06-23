@@ -54,12 +54,13 @@ struct MotorTorqueCurrentParameters
 {
     double kt; ///< motor torque to current gain
     double kfc; ///< friction compensation weight parameter
+    double kp; ///< proportional gain
     double maxCurr; ///< maximum current
     std::string frictionModel; ///< friction model
 
     void reset()
     {
-        kt = kfc = maxCurr = 0.0;
+        kt = kfc = kp = maxCurr = 0.0;
         frictionModel = "";
     }
 };

@@ -230,7 +230,7 @@ void JointTorqueControlDevice::computeDesiredCurrents()
                 estimatedFrictionTorques[j] = computeFrictionTorque(j);
             }
 
-            desiredMotorCurrents[j] = (desiredJointTorques[j]
+            desiredMotorCurrents[j] = (motorTorqueCurrentParameters[j].kp * (desiredJointTorques[j] - measuredJointTorques[j])
                                       + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j]) / motorTorqueCurrentParameters[j].kt;
 
             desiredMotorCurrents[j] = desiredMotorCurrents[j] / m_gearRatios[j];
@@ -585,6 +585,12 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
         log()->error("{} Parameter `kfc` not found", logPrefix);
         return false;
     }
+    Eigen::VectorXd kp;
+    if (!torqueGroup->getParameter("kp", kp))
+    {
+        log()->error("{} Parameter `kp` not found", logPrefix);
+        return false;
+    }
     Eigen::VectorXd maxCurr;
     if (!torqueGroup->getParameter("max_curr", maxCurr))
     {
@@ -608,6 +614,7 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
     {
         motorTorqueCurrentParameters[i].kt = kt[i];
         motorTorqueCurrentParameters[i].kfc = kfc[i];
+        motorTorqueCurrentParameters[i].kp = kp[i];
         motorTorqueCurrentParameters[i].maxCurr = maxCurr[i];
         motorTorqueCurrentParameters[i].frictionModel = frictionModels[i];
     }
@@ -620,22 +627,19 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
 
     for (int i = 0; i < kt.size(); i++)
     {
-        if (motorTorqueCurrentParameters[i].frictionModel == "FRICTION_PINN")
+        if (motorTorqueCurrentParameters[i].frictionModel == "FRICTION_PINN" && motorTorqueCurrentParameters[i].kfc > 0.0)
         {
-            if (motorTorqueCurrentParameters[i].kfc > 0.0)
-            {
-                frictionEstimators[i]
-                    = std::make_unique<JointFrictionTorqueEstimator>();
+            frictionEstimators[i]
+                = std::make_unique<JointFrictionTorqueEstimator>();
 
-                if (!frictionEstimators[i]->initialize(pinnParameters[i].modelPath,
-                                                pinnParameters[i].historyLength,
-                                                pinnParameters[i].inputNumber,
-                                                pinnParameters[i].threadNumber,
-                                                pinnParameters[i].threadNumber))
-                {
-                    log()->error("{} Failed to initialize friction estimator", logPrefix);
-                    return false;
-                }
+            if (!frictionEstimators[i]->initialize(pinnParameters[i].modelPath,
+                                            pinnParameters[i].historyLength,
+                                            pinnParameters[i].inputNumber,
+                                            pinnParameters[i].threadNumber,
+                                            pinnParameters[i].threadNumber))
+            {
+                log()->error("{} Failed to initialize friction estimator", logPrefix);
+                return false;
             }
         }
     }
