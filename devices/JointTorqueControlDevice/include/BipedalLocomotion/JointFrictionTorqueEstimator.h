@@ -52,13 +52,13 @@ public:
 
     /**
      * Estimate the joint friction starting from raw data
-     * @param[in] inputJointPosition a double representing the joint position
-     * @param[in] inputMotorPosition a double representing the motor position
+     * @param[in] inputDeltaPosition a double representing difference between the joint position and the motor position motor side (rad)
+     * @param[in] inputJointVelocity a double representing the joint velocity (rad/sec)
      * @param[out] output a double representing the joint friction torque
      * 
      * @return true if the estimation is successful, false otherwise
      */
-    bool estimate(const double inputJointPosition, const double inputMotorPosition, double& output);
+    bool estimate(double inputDeltaPosition, double inputJointVelocity, double& output);
 
     /**
      * Estimate the joint friction starting from raw data
@@ -69,9 +69,9 @@ public:
      * 
      * @return true if the estimation is successful, false otherwise
      */
-    bool estimate(const double inputDeltaPosition,
-                  const double inputJointPosition,
-                  const double inputJointVelocity,
+    bool estimate(double inputDeltaPosition,
+                  double inputJointPosition,
+                  double inputJointVelocity,
                   double& output);
 
 private:

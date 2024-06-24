@@ -100,9 +100,6 @@ void JointTorqueControlDevice::startHijackingTorqueControlIfNecessary(int j)
                                                           // initialize the desired joint torque
                                                           // considering the measured current
 
-        // run the thread
-        m_publishEstimationThread = std::thread([this] { this->publishStatus(); });
-
         if (motorTorqueCurrentParameters[j].frictionModel == "FRICTION_PINN")
         {
             frictionEstimators[j]->resetEstimator();
@@ -123,11 +120,11 @@ void JointTorqueControlDevice::stopHijackingTorqueControlIfNecessary(int j)
 {
     if (this->hijackingTorqueControl[j])
     {
-        m_torqueControlIsRunning = false;
-        if (m_publishEstimationThread.joinable())
-        {
-            m_publishEstimationThread.join();
-        }
+        // m_torqueControlIsRunning = false;
+        // if (m_publishEstimationThread.joinable())
+        // {
+        //     m_publishEstimationThread.join();
+        // }
 
         if (motorTorqueCurrentParameters[j].frictionModel == "FRICTION_PINN")
         {
@@ -160,30 +157,26 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
     {
         double velocityRadians = measuredJointVelocities[joint] * M_PI / 180.0;
 
-        double exp = std::exp(- std::pow(std::abs(velocityRadians) / coulombViscousStribeckParameters[joint].vs, 2));
-        double stribeckcoulomb = (coulombViscousStribeckParameters[joint].ks
-                                  - coulombViscousStribeckParameters[joint].kc)
-                                 * exp;
-        double kaTimesVel
-            = coulombViscousStribeckParameters[joint].ka * velocityRadians;
-        double tanh = std::tanh(kaTimesVel);
-        double visc = coulombViscousStribeckParameters[joint].kv * velocityRadians;
-        frictionTorque
-            = visc + tanh * (coulombViscousStribeckParameters[joint].kc + stribeckcoulomb);
+        double tauCoulomb = coulombViscousStribeckParameters[joint].kc * std::tanh(coulombViscousStribeckParameters[joint].ka * velocityRadians);
+        double tauViscous = coulombViscousStribeckParameters[joint].kv * velocityRadians;
+        double tauStribeck = (coulombViscousStribeckParameters[joint].ks - coulombViscousStribeckParameters[joint].kc)
+                              * std::exp( - std::pow( std::abs( velocityRadians/coulombViscousStribeckParameters[joint].vs ), 
+                                                      coulombViscousStribeckParameters[joint].alpha ) ) 
+                              * std::tanh(coulombViscousStribeckParameters[joint].ka * velocityRadians);
 
-        log()->info("Velocity {} and friction torque {} for joint {}", velocityRadians, frictionTorque, joint);
+        frictionTorque = tauCoulomb + tauViscous + tauStribeck;
     } 
     else if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_PINN")
     {
-        double jointPositionRadians = measuredJointPositions[joint] * M_PI / 180.0;
-        double jointPositionMotorSideRadians = m_gearRatios[joint] * jointPositionRadians;
+        m_tempJointPosRad = measuredJointPositions[joint] * M_PI / 180.0;
+        m_tempJointPosMotorSideRad = m_gearRatios[joint] * m_tempJointPosRad;
         m_motorPositionsRadians[joint] = measuredMotorPositions[joint] * M_PI / 180.0;
         m_motorPositionCorrected[joint] = m_motorPositionsRadians[joint] - m_initialDeltaMotorJointRadians[joint];
-        double jointVelocityRadiansSec = measuredJointVelocities[joint] * M_PI / 180.0;
-        m_motorPositionError[joint] = jointPositionMotorSideRadians - m_motorPositionCorrected[joint];
+        m_jointVelRadSec = measuredJointVelocities[joint] * M_PI / 180.0;
+        m_motorPositionError[joint] = m_tempJointPosMotorSideRad - m_motorPositionCorrected[joint];
 
         // Test network with inputs joint position and motor position (both measured) in radiands
-        // if (!frictionEstimators[joint]->estimate(jointPositionRadians,
+        // if (!frictionEstimators[joint]->estimate(m_tempJointPosRad,
         //                                          motorPositionRadians,
         //                                          frictionTorque))
         // {
@@ -192,8 +185,8 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
 
         // Test network with inputs position error, joint position motor side, joint velocity
         // if (!frictionEstimators[joint]->estimate(m_motorPositionError[joint],
-        //                                          jointPositionMotorSideRadians,
-        //                                          jointVelocityRadiansSec,
+        //                                          m_tempJointPosMotorSideRad,
+        //                                          m_jointVelRadSec,
         //                                          frictionTorque))
         // {
         //     frictionTorque = 0.0;
@@ -201,7 +194,7 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
 
         // Test network with inputs position error motor side, joint velocity
         if (!frictionEstimators[joint]->estimate(m_motorPositionError[joint],
-                                                 jointVelocityRadiansSec,
+                                                 m_jointVelRadSec,
                                                  frictionTorque))
         {
             frictionTorque = 0.0;
@@ -246,14 +239,22 @@ void JointTorqueControlDevice::computeDesiredCurrents()
                                                  motorTorqueCurrentParameters[j].maxCurr,
                                                  -motorTorqueCurrentParameters[j].maxCurr);
 
-            {
-                std::lock_guard<std::mutex> lockOutput(m_status.mutex);
-                m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
-                m_status.m_torqueLogging[j] = desiredJointTorques[j];
-                m_status.m_currentLogging[j] = desiredMotorCurrents[j];
-            }
+            // {
+            //     std::lock_guard<std::mutex> lockOutput(m_status.mutex);
+            //     m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
+            //     m_status.m_torqueLogging[j] = desiredJointTorques[j];
+            //     m_status.m_currentLogging[j] = desiredMotorCurrents[j];
+            // }
+
+            m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
+            m_status.m_torqueLogging[j] = desiredJointTorques[j];
         }
     }
+    m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
+    m_vectorsCollectionServer.clearData(); // optional see the documentation
+    m_vectorsCollectionServer.populateData("joint_torques::desired", m_status.m_torqueLogging);
+    m_vectorsCollectionServer.populateData("friction_torques::estimated", m_status.m_frictionLogging);
+    m_vectorsCollectionServer.sendData();
 
     bool isNaNOrInf = false;
     for (int j = 0; j < this->axes; j++)
@@ -491,6 +492,12 @@ bool JointTorqueControlDevice::loadFrictionParams(
             log()->error("{} Parameter `ks` not found", logPrefix);
             return false;
         }
+        Eigen::VectorXd alpha;
+        if (!frictionGroup->getParameter("alpha", alpha))
+        {
+            log()->error("{} Parameter `alpha` not found", logPrefix);
+            return false;
+        }
 
         for (int i = 0; i < kc.size(); i++)
         {
@@ -499,6 +506,7 @@ bool JointTorqueControlDevice::loadFrictionParams(
             coulombViscousStribeckParameters[i].vs = vs(i);
             coulombViscousStribeckParameters[i].ka = ka(i);
             coulombViscousStribeckParameters[i].ks = ks(i);
+            coulombViscousStribeckParameters[i].alpha = alpha(i);
         }
     }
 
@@ -661,13 +669,17 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
         log()->info("{} Parameter `joint_list` not found", logPrefix);
     }
 
-    m_vectorsCollectionServer.populateMetadata("motor_currents::desired", joint_list);
+    // m_vectorsCollectionServer.populateMetadata("motor_currents::desired", joint_list);
     m_vectorsCollectionServer.populateMetadata("joint_torques::desired", joint_list);
     m_vectorsCollectionServer.populateMetadata("friction_torques::estimated", joint_list);
     // m_vectorsCollectionServer.populateMetadata("position_error::measured", joint_list);
     // m_vectorsCollectionServer.populateMetadata("motor_position::corrected", joint_list);
     // m_vectorsCollectionServer.populateMetadata("motor_position::measured", joint_list);
     m_vectorsCollectionServer.finalizeMetadata();
+
+    // run the thread
+    // m_torqueControlIsRunning = false;
+    // m_publishEstimationThread = std::thread([this] { this->publishStatus(); });
 
     return ret;
 }
@@ -701,12 +713,11 @@ void JointTorqueControlDevice::publishStatus()
 
         {
             std::lock_guard<std::mutex> lockOutput(m_status.mutex);
-            m_vectorsCollectionServer.populateData("motor_currents::desired", m_status.m_currentLogging);
+            // m_vectorsCollectionServer.populateData("motor_currents::desired", m_status.m_currentLogging);
             m_vectorsCollectionServer.populateData("joint_torques::desired", m_status.m_torqueLogging);
             m_vectorsCollectionServer.populateData("friction_torques::estimated", m_status.m_frictionLogging);
+            m_vectorsCollectionServer.sendData();
         }
-
-        m_vectorsCollectionServer.sendData();
 
         // release the CPU
         BipedalLocomotion::clock().yield();
@@ -941,10 +952,18 @@ bool JointTorqueControlDevice::setControlModes(const int n_joint, const int* joi
 
 bool JointTorqueControlDevice::setRefTorques(const double* trqs)
 {
-    std::lock_guard<std::mutex>(this->globalMutex);
-    memcpy(desiredJointTorques.data(), trqs, this->axes * sizeof(double));
+    {
+        std::lock_guard<std::mutex>(this->globalMutex);
+        memcpy(desiredJointTorques.data(), trqs, this->axes * sizeof(double));
 
-    this->controlLoop();
+        this->controlLoop();
+    }
+
+    // for (int j = 0; j < this->axes; j++)
+    // {
+    //     m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
+    //     m_status.m_torqueLogging[j] = desiredJointTorques[j];
+    // }
 
     return true;
 }
@@ -953,13 +972,21 @@ bool JointTorqueControlDevice::setRefTorques(const int n_joints,
                                              const int* joints,
                                              const double* trqs)
 {
-    std::lock_guard<std::mutex>(this->globalMutex);
-    for (int i = 0; i < n_joints; i++)
     {
-        desiredJointTorques[joints[i]] = trqs[i];
+        std::lock_guard<std::mutex>(this->globalMutex);
+        for (int i = 0; i < n_joints; i++)
+        {
+            desiredJointTorques[joints[i]] = trqs[i];
+        }
+
+        this->controlLoop();
     }
 
-    this->controlLoop();
+    // for (int j = 0; j < this->axes; j++)
+    // {
+    //     m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
+    //     m_status.m_torqueLogging[j] = desiredJointTorques[j];
+    // }
 
     return true;
 }
@@ -1010,6 +1037,9 @@ void JointTorqueControlDevice::run()
     {
         this->controlLoop();
     }
+
+    double now_2 = yarp::os::Time::now();
+    std::cout << "Elapsed time: " << now_2 - now << std::endl; 
 }
 
 void JointTorqueControlDevice::controlLoop()

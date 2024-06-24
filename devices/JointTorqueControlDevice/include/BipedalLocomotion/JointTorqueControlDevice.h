@@ -114,10 +114,11 @@ struct CoulombViscousStribeckParameters
     double vs; ///< stiction velocity
     double ka; ///< tanh gain
     double ks; ///< stribeck friction
+    double alpha; // power factor
 
     void reset()
     {
-        kc = kv = ka = vs = ks = 0.0;
+        kc = kv = ka = vs = ks = alpha = 0.0;
     }
 };
 
@@ -148,6 +149,10 @@ private:
     std::vector<double> m_motorPositionError;
     std::vector<double> m_motorPositionCorrected;
     std::vector<double> m_motorPositionsRadians;
+
+    double m_tempJointPosRad = 0.0;
+    double m_tempJointPosMotorSideRad = 0.0;
+    double m_jointVelRadSec = 0.0;
 
     CouplingMatrices couplingMatrices;
 

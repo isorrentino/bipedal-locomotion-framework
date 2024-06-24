@@ -137,23 +137,28 @@ void JointFrictionTorqueEstimator::resetEstimator()
     m_pimpl->errorPositionBuffer.clear();
 }
 
-bool JointFrictionTorqueEstimator::estimate(const double inputJointPosition,
-                                            const double inputMotorPosition,
+bool JointFrictionTorqueEstimator::estimate(double inputDeltaPosition,
+                                            double inputJointVelocity,
                                             double& output)
 {
     if (m_pimpl->jointPositionBuffer.size() > m_pimpl->historyLength)
     {
         // The buffer is full, remove the oldest element
         m_pimpl->jointPositionBuffer.pop_front();
+    }
+
+    if (m_pimpl->motorPositionBuffer.size() > m_pimpl->historyLength)
+    {
+        // The buffer is full, remove the oldest element
         m_pimpl->motorPositionBuffer.pop_front();
     }
 
     // Push element into the queue
-    m_pimpl->jointPositionBuffer.push_back(inputJointPosition);
-    m_pimpl->motorPositionBuffer.push_back(inputMotorPosition);
+    m_pimpl->jointPositionBuffer.push_back(inputDeltaPosition);
+    m_pimpl->motorPositionBuffer.push_back(inputJointVelocity);
 
     // Check if the buffer is full
-    if (m_pimpl->jointPositionBuffer.size() < m_pimpl->historyLength)
+    if (m_pimpl->jointPositionBuffer.size() < m_pimpl->historyLength || m_pimpl->motorPositionBuffer.size() < m_pimpl->historyLength)
     {
         // The buffer is not full yet
         return false;
@@ -185,7 +190,6 @@ bool JointFrictionTorqueEstimator::estimate(const double inputJointPosition,
                             1);
 
     } catch (const Ort::Exception& e) {
-        output = 0.0;
         std::cerr << "Error during the inferece: " << e.what() << std::endl;
         return false;
     }
@@ -196,9 +200,9 @@ bool JointFrictionTorqueEstimator::estimate(const double inputJointPosition,
     return true;
 }
 
-bool JointFrictionTorqueEstimator::estimate(const double inputDeltaPosition,
-                                            const double inputJointPosition,
-                                            const double inputJointVelocity,
+bool JointFrictionTorqueEstimator::estimate(double inputDeltaPosition,
+                                            double inputJointPosition,
+                                            double inputJointVelocity,
                                             double& output)
 {
     if (m_pimpl->jointPositionBuffer.size() > m_pimpl->historyLength)
