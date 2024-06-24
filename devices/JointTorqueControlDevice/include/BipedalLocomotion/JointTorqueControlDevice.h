@@ -146,6 +146,10 @@ private:
     std::vector<double> m_motorPositionCorrected;
     std::vector<double> m_motorPositionsRadians;
 
+    std::vector<double> m_torqueLogging;
+    std::vector<double> m_frictionLogging;
+    std::vector<double> m_currentLogging;
+
     CouplingMatrices couplingMatrices;
 
     bool openCalledCorrectly{false};

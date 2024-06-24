@@ -238,17 +238,14 @@ void JointTorqueControlDevice::computeDesiredCurrents()
             desiredMotorCurrents[j] = saturation(desiredMotorCurrents[j],
                                                  motorTorqueCurrentParameters[j].maxCurr,
                                                  -motorTorqueCurrentParameters[j].maxCurr);
+
+            m_frictionLogging[j] = estimatedFrictionTorques[j];
+            m_torqueLogging[j] = desiredJointTorques[j];
+            m_currentLogging[j] = desiredMotorCurrents[j]
+
+            log()->info("Desired motor current: {}", desiredMotorCurrents[j]);
         }
     }
-
-    m_vectorsCollectionServer.populateData("motor_currents::desired", desiredMotorCurrents);
-    m_vectorsCollectionServer.populateData("joint_torques::desired", desiredJointTorques);
-    m_vectorsCollectionServer.populateData("friction_torques::estimated", estimatedFrictionTorques);
-    m_vectorsCollectionServer.populateData("position_error::measured", m_motorPositionError);
-    m_vectorsCollectionServer.populateData("motor_position::corrected", m_motorPositionCorrected);
-    m_vectorsCollectionServer.populateData("motor_position::measured", m_motorPositionsRadians);
-
-    m_vectorsCollectionServer.sendData();
 
     bool isNaNOrInf = false;
     for (int j = 0; j < this->axes; j++)
@@ -659,9 +656,9 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
     m_vectorsCollectionServer.populateMetadata("motor_currents::desired", joint_list);
     m_vectorsCollectionServer.populateMetadata("joint_torques::desired", joint_list);
     m_vectorsCollectionServer.populateMetadata("friction_torques::estimated", joint_list);
-    m_vectorsCollectionServer.populateMetadata("position_error::measured", joint_list);
-    m_vectorsCollectionServer.populateMetadata("motor_position::corrected", joint_list);
-    m_vectorsCollectionServer.populateMetadata("motor_position::measured", joint_list);
+    // m_vectorsCollectionServer.populateMetadata("position_error::measured", joint_list);
+    // m_vectorsCollectionServer.populateMetadata("motor_position::corrected", joint_list);
+    // m_vectorsCollectionServer.populateMetadata("motor_position::measured", joint_list);
     m_vectorsCollectionServer.finalizeMetadata();
 
     return ret;
@@ -701,6 +698,9 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         m_motorPositionError.resize(axes, 1);
         m_motorPositionCorrected.resize(axes, 1);
         m_motorPositionsRadians.resize(axes, 1);
+        m_torqueLogging.resize(axes, 1);
+        m_frictionLogging.resize(axes, 1);
+        m_currentLogging.resize(axes, 1);
     }
 
     // Load coupling matrices

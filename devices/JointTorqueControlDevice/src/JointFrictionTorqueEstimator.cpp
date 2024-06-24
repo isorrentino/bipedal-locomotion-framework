@@ -174,13 +174,21 @@ bool JointFrictionTorqueEstimator::estimate(const double inputJointPosition,
     const char* inputNames[] = {"input"};
     const char* outputNames[] = {"output"};
 
-    m_pimpl->session->Run(Ort::RunOptions(),
-                          inputNames,
-                          &(m_pimpl->structuredInput.tensor),
-                          1,
-                          outputNames,
-                          &(m_pimpl->structuredOutput.tensor),
-                          1);
+    try
+    {
+        m_pimpl->session->Run(Ort::RunOptions(),
+                            inputNames,
+                            &(m_pimpl->structuredInput.tensor),
+                            1,
+                            outputNames,
+                            &(m_pimpl->structuredOutput.tensor),
+                            1);
+
+    } catch (const Ort::Exception& e) {
+        output = 0.0;
+        std::cerr << "Error during the inferece: " << e.what() << std::endl;
+        return false;
+    }
 
     // copy the output
     output = static_cast<double>(m_pimpl->structuredOutput.rawData[0]);
@@ -231,13 +239,23 @@ bool JointFrictionTorqueEstimator::estimate(const double inputDeltaPosition,
     const char* inputNames[] = {"input"};
     const char* outputNames[] = {"output"};
 
-    m_pimpl->session->Run(Ort::RunOptions(),
-                          inputNames,
-                          &(m_pimpl->structuredInput.tensor),
-                          1,
-                          outputNames,
-                          &(m_pimpl->structuredOutput.tensor),
-                          1);
+    try
+    {
+        m_pimpl->session->Run(Ort::RunOptions(),
+                            inputNames,
+                            &(m_pimpl->structuredInput.tensor),
+                            1,
+                            outputNames,
+                            &(m_pimpl->structuredOutput.tensor),
+                            1);
+
+    } catch (const Ort::Exception& e) {
+        // copy the output
+        output = 0.0;
+        
+        std::cerr << "Error during the inferece: " << e.what() << std::endl;
+        return false;
+    }
 
     // copy the output
     output = static_cast<double>(m_pimpl->structuredOutput.rawData[0]);
