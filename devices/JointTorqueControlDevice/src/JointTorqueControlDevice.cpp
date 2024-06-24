@@ -233,6 +233,9 @@ void JointTorqueControlDevice::computeDesiredCurrents()
             desiredMotorCurrents[j] = (motorTorqueCurrentParameters[j].kp * (desiredJointTorques[j] - measuredJointTorques[j])
                                       + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j]) / motorTorqueCurrentParameters[j].kt;
 
+            desiredMotorCurrents[j] = (motorTorqueCurrentParameters[j].kp * desiredJointTorques[j]
+                                      + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j]) / motorTorqueCurrentParameters[j].kt;
+
             desiredMotorCurrents[j] = desiredMotorCurrents[j] / m_gearRatios[j];
 
             desiredMotorCurrents[j] = saturation(desiredMotorCurrents[j],
