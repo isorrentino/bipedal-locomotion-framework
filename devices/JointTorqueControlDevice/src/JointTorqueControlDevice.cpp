@@ -100,6 +100,9 @@ void JointTorqueControlDevice::startHijackingTorqueControlIfNecessary(int j)
                                                           // initialize the desired joint torque
                                                           // considering the measured current
 
+        // run the thread
+        m_publishEstimationThread = std::thread([this] { this->publishStatus(); });
+
         if (motorTorqueCurrentParameters[j].frictionModel == "FRICTION_PINN")
         {
             frictionEstimators[j]->resetEstimator();
@@ -120,6 +123,12 @@ void JointTorqueControlDevice::stopHijackingTorqueControlIfNecessary(int j)
 {
     if (this->hijackingTorqueControl[j])
     {
+        m_torqueControlIsRunning = false;
+        if (m_publishEstimationThread.joinable())
+        {
+            m_publishEstimationThread.join();
+        }
+
         if (motorTorqueCurrentParameters[j].frictionModel == "FRICTION_PINN")
         {
             frictionEstimators[j]->resetEstimator();
@@ -238,7 +247,7 @@ void JointTorqueControlDevice::computeDesiredCurrents()
                                                  -motorTorqueCurrentParameters[j].maxCurr);
 
             {
-                std::lock_guard<std::mutex> lock(globalMutex);
+                std::lock_guard<std::mutex> lockOutput(m_status.mutex);
                 m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
                 m_status.m_torqueLogging[j] = desiredJointTorques[j];
                 m_status.m_currentLogging[j] = desiredMotorCurrents[j];
@@ -660,9 +669,6 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
     // m_vectorsCollectionServer.populateMetadata("motor_position::measured", joint_list);
     m_vectorsCollectionServer.finalizeMetadata();
 
-    // run the thread
-    m_publishEstimationThread = std::thread([this] { this->publishStatus(); });
-
     return ret;
 }
 
@@ -675,9 +681,9 @@ void JointTorqueControlDevice::publishStatus()
     auto wakeUpTime = time;
     const auto publishOutputPeriod = std::chrono::duration<double>(0.01);
 
-    m_estimatorIsRunning = true;
+    m_torqueControlIsRunning = true;
 
-    while (m_estimatorIsRunning)
+    while (m_torqueControlIsRunning)
     {
         m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
         m_vectorsCollectionServer.clearData(); // optional see the documentation

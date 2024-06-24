@@ -151,7 +151,7 @@ private:
 
     CouplingMatrices couplingMatrices;
 
-    bool m_estimatorIsRunning{false}; /**< True if the estimator is running. */
+    bool m_torqueControlIsRunning{false}; /**< True if the estimator is running. */
 
     std::thread m_publishEstimationThread; /**< Thread to publish the estimation. */
     struct Status
