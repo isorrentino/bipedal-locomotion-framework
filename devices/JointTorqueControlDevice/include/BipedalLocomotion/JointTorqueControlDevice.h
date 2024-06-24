@@ -17,6 +17,9 @@
 #include <BipedalLocomotion/YarpUtilities/VectorsCollectionServer.h>
 
 #include <iostream>
+#include <memory>
+#include <mutex>
+#include <thread>
 
 #include <yarp/os/PeriodicThread.h>
 #include <yarp/os/Property.h>
@@ -146,11 +149,18 @@ private:
     std::vector<double> m_motorPositionCorrected;
     std::vector<double> m_motorPositionsRadians;
 
-    std::vector<double> m_torqueLogging;
-    std::vector<double> m_frictionLogging;
-    std::vector<double> m_currentLogging;
-
     CouplingMatrices couplingMatrices;
+
+    bool m_estimatorIsRunning{false}; /**< True if the estimator is running. */
+
+    std::thread m_publishEstimationThread; /**< Thread to publish the estimation. */
+    struct Status
+    {
+        std::mutex mutex;
+        std::vector<double> m_torqueLogging;
+        std::vector<double> m_frictionLogging;
+        std::vector<double> m_currentLogging;
+    } m_status;
 
     bool openCalledCorrectly{false};
 
@@ -171,6 +181,12 @@ private:
     void readStatus();
     // bool loadGains(yarp::os::Searchable& config);
     bool loadFrictionParams(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler);
+
+    /**
+     * Published the status.
+     * This is a separate thread.
+     */
+    void publishStatus();
 
     /**
      * Load the coupling matrices from the group whose name

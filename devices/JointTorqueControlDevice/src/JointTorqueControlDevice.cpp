@@ -6,6 +6,7 @@
  */
 
 #include <BipedalLocomotion/JointTorqueControlDevice.h>
+#include <BipedalLocomotion/System/Clock.h>
 
 #include <algorithm>
 #include <cstring>
@@ -203,9 +204,6 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
 
 void JointTorqueControlDevice::computeDesiredCurrents()
 {
-    m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
-    m_vectorsCollectionServer.clearData(); // optional see the documentation
-
     // compute timestep
     double dt;
     if (timeOfLastControlLoop < 0.0)
@@ -239,11 +237,12 @@ void JointTorqueControlDevice::computeDesiredCurrents()
                                                  motorTorqueCurrentParameters[j].maxCurr,
                                                  -motorTorqueCurrentParameters[j].maxCurr);
 
-            m_frictionLogging[j] = estimatedFrictionTorques[j];
-            m_torqueLogging[j] = desiredJointTorques[j];
-            m_currentLogging[j] = desiredMotorCurrents[j]
-
-            log()->info("Desired motor current: {}", desiredMotorCurrents[j]);
+            {
+                std::lock_guard<std::mutex> lock(globalMutex);
+                m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
+                m_status.m_torqueLogging[j] = desiredJointTorques[j];
+                m_status.m_currentLogging[j] = desiredMotorCurrents[j];
+            }
         }
     }
 
@@ -661,7 +660,54 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
     // m_vectorsCollectionServer.populateMetadata("motor_position::measured", joint_list);
     m_vectorsCollectionServer.finalizeMetadata();
 
+    // run the thread
+    m_publishEstimationThread = std::thread([this] { this->publishStatus(); });
+
     return ret;
+}
+
+void JointTorqueControlDevice::publishStatus()
+{
+    constexpr auto logPrefix = "[JointTorqueControlDevice::publishStatus]";
+
+    auto time = BipedalLocomotion::clock().now();
+    auto oldTime = time;
+    auto wakeUpTime = time;
+    const auto publishOutputPeriod = std::chrono::duration<double>(0.01);
+
+    m_estimatorIsRunning = true;
+
+    while (m_estimatorIsRunning)
+    {
+        m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
+        m_vectorsCollectionServer.clearData(); // optional see the documentation
+
+        // detect if a clock has been reset
+        oldTime = time;
+        time = BipedalLocomotion::clock().now();
+        // if the current time is lower than old time, the timer has been reset.
+        if ((time - oldTime).count() < 1e-12)
+        {
+            wakeUpTime = time;
+        }
+        wakeUpTime = std::chrono::duration_cast<std::chrono::nanoseconds>(wakeUpTime
+                                                                          + publishOutputPeriod);
+
+        {
+            std::lock_guard<std::mutex> lockOutput(m_status.mutex);
+            m_vectorsCollectionServer.populateData("motor_currents::desired", m_status.m_currentLogging);
+            m_vectorsCollectionServer.populateData("joint_torques::desired", m_status.m_torqueLogging);
+            m_vectorsCollectionServer.populateData("friction_torques::estimated", m_status.m_frictionLogging);
+        }
+
+        m_vectorsCollectionServer.sendData();
+
+        // release the CPU
+        BipedalLocomotion::clock().yield();
+
+        // sleep
+        BipedalLocomotion::clock().sleepUntil(wakeUpTime);
+    }
 }
 
 bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
@@ -698,9 +744,9 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         m_motorPositionError.resize(axes, 1);
         m_motorPositionCorrected.resize(axes, 1);
         m_motorPositionsRadians.resize(axes, 1);
-        m_torqueLogging.resize(axes, 1);
-        m_frictionLogging.resize(axes, 1);
-        m_currentLogging.resize(axes, 1);
+        m_status.m_torqueLogging.resize(axes, 1);
+        m_status.m_frictionLogging.resize(axes, 1);
+        m_status.m_currentLogging.resize(axes, 1);
     }
 
     // Load coupling matrices
