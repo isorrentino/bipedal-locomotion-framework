@@ -255,7 +255,7 @@ void JointTorqueControlDevice::computeDesiredCurrents()
         }
     }
     m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
-    m_vectorsCollectionServer.clearData(); // optional see the documentation
+    // m_vectorsCollectionServer.clearData(); // optional see the documentation
     m_vectorsCollectionServer.populateData("joint_torques::desired", m_status.m_torqueLogging);
     m_vectorsCollectionServer.populateData("friction_torques::estimated", m_status.m_frictionLogging);
     m_vectorsCollectionServer.sendData();
