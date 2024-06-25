@@ -1043,7 +1043,7 @@ void JointTorqueControlDevice::run()
     }
 
     double now_2 = yarp::os::Time::now();
-    std::cout << "Elapsed time: " << now_2 - now << std::endl; 
+    // std::cout << "Elapsed time: " << now_2 - now << std::endl;
 }
 
 void JointTorqueControlDevice::controlLoop()
