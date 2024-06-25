@@ -230,11 +230,12 @@ void JointTorqueControlDevice::computeDesiredCurrents()
                 estimatedFrictionTorques[j] = computeFrictionTorque(j);
             }
 
-            desiredMotorCurrents[j] = (motorTorqueCurrentParameters[j].kp * (desiredJointTorques[j] - measuredJointTorques[j])
-                                      + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j]) / motorTorqueCurrentParameters[j].kt;
-
-            desiredMotorCurrents[j] = (motorTorqueCurrentParameters[j].kp * desiredJointTorques[j]
-                                      + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j]) / motorTorqueCurrentParameters[j].kt;
+            desiredMotorCurrents[j]
+                = (desiredJointTorques[j]
+                   + motorTorqueCurrentParameters[j].kp
+                         * (desiredJointTorques[j] - measuredJointTorques[j])
+                   + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j])
+                  / motorTorqueCurrentParameters[j].kt;
 
             desiredMotorCurrents[j] = desiredMotorCurrents[j] / m_gearRatios[j];
 
