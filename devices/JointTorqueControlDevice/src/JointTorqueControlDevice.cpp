@@ -91,6 +91,158 @@ JointTorqueControlDevice::~JointTorqueControlDevice()
 {
 }
 
+bool JointTorqueControlDevice::setKpJtcvc(const std::string& jointName, const double kp)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    if (it != m_axisNames.end()) {
+        // Element found
+        int index = std::distance(m_axisNames.begin(), it);
+
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+
+            // Change kp for the joint
+            motorTorqueCurrentParameters[index].kp = kp;
+        }
+    } else {
+        // Element not found
+        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
+                      << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+double JointTorqueControlDevice::getKpJtcvc(const std::string& jointName)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    double kp = 0.0;
+
+    if (it != m_axisNames.end()) {
+        // Element found
+        int index = std::distance(m_axisNames.begin(), it);
+        
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+
+            // Change kp for the joint
+            kp = motorTorqueCurrentParameters[index].kp;
+        }
+    } else {
+        // Element not found
+        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
+                      << std::endl;
+    }
+
+    return kp;
+}
+
+bool JointTorqueControlDevice::setKfcJtcvc(const std::string& jointName, const double kfc)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    if (it != m_axisNames.end()) {
+        // Element found
+        int index = std::distance(m_axisNames.begin(), it);
+        
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+            
+            // Change kp for the joint
+            motorTorqueCurrentParameters[index].kfc = kfc;
+        }
+    } else {
+        // Element not found
+        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
+                      << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+double JointTorqueControlDevice::getKfcJtcvc(const std::string& jointName)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    double kfc = 0.0;
+
+    if (it != m_axisNames.end()) {
+        // Element found
+        int index = std::distance(m_axisNames.begin(), it);
+        
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+            
+            // Change kp for the joint
+            kfc = motorTorqueCurrentParameters[index].kfc;
+        }
+    } else {
+        // Element not found
+        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
+                      << std::endl;
+    }
+
+    return kfc;
+}
+
+bool JointTorqueControlDevice::setFrictionModel(const std::string& jointName, const std::string& model)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    if (it != m_axisNames.end()) {
+        // Element found
+        int index = std::distance(m_axisNames.begin(), it);
+        
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+            
+            // Change kp for the joint
+            motorTorqueCurrentParameters[index].frictionModel = model;
+
+            if (model == "FRICTION_PINN")
+            {
+                frictionEstimators[index]->resetEstimator();
+            }
+        }
+    } else {
+        // Element not found
+        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
+                      << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+std::string JointTorqueControlDevice::getFrictionModel(const std::string& jointName)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    std::string model = "";
+
+    if (it != m_axisNames.end()) {
+        // Element found
+        int index = std::distance(m_axisNames.begin(), it);
+        
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+            
+            // Change kp for the joint
+            model = motorTorqueCurrentParameters[index].frictionModel;
+        }
+    } else {
+        // Element not found
+        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
+                      << std::endl;
+    }
+
+    return model;
+}
+
 // HIJACKING CONTROL
 void JointTorqueControlDevice::startHijackingTorqueControlIfNecessary(int j)
 {
@@ -120,12 +272,6 @@ void JointTorqueControlDevice::stopHijackingTorqueControlIfNecessary(int j)
 {
     if (this->hijackingTorqueControl[j])
     {
-        // m_torqueControlIsRunning = false;
-        // if (m_publishEstimationThread.joinable())
-        // {
-        //     m_publishEstimationThread.join();
-        // }
-
         if (motorTorqueCurrentParameters[j].frictionModel == "FRICTION_PINN")
         {
             frictionEstimators[j]->resetEstimator();
@@ -223,6 +369,8 @@ void JointTorqueControlDevice::computeDesiredCurrents()
 
     for (int j = 0; j < this->axes; j++)
     {
+        std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+
         if (this->hijackingTorqueControl[j])
         {
             if (motorTorqueCurrentParameters[j].kfc > 0.0)
@@ -243,22 +391,23 @@ void JointTorqueControlDevice::computeDesiredCurrents()
                                                  motorTorqueCurrentParameters[j].maxCurr,
                                                  -motorTorqueCurrentParameters[j].maxCurr);
 
-            // {
-            //     std::lock_guard<std::mutex> lockOutput(m_status.mutex);
-            //     m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
-            //     m_status.m_torqueLogging[j] = desiredJointTorques[j];
-            //     m_status.m_currentLogging[j] = desiredMotorCurrents[j];
-            // }
+            {
+                std::lock_guard<std::mutex> lockOutput(m_status.mutex);
+                m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
+                m_status.m_torqueLogging[j] = desiredJointTorques[j];
+                m_status.m_currentLogging[j] = desiredMotorCurrents[j];
+            }
 
-            m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
-            m_status.m_torqueLogging[j] = desiredJointTorques[j];
+            // m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
+            // m_status.m_torqueLogging[j] = desiredJointTorques[j];
         }
     }
-    m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
+
+    // m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
     // m_vectorsCollectionServer.clearData(); // optional see the documentation
-    m_vectorsCollectionServer.populateData("joint_torques::desired", m_status.m_torqueLogging);
-    m_vectorsCollectionServer.populateData("friction_torques::estimated", m_status.m_frictionLogging);
-    m_vectorsCollectionServer.sendData();
+    // m_vectorsCollectionServer.populateData("joint_torques::desired", m_status.m_torqueLogging);
+    // m_vectorsCollectionServer.populateData("friction_torques::estimated", m_status.m_frictionLogging);
+    // m_vectorsCollectionServer.sendData();
 
     bool isNaNOrInf = false;
     for (int j = 0; j < this->axes; j++)
@@ -663,7 +812,7 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
 
     if (!m_vectorsCollectionServer.initialize(params))
     {
-        log()->error("[BalancingController::configure] Unable to configure the server.");
+        log()->error("{} Unable to configure the server.", logPrefix);
         return false;
     }
 
@@ -671,6 +820,14 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
     if (!params->getParameter("joint_list", joint_list))
     {
         log()->info("{} Parameter `joint_list` not found", logPrefix);
+    }
+
+    std::string rpcPortName = "/JointTorqueControl/rpc";
+    this->yarp().attachAsServer(this->m_rpcPort);
+    if (!m_rpcPort.open(rpcPortName))
+    {
+        log()->error("{} Could not open", logPrefix);
+        return false;
     }
 
     // m_vectorsCollectionServer.populateMetadata("motor_currents::desired", joint_list);
@@ -682,8 +839,8 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
     m_vectorsCollectionServer.finalizeMetadata();
 
     // run the thread
-    // m_torqueControlIsRunning = false;
-    // m_publishEstimationThread = std::thread([this] { this->publishStatus(); });
+    m_torqueControlIsRunning = false;
+    m_publishEstimationThread = std::thread([this] { this->publishStatus(); });
 
     return ret;
 }
@@ -698,7 +855,7 @@ void JointTorqueControlDevice::publishStatus()
     const auto publishOutputPeriod = std::chrono::duration<double>(0.01);
 
     m_torqueControlIsRunning = true;
-
+    
     while (m_torqueControlIsRunning)
     {
         m_vectorsCollectionServer.prepareData(); // required to prepare the data to be sent
@@ -761,6 +918,7 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         measuredMotorPositions.resize(axes, 0.0);
         estimatedFrictionTorques.resize(axes, 0.0);
         m_gearRatios.resize(axes, 1);
+        m_axisNames.resize(axes, "");
         m_initialDeltaMotorJointRadians.resize(axes, 1);
         m_motorPositionError.resize(axes, 1);
         m_motorPositionCorrected.resize(axes, 1);
@@ -808,11 +966,31 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         }
     }
 
+    if (ret)
+    {
+        for (int i = 0; i < axes; i++)
+        {
+            std::string jointName;
+            if (!this->getAxisName(i, jointName))
+            {
+                yError("Failed to get the axis name for axis %d", i);
+                ret = false;
+            }
+            m_axisNames[i] = jointName;
+        }
+    }
+
     return ret;
 }
 
 bool JointTorqueControlDevice::detachAll()
 {
+    m_torqueControlIsRunning = false;
+    if (m_publishEstimationThread.joinable()) {
+        m_publishEstimationThread.join();
+    }
+
+    m_rpcPort.close();
     this->PeriodicThread::stop();
     openCalledCorrectly = false;
     return PassThroughControlBoard::detachAll();
@@ -963,12 +1141,6 @@ bool JointTorqueControlDevice::setRefTorques(const double* trqs)
         this->controlLoop();
     }
 
-    // for (int j = 0; j < this->axes; j++)
-    // {
-    //     m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
-    //     m_status.m_torqueLogging[j] = desiredJointTorques[j];
-    // }
-
     return true;
 }
 
@@ -985,12 +1157,6 @@ bool JointTorqueControlDevice::setRefTorques(const int n_joints,
 
         this->controlLoop();
     }
-
-    // for (int j = 0; j < this->axes; j++)
-    // {
-    //     m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
-    //     m_status.m_torqueLogging[j] = desiredJointTorques[j];
-    // }
 
     return true;
 }

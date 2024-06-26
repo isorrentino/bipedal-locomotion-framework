@@ -141,15 +141,10 @@ bool JointFrictionTorqueEstimator::estimate(double inputDeltaPosition,
                                             double inputJointVelocity,
                                             double& output)
 {
-    if (m_pimpl->jointPositionBuffer.size() > m_pimpl->historyLength)
+    if (m_pimpl->jointPositionBuffer.size() == m_pimpl->historyLength)
     {
         // The buffer is full, remove the oldest element
         m_pimpl->jointPositionBuffer.pop_front();
-    }
-
-    if (m_pimpl->motorPositionBuffer.size() > m_pimpl->historyLength)
-    {
-        // The buffer is full, remove the oldest element
         m_pimpl->motorPositionBuffer.pop_front();
     }
 
@@ -158,7 +153,7 @@ bool JointFrictionTorqueEstimator::estimate(double inputDeltaPosition,
     m_pimpl->motorPositionBuffer.push_back(inputJointVelocity);
 
     // Check if the buffer is full
-    if (m_pimpl->jointPositionBuffer.size() < m_pimpl->historyLength || m_pimpl->motorPositionBuffer.size() < m_pimpl->historyLength)
+    if (m_pimpl->jointPositionBuffer.size() < m_pimpl->historyLength)
     {
         // The buffer is not full yet
         return false;
@@ -205,7 +200,7 @@ bool JointFrictionTorqueEstimator::estimate(double inputDeltaPosition,
                                             double inputJointVelocity,
                                             double& output)
 {
-    if (m_pimpl->jointPositionBuffer.size() > m_pimpl->historyLength)
+    if (m_pimpl->jointPositionBuffer.size() == m_pimpl->historyLength)
     {
         // The buffer is full, remove the oldest element
         m_pimpl->errorPositionBuffer.pop_front();

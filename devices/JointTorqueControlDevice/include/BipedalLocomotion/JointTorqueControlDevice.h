@@ -27,6 +27,9 @@
 
 #include <Eigen/Core>
 
+#include <JointTorqueControlCommands.h>
+
+
 namespace BipedalLocomotion
 {
 class JointTorqueControlDevice;
@@ -124,7 +127,8 @@ struct CoulombViscousStribeckParameters
 
 class BipedalLocomotion::JointTorqueControlDevice
     : public BipedalLocomotion::PassThroughControlBoard,
-      public yarp::os::PeriodicThread
+      public yarp::os::PeriodicThread,
+      public JointTorqueControlCommands
 {
 private:
     yarp::os::Property PropertyConfigOptions;
@@ -134,6 +138,8 @@ private:
     std::vector<CoulombViscousParameters> coulombViscousParameters;
     std::vector<CoulombViscousStribeckParameters> coulombViscousStribeckParameters;
     std::vector<std::unique_ptr<JointFrictionTorqueEstimator>> frictionEstimators;
+    std::mutex mutexTorqueControlParam_; // The mutex for protecting the parameters
+    
     yarp::sig::Vector desiredJointTorques;
     yarp::sig::Vector desiredMotorCurrents;
     yarp::sig::Vector measuredJointVelocities;
@@ -149,6 +155,9 @@ private:
     std::vector<double> m_motorPositionError;
     std::vector<double> m_motorPositionCorrected;
     std::vector<double> m_motorPositionsRadians;
+    std::vector<std::string> m_axisNames;
+
+    yarp::os::Port m_rpcPort; /**< Remote Procedure Call port. */
 
     double m_tempJointPosRad = 0.0;
     double m_tempJointPosMotorSideRad = 0.0;
@@ -244,6 +253,13 @@ public:
     virtual bool threadInit();
     virtual void run();
     virtual void threadRelease();
+
+    virtual bool setKpJtcvc(const std::string& jointName, const double kp);
+    virtual double getKpJtcvc(const std::string& jointName) override;
+    virtual bool setKfcJtcvc(const std::string& jointName, const double kfc) override;
+    virtual double getKfcJtcvc(const std::string& jointName) override;
+    virtual bool setFrictionModel(const std::string& jointName, const std::string& model) override;
+    virtual std::string getFrictionModel(const std::string& jointName) override;
 };
 
 #endif // BIPEDAL_LOCOMOTION_FRAMEWORK_JOINT_TORQUE_CONTROL_DEVICE_H

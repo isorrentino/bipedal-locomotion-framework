@@ -3,6 +3,10 @@
 # BSD-3-Clause license.
 
 if(FRAMEWORK_COMPILE_JointTorqueControlDevice)
+  add_bipedal_locomotion_yarp_thrift(
+      NAME JointTorqueControlCommands
+      THRIFT thrifts/JointTorqueControlCommands.thrift
+      INSTALLATION_FOLDER JointTorqueControlDevice)
 
   add_bipedal_yarp_device(
       NAME JointTorqueControlDevice
@@ -18,6 +22,7 @@ if(FRAMEWORK_COMPILE_JointTorqueControlDevice)
       BipedalLocomotion::RobotInterfaceYarpImplementation
       BipedalLocomotion::ParametersHandlerYarpImplementation
       BipedalLocomotion::VectorsCollection
+      BipedalLocomotion::JointTorqueControlCommands
       PUBLIC_LINK_LIBRARIES
       onnxruntime::onnxruntime
       Eigen3::Eigen
