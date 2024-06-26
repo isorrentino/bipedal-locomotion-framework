@@ -822,7 +822,14 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
         log()->info("{} Parameter `joint_list` not found", logPrefix);
     }
 
-    std::string rpcPortName = "/JointTorqueControl/rpc";
+    std::string remote;
+    if (!params->getParameter("remote", remote))
+    {
+        log()->error("{} Parameter `remote` not found", logPrefix);
+        return false;
+    }
+
+    std::string rpcPortName = remote + "/rpc:i";
     this->yarp().attachAsServer(this->m_rpcPort);
     if (!m_rpcPort.open(rpcPortName))
     {
@@ -977,6 +984,11 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
                 ret = false;
             }
             m_axisNames[i] = jointName;
+        }
+
+        for (int i = 0; i < axes; i++)
+        {
+            log()->info("Axis {}, name {}", i, m_axisNames[i]);
         }
     }
 
