@@ -829,7 +829,7 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
         return false;
     }
 
-    std::string rpcPortName = remote + "/rpc:i";
+    std::string rpcPortName = remote + "/commands/rpc:i";
     this->yarp().attachAsServer(this->m_rpcPort);
     if (!m_rpcPort.open(rpcPortName))
     {
@@ -925,7 +925,7 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         measuredMotorPositions.resize(axes, 0.0);
         estimatedFrictionTorques.resize(axes, 0.0);
         m_gearRatios.resize(axes, 1);
-        m_axisNames.resize(axes, "");
+        m_axisNames.resize(axes);
         m_initialDeltaMotorJointRadians.resize(axes, 1);
         m_motorPositionError.resize(axes, 1);
         m_motorPositionCorrected.resize(axes, 1);
@@ -988,7 +988,7 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
 
         for (int i = 0; i < axes; i++)
         {
-            log()->info("Axis {}, name {}", i, m_axisNames[i]);
+            log()->info("----------------------------------------- Axis {}, name {}", i, m_axisNames[i]);
         }
     }
 
