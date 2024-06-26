@@ -93,152 +93,127 @@ JointTorqueControlDevice::~JointTorqueControlDevice()
 
 bool JointTorqueControlDevice::setKpJtcvc(const std::string& jointName, const double kp)
 {
-    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+    size_t index = 0;
 
-    if (it != m_axisNames.end()) {
-        // Element found
-        int index = std::distance(m_axisNames.begin(), it);
-
+    do{
+        if (m_axisNames[index] == jointName)
         {
             std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
-
-            // Change kp for the joint
             motorTorqueCurrentParameters[index].kp = kp;
-        }
-    } else {
-        // Element not found
-        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
-                      << std::endl;
-        return false;
-    }
 
-    return true;
+            log()->info("Request for kp des = {}", kp);
+            log()->info("Setting value kp = {}", motorTorqueCurrentParameters[index].kp);
+
+            return true;
+        }
+
+        index++;
+    } while (index < m_axisNames.size());
+
+    return false;
 }
 
 double JointTorqueControlDevice::getKpJtcvc(const std::string& jointName)
 {
-    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+    size_t index = 0;
 
-    double kp = 0.0;
+    double kp = -1;
 
-    if (it != m_axisNames.end()) {
-        // Element found
-        int index = std::distance(m_axisNames.begin(), it);
-        
+    do{
+        if (m_axisNames[index] == jointName)
         {
             std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
 
-            // Change kp for the joint
-            kp = motorTorqueCurrentParameters[index].kp;
+            log()->info("kp value is {}", motorTorqueCurrentParameters[index].kp);
+
+            return motorTorqueCurrentParameters[index].kp;
         }
-    } else {
-        // Element not found
-        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
-                      << std::endl;
-    }
+
+        index++;
+    } while (index < m_axisNames.size());
 
     return kp;
 }
 
 bool JointTorqueControlDevice::setKfcJtcvc(const std::string& jointName, const double kfc)
 {
-    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+    size_t index = 0;
 
-    if (it != m_axisNames.end()) {
-        // Element found
-        int index = std::distance(m_axisNames.begin(), it);
-        
+    do{
+        if (m_axisNames[index] == jointName)
         {
             std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
-            
-            // Change kp for the joint
             motorTorqueCurrentParameters[index].kfc = kfc;
-        }
-    } else {
-        // Element not found
-        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
-                      << std::endl;
-        return false;
-    }
 
-    return true;
+            return true;
+        }
+
+        index++;
+    } while (index < m_axisNames.size());
+
+    return false;
 }
 
 double JointTorqueControlDevice::getKfcJtcvc(const std::string& jointName)
 {
-    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+    size_t index = 0;
 
-    double kfc = 0.0;
+    double kfc = -1;
 
-    if (it != m_axisNames.end()) {
-        // Element found
-        int index = std::distance(m_axisNames.begin(), it);
-        
+    do{
+        if (m_axisNames[index] == jointName)
         {
             std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
-            
-            // Change kp for the joint
-            kfc = motorTorqueCurrentParameters[index].kfc;
+
+            return motorTorqueCurrentParameters[index].kfc;
         }
-    } else {
-        // Element not found
-        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
-                      << std::endl;
-    }
+
+        index++;
+    } while (index < m_axisNames.size());
 
     return kfc;
 }
 
 bool JointTorqueControlDevice::setFrictionModel(const std::string& jointName, const std::string& model)
 {
-    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+    size_t index = 0;
 
-    if (it != m_axisNames.end()) {
-        // Element found
-        int index = std::distance(m_axisNames.begin(), it);
-        
+    do{
+        if (m_axisNames[index] == jointName)
         {
             std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
-            
-            // Change kp for the joint
             motorTorqueCurrentParameters[index].frictionModel = model;
 
             if (model == "FRICTION_PINN")
             {
                 frictionEstimators[index]->resetEstimator();
             }
-        }
-    } else {
-        // Element not found
-        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
-                      << std::endl;
-        return false;
-    }
 
-    return true;
+            return true;
+        }
+
+        index++;
+    } while (index < m_axisNames.size());
+
+    return false;
 }
 
 std::string JointTorqueControlDevice::getFrictionModel(const std::string& jointName)
 {
-    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+    size_t index = 0;
 
-    std::string model = "";
+    std::string model = "none";
 
-    if (it != m_axisNames.end()) {
-        // Element found
-        int index = std::distance(m_axisNames.begin(), it);
-        
+    do{
+        if (m_axisNames[index] == jointName)
         {
             std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
-            
-            // Change kp for the joint
-            model = motorTorqueCurrentParameters[index].frictionModel;
+
+            return motorTorqueCurrentParameters[index].frictionModel;
         }
-    } else {
-        // Element not found
-        std::cerr << "Cannot find joint " << jointName << " in the list of controlled joints"
-                      << std::endl;
-    }
+
+        index++;
+    } while (index < m_axisNames.size());
 
     return model;
 }
@@ -955,44 +930,38 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
 
     if (ret)
     {
-        ret = ret && this->start();
+        if (!this->start())
+        {
+            log()->error("Failed to start device");
+            ret = false;
+        }
     }
 
     // Get gearratio of motors
-    if (ret)
+    for (int i = 0; i < axes; i++)
     {
-        for (int i = 0; i < axes; i++)
+        double gearRatio;
+        if (!this->getGearboxRatio(i, &gearRatio))
         {
-            double gearRatio;
-            if (!this->getGearboxRatio(i, &gearRatio))
-            {
-                yError("Failed to get gear ratio for joint %d", i);
-                ret = false;
-            }
-            m_gearRatios[i] = gearRatio;
+            yError("Failed to get gear ratio for joint %d", i);
+            ret = false;
         }
+        m_gearRatios[i] = gearRatio;
     }
 
-    if (ret)
+    for (int i = 0; i < axes; i++)
     {
-        for (int i = 0; i < axes; i++)
+        std::string jointName;
+        if (!this->getAxisName(i, jointName))
         {
-            std::string jointName;
-            if (!this->getAxisName(i, jointName))
-            {
-                yError("Failed to get the axis name for axis %d", i);
-                ret = false;
-            }
-            m_axisNames[i] = jointName;
+            yError("Failed to get the axis name for axis %d", i);
+            ret = false;
         }
-
-        for (int i = 0; i < axes; i++)
-        {
-            log()->info("----------------------------------------- Axis {}, name {}", i, m_axisNames[i]);
-        }
+    
+        m_axisNames[i] = jointName;
     }
 
-    return ret;
+    return true;
 }
 
 bool JointTorqueControlDevice::detachAll()
