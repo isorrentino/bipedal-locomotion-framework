@@ -99,10 +99,11 @@ struct CoulombViscousParameters
 {
     double kc; ///< coulomb friction
     double kv; ///< viscous friction
+    double ka; ///< viscous friction
 
     void reset()
     {
-        kc = kv = 0.0;
+        kc = kv = ka = 0.0;
     }
 };
 

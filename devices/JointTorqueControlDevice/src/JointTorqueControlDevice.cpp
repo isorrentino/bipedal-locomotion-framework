@@ -270,7 +270,7 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
     {
         double velocityRadians = measuredJointVelocities[joint] * M_PI / 180.0;
 
-        frictionTorque = coulombViscousParameters[joint].kc * sign(velocityRadians)
+        frictionTorque = coulombViscousParameters[joint].kc * std::tanh(coulombViscousParameters[joint].ka * velocityRadians)
                          + coulombViscousParameters[joint].kv * velocityRadians;
     }
     else if (motorTorqueCurrentParameters[joint].frictionModel
@@ -574,11 +574,18 @@ bool JointTorqueControlDevice::loadFrictionParams(
             log()->error("{} Parameter `kv` not found", logPrefix);
             return false;
         }
+        Eigen::VectorXd ka;
+        if (!frictionGroup->getParameter("ka", ka))
+        {
+            log()->error("{} Parameter `ka` not found", logPrefix);
+            return false;
+        }
 
         for (int i = 0; i < kc.size(); i++)
         {
             coulombViscousParameters[i].kc = kc(i);
             coulombViscousParameters[i].kv = kv(i);
+            coulombViscousParameters[i].ka = ka(i);
         }
     }
 
