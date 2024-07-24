@@ -208,6 +208,7 @@ def main():
         joints_to_control,
     )
     vectors_collection_server.finalize_metadata()
+    blf.clock().sleep_for(datetime.timedelta(milliseconds=200))
 
     # Create the ctrl+c handler
     ctrl_c_handler = create_ctrl_c_handler(sensor_bridge=sensor_bridge, robot_control=robot_control)
