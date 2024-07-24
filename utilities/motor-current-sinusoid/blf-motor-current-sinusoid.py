@@ -14,8 +14,6 @@ from pathlib import Path
 import sys
 import os
 
-from tqdm import tqdm
-
 logPrefix = "[MotorCurrentSinusoidApplication]"
 
 class MotorParameters:
@@ -223,6 +221,16 @@ def main():
     traj_index = 0
     delta_traj_index = 1
 
+    try:
+        from tqdm import tqdm
+        is_tqdm_installed = True
+    except ImportError:
+        blf.log().warn("{} tqdm is not installed, the progress bar will not be shown".format(logPrefix))
+        is_tqdm_installed = False
+        last_printed_progress = -1
+        # hijack tqdm with a dummy function
+        tqdm = lambda x: x
+
     for _ in tqdm(range(trajectory.shape[0])):
         tic = blf.clock().now()
 
@@ -267,15 +275,19 @@ def main():
         else:
             blf.log().warning("{} The control loop is too slow, real time constraints not satisfied".format(logPrefix))
 
+        # Print progress percentage, only if tqdm is not installed
+        if not is_tqdm_installed:
+            
+            # Calculate progress
+            progress = (traj_index + 1) / trajectory.shape[0] * 100
+            
+            # Check if progress is a multiple of 10 and different from last printed progress
+            if int(progress) % 10 == 0 and int(progress) != last_printed_progress:
+                print(f'Progress: {int(progress)}%', end='\r')
+                last_printed_progress = int(progress)
+
         # update the trajectory index
         traj_index = traj_index + delta_traj_index
-
-        # # Print percentage of the trajectory only when the percentage is multiple of 0.1
-        # if traj_index % int(trajectory.shape[0]/5) == 0:
-        #     print(f"Percentage of the trajectory: {int(100*traj_index/trajectory.shape[0])}")
-            
-        # # if traj_index >= trajectory.shape[0]:
-        # #     break
     
     blf.log().info("{} The trajectory is finished".format(logPrefix))
 
