@@ -251,11 +251,17 @@ def main():
     dt = param_handler.get_parameter_datetime("dt")
 
     # Get the starting position: the trajectory will be generated for each starting position
-    number_of_starting_points = param_handler.get_parameter_int("number_of_starting_points")
-    starting_positions = np.zeros((number_of_starting_points,len(joints_to_control)))
+    number_of_starting_points = param_handler.get_parameter_int(
+        "number_of_starting_points"
+    )
+    starting_positions = np.zeros((number_of_starting_points, len(joints_to_control)))
     for joint_index, joint in enumerate(joints_to_control):
-        tmp = np.linspace(lower_limits[joint_index], upper_limits[joint_index],  number_of_starting_points+2)
-        starting_positions[:,joint_index] = tmp[1:-1]
+        tmp = np.linspace(
+            lower_limits[joint_index],
+            upper_limits[joint_index],
+            number_of_starting_points + 2,
+        )
+        starting_positions[:, joint_index] = tmp[1:-1]
     blf.log().info("{} Starting positions: \n {}".format(logPrefix, starting_positions))
 
     # Start the data collection
@@ -275,19 +281,27 @@ def main():
         ):
             raise RuntimeError("{} Unable to set the control mode".format(logPrefix))
         if not robot_control.set_references(
-            starting_position, blf.robot_interface.YarpRobotControl.Position, joint_positions
+            starting_position,
+            blf.robot_interface.YarpRobotControl.Position,
+            joint_positions,
         ):
             raise RuntimeError("{} Unable to set the references".format(logPrefix))
-        
+
         # wait for the joints to reach the starting position
         is_motion_done = False
         while not is_motion_done:
             is_ok, is_motion_done, _, _ = robot_control.check_motion_done()
             if not is_ok:
-                raise RuntimeError("{} Unable to check if the motion is done".format(logPrefix))
+                raise RuntimeError(
+                    "{} Unable to check if the motion is done".format(logPrefix)
+                )
             blf.clock().sleep_for(datetime.timedelta(milliseconds=200))
         blf.clock().sleep_for(datetime.timedelta(seconds=1))
-        blf.log().info("{} Joints moved to the starting position #{}, starting the trajectory".format(logPrefix, counter+1))
+        blf.log().info(
+            "{} Joints moved to the starting position #{}, starting the trajectory".format(
+                logPrefix, counter + 1
+            )
+        )
 
         # Generate the trajectory
         if isGazebo:
@@ -296,11 +310,15 @@ def main():
                 MotorParameters.k_tau[joint] for joint in joints_to_control
             ]
             if not are_joints_ok:
-                raise RuntimeError("{} Unable to get the joint torques".format(logPrefix))
+                raise RuntimeError(
+                    "{} Unable to get the joint torques".format(logPrefix)
+                )
         else:
             are_joints_ok, motor_currents, _ = sensor_bridge.get_motor_currents()
             if not are_joints_ok:
-                raise RuntimeError("{} Unable to get the motor current".format(logPrefix))
+                raise RuntimeError(
+                    "{} Unable to get the motor current".format(logPrefix)
+                )
         trajectory = []
         for joint_index in range(len(joints_to_control)):
             trajectory.append(
@@ -318,7 +336,12 @@ def main():
         trajectory = np.array(trajectory).T
 
         # reset control modes for current/torque
-        control_modes = [blf.robot_interface.YarpRobotControl.Torque if isGazebo else blf.robot_interface.YarpRobotControl.Current for _ in joints_to_control]
+        control_modes = [
+            blf.robot_interface.YarpRobotControl.Torque
+            if isGazebo
+            else blf.robot_interface.YarpRobotControl.Current
+            for _ in joints_to_control
+        ]
 
         # reset variables
         is_out_of_safety_limits = [False for _ in joints_to_control]
@@ -328,7 +351,7 @@ def main():
 
         # loop over the trajectory
         for _ in tqdm(range(trajectory.shape[0])):
-            tic = blf.clock().now()            
+            tic = blf.clock().now()
 
             # get the feedback
             if not sensor_bridge.advance():
@@ -338,7 +361,9 @@ def main():
 
             are_joints_ok, joint_positions, _ = sensor_bridge.get_joint_positions()
             if not are_joints_ok:
-                raise RuntimeError("{} Unable to get the joint positions".format(logPrefix))    
+                raise RuntimeError(
+                    "{} Unable to get the joint positions".format(logPrefix)
+                )
 
             # check if the joints are within the safety limits
             # if not, stop the trajectory and set the related control mode to position
@@ -346,52 +371,80 @@ def main():
                 if is_out_of_safety_limits[joint_index]:
                     # nothing to do, it was already notified before
                     continue
-                if (np.abs(joint_positions[joint_index] - lower_limits[joint_index]) < safety_threshold) or (np.abs(joint_positions[joint_index] - upper_limits[joint_index]) < safety_threshold):
+                if (
+                    np.abs(joint_positions[joint_index] - lower_limits[joint_index])
+                    < safety_threshold
+                ) or (
+                    np.abs(joint_positions[joint_index] - upper_limits[joint_index])
+                    < safety_threshold
+                ):
                     # set the control mode to position
-                    control_modes[joint_index] = blf.robot_interface.YarpRobotControl.Position
+                    control_modes[
+                        joint_index
+                    ] = blf.robot_interface.YarpRobotControl.Position
                     # set the reference to the current position
                     position_reference[joint_index] = joint_positions[joint_index]
-                    blf.log().warn("{} Joint {} is out of the safety limits, stopping its trajectory and switching to Position control, with reference position {}".format(logPrefix, joint, position_reference[joint_index]))
+                    blf.log().warn(
+                        "{} Joint {} is out of the safety limits, stopping its trajectory and switching to Position control, with reference position {}".format(
+                            logPrefix, joint, position_reference[joint_index]
+                        )
+                    )
                     # update flag
                     is_out_of_safety_limits[joint_index] = True
 
             # set control modes
             if not robot_control.set_control_mode(control_modes):
-                raise RuntimeError("{} Unable to set the control mode".format(logPrefix))
-            
+                raise RuntimeError(
+                    "{} Unable to set the control mode".format(logPrefix)
+                )
+
             # get the current/torque references
             current_reference = trajectory[traj_index]
 
             # merge the position and current/torque references depending on the control mode
-            reference = np.where(is_out_of_safety_limits, position_reference, current_reference)
+            reference = np.where(
+                is_out_of_safety_limits, position_reference, current_reference
+            )
 
             # send the references motor current (or joint torque for Gazebo)
             if isGazebo:
                 if not robot_control.set_references(
                     reference
                     / [MotorParameters.k_tau[joint] for joint in joints_to_control],
-                    control_modes, joint_positions
+                    control_modes,
+                    joint_positions,
                 ):
-                    raise RuntimeError("{} Unable to set the references".format(logPrefix))
+                    raise RuntimeError(
+                        "{} Unable to set the references".format(logPrefix)
+                    )
             else:
                 if not robot_control.set_references(
                     reference, control_modes, joint_positions
                 ):
-                    raise RuntimeError("{} Unable to set the references".format(logPrefix))
-
+                    raise RuntimeError(
+                        "{} Unable to set the references".format(logPrefix)
+                    )
 
             if any(is_out_of_safety_limits):
 
                 blf.log().debug("{} Reference: {}".format(logPrefix, reference))
-                blf.log().debug("{} current_reference: {}".format(logPrefix, current_reference))
-                blf.log().debug("{} position_reference: {}".format(logPrefix, position_reference))
-                blf.log().debug("{} joints position: {}".format(logPrefix, joint_positions))
+                blf.log().debug(
+                    "{} current_reference: {}".format(logPrefix, current_reference)
+                )
+                blf.log().debug(
+                    "{} position_reference: {}".format(logPrefix, position_reference)
+                )
+                blf.log().debug(
+                    "{} joints position: {}".format(logPrefix, joint_positions)
+                )
 
             # log the data
             vectors_collection_server.prepare_data()
             if not vectors_collection_server.clear_data():
                 raise RuntimeError("{} Unable to clear the data".format(logPrefix))
-            vectors_collection_server.populate_data("motors::desired::current", current_reference)
+            vectors_collection_server.populate_data(
+                "motors::desired::current", current_reference
+            )
             vectors_collection_server.send_data()
 
             # # if any joint was out of the safety limits, wait for it to get back to the starting position
