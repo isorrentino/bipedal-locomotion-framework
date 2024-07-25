@@ -422,18 +422,6 @@ def main():
                 reference, control_modes, joint_positions
             ):
                 raise RuntimeError("{} Unable to set the references".format(logPrefix))
-
-            # send the references motor current (or joint torque for Gazebo)
-            if not robot_control.set_references(
-                reference, control_modes, joint_positions
-            ):
-                raise RuntimeError("{} Unable to set the references".format(logPrefix))
-
-            # send the references motor current (or joint torque for Gazebo)
-            if not robot_control.set_references(
-                reference, control_modes, joint_positions
-            ):
-                raise RuntimeError("{} Unable to set the references".format(logPrefix))
             
             # check if move to next starting position
             if any(is_out_of_safety_limits):
