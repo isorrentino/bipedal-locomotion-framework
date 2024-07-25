@@ -434,6 +434,15 @@ def main():
                 reference, control_modes, joint_positions
             ):
                 raise RuntimeError("{} Unable to set the references".format(logPrefix))
+            
+            # check if move to next starting position
+            if any(is_out_of_safety_limits):
+                blf.log().info(
+                    "{} The trajectory is stopped due to safety limits. Moving to next starting position, if available.".format(
+                        logPrefix
+                    )
+                )
+                break
 
             # log the data
             vectors_collection_server.prepare_data()
@@ -443,15 +452,6 @@ def main():
                 "motors::desired::current", current_reference
             )
             vectors_collection_server.send_data()
-
-            # check if move to next starting position
-            if any(is_out_of_safety_limits):
-                blf.log().info(
-                    "{} The trajectory is stopped due to safety limits. Moving to next starting position, if available.".format(
-                        logPrefix
-                    )
-                )
-                break
 
             # sleep
             toc = blf.clock().now()
