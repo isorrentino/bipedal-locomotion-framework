@@ -383,20 +383,20 @@ def main():
                     np.abs(joint_positions[joint_index] - upper_limits[joint_index])
                     < safety_threshold
                 ):
-                    blf.log().warn(
-                        "{} Joint {} is out of the safety limits, stopping its trajectory and switching all joints to Position control".format(
-                            logPrefix, joint
-                        )
-                    )
-                    # set the control mode to position for all the joints
-                    control_modes = [
-                        blf.robot_interface.YarpRobotControl.Position
-                        for _ in joints_to_control
-                    ]
+                    # set the control mode to position 
+                    control_modes[joint_index] = blf.robot_interface.YarpRobotControl.Position
+
                     # set the reference to the current position
-                    position_reference = joint_positions
+                    position_reference[joint_index] = joint_positions[joint_index]
+
                     # update flag
                     is_out_of_safety_limits[joint_index] = True
+
+                    blf.log().warn(
+                        "{} Joint {} is out of the safety limits, stopping its trajectory and switching to Position control with reference position {}".format(
+                            logPrefix, joint, position_reference[joint_index]
+                        )
+                    )
 
             # set control modes
             if not robot_control.set_control_mode(control_modes):
@@ -414,7 +414,7 @@ def main():
 
             # merge the position and current/torque references depending on the control mode
             reference = np.where(
-                any(is_out_of_safety_limits), position_reference, current_reference
+                is_out_of_safety_limits, position_reference, current_reference
             )
 
             # send the references motor current (or joint torque for Gazebo)
@@ -422,11 +422,11 @@ def main():
                 reference, control_modes, joint_positions
             ):
                 raise RuntimeError("{} Unable to set the references".format(logPrefix))
-            
-            # check if move to next starting position
-            if any(is_out_of_safety_limits):
+                        
+            # check if it is time to move to next starting position
+            if all(is_out_of_safety_limits):
                 blf.log().info(
-                    "{} The trajectory is stopped due to safety limits. Moving to next starting position, if available.".format(
+                    "{} The trajectory is stopped due to all joints exceeding safety limits. Moving to next starting position, if available.".format(
                         logPrefix
                     )
                 )
