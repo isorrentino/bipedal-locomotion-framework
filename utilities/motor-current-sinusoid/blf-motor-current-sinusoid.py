@@ -286,8 +286,7 @@ def main():
             raise RuntimeError("{} Unable to set the control mode".format(logPrefix))
         if not robot_control.set_references(
             starting_position,
-            blf.robot_interface.YarpRobotControl.Position,
-            joint_positions,
+            blf.robot_interface.YarpRobotControl.Position
         ):
             raise RuntimeError("{} Unable to set the references".format(logPrefix))
 
@@ -352,6 +351,12 @@ def main():
             for _ in joints_to_control
         ]
 
+        # update motor control modes
+        if not robot_control.set_control_mode(control_modes):
+            raise RuntimeError(
+                "{} Unable to set the control mode".format(logPrefix)
+            )
+
         # reset variables
         is_out_of_safety_limits = [False for _ in joints_to_control]
         position_reference = starting_position
@@ -396,17 +401,17 @@ def main():
                     # update flag
                     is_out_of_safety_limits[joint_index] = True
 
+                    # set control modes
+                    if not robot_control.set_control_mode(control_modes):
+                        raise RuntimeError(
+                            "{} Unable to set the control mode".format(logPrefix)
+                        )
+                    
                     blf.log().warn(
                         "{} Joint {} is out of the safety limits, stopping its trajectory and switching to Position control with reference position {}".format(
                             logPrefix, joint, position_reference[joint_index]
                         )
                     )
-
-            # set control modes
-            if not robot_control.set_control_mode(control_modes):
-                raise RuntimeError(
-                    "{} Unable to set the control mode".format(logPrefix)
-                )
 
             # get the current/torque references
             if isGazebo:
@@ -435,7 +440,7 @@ def main():
                     )
                 )
                 break
-
+           
             # log the data
             vectors_collection_server.prepare_data()
             if not vectors_collection_server.clear_data():
@@ -454,7 +459,7 @@ def main():
             if delta_time < dt:
                 blf.clock().sleep_for(dt - delta_time)
             else:
-                blf.log().warn(
+                blf.log().debug(
                     "{} The control loop is too slow, real time constraints not satisfied".format(
                         logPrefix
                     )
