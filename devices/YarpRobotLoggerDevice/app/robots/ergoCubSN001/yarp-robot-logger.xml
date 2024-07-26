@@ -7,18 +7,19 @@ BSD-3-Clause license. -->
   <param name="robot">ergocub</param>
   <param name="sampling_period_in_s">0.001</param>
 
-  <!--param name="rgb_cameras_fps">(20)</param>
-  <param name="rgb_cameras_rgb_save_mode">("video")</param-->
+  <param name="rgb_cameras_fps">(20)</param>
+  <param name="rgb_cameras_rgb_save_mode">("video")</param>
 
   <param name="rgbd_cameras_fps">()</param>
   <param name="rgbd_cameras_depth_scale">()</param>
   <param name="rgbd_cameras_depth_save_mode">()</param>
   <param name="rgbd_cameras_rgb_save_mode">()</param>
 
-  <!--param name="video_codec_code">mp4v</param>
+  <param name="video_codec_code">mp4v</param>
   <param name="port_prefix">/yarp-robot-logger</param>
-  <param name="text_logging_subnames">("ergoCubSN001/yarprobotinterface")</param-->
-  <!--param name="code_status_cmd_prefixes">("ssh ergocub@10.0.2.2" "ssh ergocub@10.0.2.3")</param-->
+  <param name="text_logging_subnames">("ergoCubSN001/yarprobotinterface")</param>
+  <param name="code_status_cmd_prefixes">("ssh ergocub@10.0.2.2" "ssh ergocub@10.0.2.3")</param>
+  <param name="maximum_admissible_time_step">1.0</param>
 
   <group name="Telemetry">
     <param name="save_period">1800.0</param>
@@ -42,6 +43,13 @@ BSD-3-Clause license. -->
       <param name="carrier">"udp"</param>
     </group>
 
+    <group name="CurrentControl">
+      <param name="local">"/yarp-robot-logger/exogenous_signals/current_control_trajectory"</param>
+      <param name="remote">"/motor_current_trajectory_player/logger"</param>
+      <param name="signal_name">"current_control"</param>
+      <param name="carrier">"udp"</param>
+    </group>
+
     <group name="Balancing">
       <param name="local">"/yarp-robot-logger/exogenous_signals/balancing_position_controller"</param>
       <param name="remote">"/balancing_position_controller/logger"</param>
@@ -62,22 +70,15 @@ BSD-3-Clause license. -->
       <param name="signal_name">"grid_tracking"</param>
       <param name="carrier">"udp"</param>
     </group>
-
-    <group name="CurrentControl">
-      <param name="local">"/yarp-robot-logger/exogenous_signals/current_control_trajectory"</param>
-      <param name="remote">"/motor_current_trajectory_player/logger"</param>
-      <param name="signal_name">"current_control"</param>
-      <param name="carrier">"udp"</param>
-    </group>
   </group>
 
-  <!--group name="RobotCameraBridge">
+  <group name="RobotCameraBridge">
       <param name="stream_cameras">true</param>
       <group name="Cameras">
         <param name="rgb_cameras_list">("jabra")</param>
         <param name="rgbd_cameras_list">()</param>
       </group>
-  </group-->
+  </group>
 
   <group name="RobotSensorBridge">
     <param name="check_for_nan">false</param>
@@ -128,7 +129,7 @@ BSD-3-Clause license. -->
       <elem name="left_arm_wrench_client">left_arm_wrench_client</elem-->
       <elem name="mas-remapper">mas-remapper</elem>
       <!-- <elem name="realsense">realsense</elem> -->
-      <!--elem name="jabra">jabra</elem-->
+      <elem name="jabra">jabra</elem>
     </paramlist>
   </action>
 
