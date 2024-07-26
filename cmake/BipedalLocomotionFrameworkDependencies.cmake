@@ -249,7 +249,11 @@ framework_dependent_option(FRAMEWORK_COMPILE_JointTrajectoryPlayer
   "Compile joint-trajectory-player application?" ON
   "FRAMEWORK_COMPILE_YarpImplementation;FRAMEWORK_COMPILE_RobotInterface;FRAMEWORK_COMPILE_matioCppConversions;FRAMEWORK_USE_matioCpp;FRAMEWORK_USE_YARP;FRAMEWORK_COMPILE_Contact" OFF)
 
-framework_dependent_option(FRAMEWORK_COMPILE_Perception
+  framework_dependent_option(FRAMEWORK_COMPILE_MotorCurrentSinusoidApplication
+  "Compile motor-current-sinusoid application?" ON
+  "FRAMEWORK_COMPILE_YarpImplementation;FRAMEWORK_COMPILE_RobotInterface;FRAMEWORK_USE_YARP;" OFF)
+
+  framework_dependent_option(FRAMEWORK_COMPILE_Perception
   "Compile Perception libraries?" ON
   "FRAMEWORK_USE_OpenCV;FRAMEWORK_USE_PCL" OFF)
 

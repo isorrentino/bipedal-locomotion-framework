@@ -128,15 +128,9 @@ def main():
 
     param_handler = blf.parameters_handler.YarpParametersHandler()
 
-    param_file = (
-        Path(__file__).parent
-        / "config"
-        / "robots"
-        / os.environ.get("YARP_ROBOT_NAME")
-        / "blf-motor-current-sinusoid-options.ini"
-    )
+    param_file = "blf-motor-current-sinusoid-options.ini"
 
-    if not param_handler.set_from_filename(str(param_file)):
+    if not param_handler.set_from_filename(param_file):
         raise RuntimeError("{} Unable to load the parameters".format(logPrefix))
 
     sinusoid_group = param_handler.get_group("SINUSOID")
