@@ -54,9 +54,9 @@ def generate_trajectory_for_joint(
 ):
     trajectory = []
     A = min_delta_current
-    f_in = min_frequency
-    f_end = max_frequency
-    delta_f = frequency_increment
+    f_in = max_frequency
+    f_end = min_frequency
+    delta_f = -frequency_increment
 
     while np.abs(A) <= np.abs(max_delta_current):
 
@@ -66,14 +66,14 @@ def generate_trajectory_for_joint(
             trajectory.append(initial_current + A * np.sin(2 * np.pi * f * t))
 
         A += delta_current_increment
-        if f_in == min_frequency:
-            f_in = max_frequency
-            f_end = min_frequency
-            delta_f = -frequency_increment
-        else:
-            f_in = min_frequency
-            f_end = max_frequency
-            delta_f = frequency_increment
+        # if f_in == min_frequency:
+        f_in = max_frequency
+        f_end = min_frequency
+        delta_f = -frequency_increment
+        # else:
+        #     f_in = min_frequency
+        #     f_end = max_frequency
+        #     delta_f = frequency_increment
 
     # Concatenate trajectories
     trajectory = np.concatenate(trajectory)
