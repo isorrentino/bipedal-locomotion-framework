@@ -7,8 +7,7 @@ import os
 import signal
 import sys
 
-## extend the python path
-from pathlib import Path
+from abc import ABC, abstractmethod
 
 import bipedal_locomotion_framework as blf
 import numpy as np
@@ -16,8 +15,7 @@ import yarp
 
 logPrefix = "[MotorCurrentSinusoidApplication]"
 
-
-class MotorParameters:
+class MotorParameters(ABC):
     # k_tau[A/Nm] includes the gear ratio
     k_tau = {
         "l_hip_roll": 94 * 1e-3,
@@ -34,56 +32,86 @@ class MotorParameters:
         "r_ankle_roll": 177 * 1e-3,
     }
 
+class Trajectory(ABC):
+    @abstractmethod
+    def generate(self, *args, **kwargs):
+        pass
+
+class SinusoidTrajectoryGenerator(Trajectory):
+    def __init__(self, min_delta_current, max_delta_current, delta_current_increment, min_frequency, max_frequency, frequency_increment):
+        self.min_delta_current = min_delta_current
+        self.max_delta_current = max_delta_current
+        self.delta_current_increment = delta_current_increment
+        self.min_frequency = min_frequency
+        self.max_frequency = max_frequency
+        self.frequency_increment = frequency_increment
+        self.joint_list = []
+        self.trajectory = np.array([])
+    
+    def from_parameter_handler(param_handler):
+
+        min_delta_current = param_handler.get_parameter_vector_float("min_delta_current")
+        max_delta_current = param_handler.get_parameter_vector_float("max_delta_current")
+        delta_current_increment = param_handler.get_parameter_vector_float(
+            "delta_current_increment"
+        )
+        min_frequency = param_handler.get_parameter_vector_float("min_frequency")
+        max_frequency = param_handler.get_parameter_vector_float("max_frequency")
+        frequency_increment = param_handler.get_parameter_vector_float(
+            "frequency_increment"
+        )
+
+        return SinusoidTrajectoryGenerator(
+            min_delta_current=min_delta_current,
+            max_delta_current=max_delta_current,
+            delta_current_increment=delta_current_increment,
+            min_frequency=min_frequency,
+            max_frequency=max_frequency,
+            frequency_increment=frequency_increment
+        )
+    
+    def set_joint_list(self, joint_list):
+        self.joint_list = joint_list
+
+    def generate(self, dt, initial_current, joint_index=None):
+        
+        # Check if joint list is set
+        if not self.joint_list:
+            raise ValueError("Joint list must be set before generating the trajectory")
+        
+        # Check if joint index has to be specified
+        if len(self.joint_list)>1 and (joint_index is None):
+            raise ValueError("Joint index must be specified when more than one joint is controlled")
+        
+        # Set default joint index, if not specified
+        if joint_index is None:
+            joint_index = 0
+
+        A = self.min_delta_current[joint_index]
+        f_in = self.max_frequency[joint_index]
+        f_end = self.min_frequency[joint_index]
+        delta_f = -self.frequency_increment[joint_index]
+        delta_current_increment = self.delta_current_increment[joint_index]
+
+        # Generate the trajectory
+        trajectory = []
+
+        while np.abs(A) <= np.abs(self.max_delta_current[joint_index]):
+
+            for f in np.arange(f_in, f_end, delta_f):
+                t_max = 2.0 / f
+                t = np.arange(0, t_max, dt)
+                trajectory.extend(initial_current + A * np.sin(2 * np.pi * f * t))
+
+            A += delta_current_increment
+
+        return trajectory
 
 def build_remote_control_board_driver(
     param_handler: blf.parameters_handler.IParametersHandler, local_prefix: str
 ):
     param_handler.set_parameter_string("local_prefix", local_prefix)
     return blf.robot_interface.construct_remote_control_board_remapper(param_handler)
-
-
-def generate_trajectory_for_joint(
-    initial_current,
-    delta_t,
-    min_delta_current,
-    max_delta_current,
-    delta_current_increment,
-    min_frequency,
-    max_frequency,
-    frequency_increment,
-):
-    trajectory = []
-    A = min_delta_current
-    f_in = max_frequency
-    f_end = min_frequency
-    delta_f = -frequency_increment
-
-    while np.abs(A) <= np.abs(max_delta_current):
-
-        for f in np.arange(f_in, f_end, delta_f):
-            t_max = 2.0 / f
-            t = np.arange(0, t_max, delta_t)
-            trajectory.append(initial_current + A * np.sin(2 * np.pi * f * t))
-
-        A += delta_current_increment
-        # if f_in == min_frequency:
-        f_in = max_frequency
-        f_end = min_frequency
-        delta_f = -frequency_increment
-        # else:
-        #     f_in = min_frequency
-        #     f_end = max_frequency
-        #     delta_f = frequency_increment
-
-    # Concatenate trajectories
-    trajectory = np.concatenate(trajectory)
-    # # Plot the trajectory
-    # import matplotlib.pyplot as plt
-    # plt.plot(trajectory)
-    # plt.show()
-
-    return trajectory
-
 
 def create_ctrl_c_handler(sensor_bridge, robot_control):
     def ctrl_c_handler(sig, frame):
@@ -133,28 +161,23 @@ def main():
     if not param_handler.set_from_filename(param_file):
         raise RuntimeError("{} Unable to load the parameters".format(logPrefix))
 
+    # Load the trajectory parameters
     sinusoid_group = param_handler.get_group("SINUSOID")
-    min_delta_current = sinusoid_group.get_parameter_vector_float("min_delta_current")
-    max_delta_current = sinusoid_group.get_parameter_vector_float("max_delta_current")
-    delta_current_increment = sinusoid_group.get_parameter_vector_float(
-        "delta_current_increment"
-    )
-    min_frequency = sinusoid_group.get_parameter_vector_float("min_frequency")
-    max_frequency = sinusoid_group.get_parameter_vector_float("max_frequency")
-    frequency_increment = sinusoid_group.get_parameter_vector_float(
-        "frequency_increment"
-    )
+
+    # Create the trajectory generator
+    trajectory_generator = SinusoidTrajectoryGenerator.from_parameter_handler(sinusoid_group)
 
     # Load joints to control and build the control board driver
     robot_control_handler = param_handler.get_group("ROBOT_CONTROL")
     joints_to_control = robot_control_handler.get_parameter_vector_string("joints_list")
+    blf.log().info("{} Joints to control: {}".format(logPrefix, joints_to_control))
     bypass_motor_current_measure = [
         True
         if joint in ["l_ankle_roll", "r_ankle_roll", "l_ankle_pitch", "r_ankle_pitch"]
         else False
         for joint in joints_to_control
     ]
-    blf.log().info("{} Joints to control: {}".format(logPrefix, joints_to_control))
+    trajectory_generator.set_joint_list(joints_to_control)
 
     poly_drivers = dict()
 
@@ -326,20 +349,16 @@ def main():
                 raise RuntimeError(
                     "{} Unable to get the motor current".format(logPrefix)
                 )
+            
         trajectory = []
         for joint_index in range(len(joints_to_control)):
             trajectory.append(
-                generate_trajectory_for_joint(
-                    motor_currents[joint_index]
-                    if not (bypass_motor_current_measure[joint_index])
-                    else 0,
-                    dt.total_seconds(),
-                    min_delta_current[joint_index],
-                    max_delta_current[joint_index],
-                    delta_current_increment[joint_index],
-                    min_frequency[joint_index],
-                    max_frequency[joint_index],
-                    frequency_increment[joint_index],
+                trajectory_generator.generate(
+                    dt=dt.total_seconds(), 
+                    initial_current=motor_currents[joint_index]
+                        if not (bypass_motor_current_measure[joint_index])
+                        else 0,
+                    joint_index=joint_index
                 )
             )
         trajectory = np.array(trajectory).T
