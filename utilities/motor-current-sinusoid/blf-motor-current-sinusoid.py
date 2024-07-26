@@ -222,6 +222,10 @@ def main():
         "motors::desired::current",
         joints_to_control,
     )
+    vectors_collection_server.populate_metadata(
+        "motors::control_mode::current",
+        joints_to_control,
+    )
     vectors_collection_server.finalize_metadata()
     blf.clock().sleep_for(datetime.timedelta(milliseconds=200))
 
@@ -438,6 +442,9 @@ def main():
                 raise RuntimeError("{} Unable to clear the data".format(logPrefix))
             vectors_collection_server.populate_data(
                 "motors::desired::current", current_reference
+            )
+            vectors_collection_server.populate_data(
+                "motors::control_mode::current", np.where(is_out_of_safety_limits, 0, 1)
             )
             vectors_collection_server.send_data()
 
