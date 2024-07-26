@@ -154,6 +154,7 @@ def main():
     # Load joints to control and build the control board driver
     robot_control_handler = param_handler.get_group("ROBOT_CONTROL")
     joints_to_control = robot_control_handler.get_parameter_vector_string("joints_list")
+    bypass_motor_current_measure = [True if joint in ["l_ankle_roll", "r_ankle_roll", "l_ankle_pitch", "r_ankle_pitch"] else False for joint in joints_to_control]
     blf.log().info("{} Joints to control: {}".format(logPrefix, joints_to_control))
 
     poly_drivers = dict()
@@ -331,7 +332,7 @@ def main():
         for joint_index in range(len(joints_to_control)):
             trajectory.append(
                 generate_trajectory_for_joint(
-                    motor_currents[joint_index],
+                    motor_currents[joint_index] if not(bypass_motor_current_measure[joint_index]) else 0,
                     dt.total_seconds(),
                     min_delta_current[joint_index],
                     max_delta_current[joint_index],
