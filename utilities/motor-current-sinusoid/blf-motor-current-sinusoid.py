@@ -267,12 +267,12 @@ def main():
     starting_positions = np.zeros((number_of_starting_points, len(joints_to_control)))
     for joint_index, joint in enumerate(joints_to_control):
         tmp = np.linspace(
-            lower_limits[joint_index],
-            upper_limits[joint_index],
+            lower_limits[joint_index], # + safety_threshold,
+            upper_limits[joint_index], # - safety_threshold,
             number_of_starting_points + 2,
         )
         starting_positions[:, joint_index] = tmp[1:-1]
-    blf.log().info("{} Starting positions: \n {}".format(logPrefix, starting_positions))
+    blf.log().info("{} Starting positions: \n {}".format(logPrefix, np.rad2deg(starting_positions)))
 
     # Start the data collection
     blf.log().info(
