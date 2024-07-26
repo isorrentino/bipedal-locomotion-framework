@@ -154,7 +154,12 @@ def main():
     # Load joints to control and build the control board driver
     robot_control_handler = param_handler.get_group("ROBOT_CONTROL")
     joints_to_control = robot_control_handler.get_parameter_vector_string("joints_list")
-    bypass_motor_current_measure = [True if joint in ["l_ankle_roll", "r_ankle_roll", "l_ankle_pitch", "r_ankle_pitch"] else False for joint in joints_to_control]
+    bypass_motor_current_measure = [
+        True
+        if joint in ["l_ankle_roll", "r_ankle_roll", "l_ankle_pitch", "r_ankle_pitch"]
+        else False
+        for joint in joints_to_control
+    ]
     blf.log().info("{} Joints to control: {}".format(logPrefix, joints_to_control))
 
     poly_drivers = dict()
@@ -286,8 +291,7 @@ def main():
         ):
             raise RuntimeError("{} Unable to set the control mode".format(logPrefix))
         if not robot_control.set_references(
-            starting_position,
-            blf.robot_interface.YarpRobotControl.Position
+            starting_position, blf.robot_interface.YarpRobotControl.Position
         ):
             raise RuntimeError("{} Unable to set the references".format(logPrefix))
 
@@ -332,7 +336,9 @@ def main():
         for joint_index in range(len(joints_to_control)):
             trajectory.append(
                 generate_trajectory_for_joint(
-                    motor_currents[joint_index] if not(bypass_motor_current_measure[joint_index]) else 0,
+                    motor_currents[joint_index]
+                    if not (bypass_motor_current_measure[joint_index])
+                    else 0,
                     dt.total_seconds(),
                     min_delta_current[joint_index],
                     max_delta_current[joint_index],
@@ -354,9 +360,7 @@ def main():
 
         # update motor control modes
         if not robot_control.set_control_mode(control_modes):
-            raise RuntimeError(
-                "{} Unable to set the control mode".format(logPrefix)
-            )
+            raise RuntimeError("{} Unable to set the control mode".format(logPrefix))
 
         # reset variables
         is_out_of_safety_limits = [False for _ in joints_to_control]
@@ -393,8 +397,10 @@ def main():
                     np.abs(joint_positions[joint_index] - upper_limits[joint_index])
                     < safety_threshold
                 ):
-                    # set the control mode to position 
-                    control_modes[joint_index] = blf.robot_interface.YarpRobotControl.Position
+                    # set the control mode to position
+                    control_modes[
+                        joint_index
+                    ] = blf.robot_interface.YarpRobotControl.Position
 
                     # set the reference to the current position
                     position_reference[joint_index] = joint_positions[joint_index]
@@ -407,7 +413,7 @@ def main():
                         raise RuntimeError(
                             "{} Unable to set the control mode".format(logPrefix)
                         )
-                    
+
                     blf.log().warn(
                         "{} Joint {} is out of the safety limits, stopping its trajectory and switching to Position control with reference position {}".format(
                             logPrefix, joint, position_reference[joint_index]
@@ -432,7 +438,7 @@ def main():
                 reference, control_modes, joint_positions
             ):
                 raise RuntimeError("{} Unable to set the references".format(logPrefix))
-                        
+
             # check if it is time to move to next starting position
             if all(is_out_of_safety_limits):
                 blf.log().info(
@@ -441,7 +447,7 @@ def main():
                     )
                 )
                 break
-           
+
             # log the data
             vectors_collection_server.prepare_data()
             if not vectors_collection_server.clear_data():
