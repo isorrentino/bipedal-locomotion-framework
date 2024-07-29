@@ -7,6 +7,7 @@ import os
 import signal
 import sys
 from abc import ABC, abstractmethod
+import argparse
 
 import bipedal_locomotion_framework as blf
 import numpy as np
@@ -87,7 +88,7 @@ class SinusoidTrajectoryGenerator(Trajectory):
     def set_joint_list(self, joint_list):
         self.joint_list = joint_list
 
-    def generate(self, dt, initial_current, joint_index=None):
+    def generate(self, dt, initial_current, joint_index=None, opposite_direction=False):
 
         # Check if joint list is set
         if not self.joint_list:
@@ -121,15 +122,136 @@ class SinusoidTrajectoryGenerator(Trajectory):
 
             A += delta_current_increment
 
-        return trajectory
+        return trajectory if not(opposite_direction) else -trajectory
 
+    @staticmethod
+    def create_starting_points(
+        number_of_starting_points, number_of_joints, lower_limits, upper_limits, safety_threshold=0.0, repeats=1,
+    ):
+        
+        if number_of_joints != lower_limits.size or number_of_joints != upper_limits.size:
+            raise ValueError(
+                "The number of joints must be equal to the size of the lower and upper limits"
+            )
+        
+        starting_points = np.zeros((number_of_starting_points, number_of_joints))
+        for joint_index in range(number_of_joints):
+            tmp = np.linspace(
+                lower_limits[joint_index] + safety_threshold,
+                upper_limits[joint_index] - safety_threshold,
+                number_of_starting_points + 2,
+            )
+            starting_points[:, joint_index] = tmp[1:-1]
+        
+        # repeat the starting points
+        return np.repeat(starting_points, repeats=repeats, axis=0)
+
+class RampTrajectoryGenerator(Trajectory):
+    def __init__(
+        self,
+        max_delta_current,
+        delta_current_increment,
+        delta_time,
+    ):
+        self.max_delta_current = max_delta_current
+        self.delta_current_increment = delta_current_increment
+        self.delta_time = delta_time
+        self.joint_list = []
+        self.trajectory = np.array([])
+
+    def from_parameter_handler(param_handler):
+
+        max_delta_current = param_handler.get_parameter_vector_float(
+            "max_delta_current"
+        )
+        delta_current_increment = param_handler.get_parameter_vector_float(
+            "delta_current_increment"
+        )
+        delta_time = param_handler.get_parameter_vector_float(
+            "delta_time"
+        )
+
+        return RampTrajectoryGenerator(
+            max_delta_current=max_delta_current,
+            delta_current_increment=delta_current_increment,
+            delta_time=delta_time,
+        )
+
+    def set_joint_list(self, joint_list):
+        self.joint_list = joint_list
+
+    def generate(self, dt, initial_current, joint_index=None, opposite_direction=False):
+
+        # Check if joint list is set
+        if not self.joint_list:
+            raise ValueError("Joint list must be set before generating the trajectory")
+
+        # Check if joint index has to be specified
+        if len(self.joint_list) > 1 and (joint_index is None):
+            raise ValueError(
+                "Joint index must be specified when more than one joint is controlled"
+            )
+
+        # Set default joint index, if not specified
+        if joint_index is None:
+            joint_index = 0
+
+        # Generate the trajectory
+        trajectory = []
+        is_generation_over = False
+
+        delta_time_ramp = 0.0
+        motor_current = initial_current
+
+        while not is_generation_over:
+
+            if delta_time_ramp > self.delta_time[joint_index]:
+                delta_time_ramp = 0.0
+                motor_current = motor_current + self.delta_current_increment[joint_index]
+
+                if np.abs(motor_current - initial_current) > self.max_delta_current[joint_index]:
+                    is_generation_over = True
+                else:
+                    trajectory.append(motor_current)
+            else:
+                trajectory.append(motor_current)
+
+            delta_time_ramp = delta_time_ramp + dt
+
+        # import matplotlib.pyplot as plt
+        # plt.figure(figsize=(10, 4))  # Create a new figure with a specific size
+        # plt.plot(np.array(trajectory),marker='o')  # Plot the data      
+        # plt.show()  # Show the plot  
+
+        return trajectory if not(opposite_direction) else [-point for point in trajectory]
+
+    @staticmethod
+    def create_starting_points(
+        number_of_starting_points, number_of_joints, lower_limits, upper_limits, safety_threshold=0.0, repeats=1,
+    ):
+        
+        if number_of_joints != lower_limits.size or number_of_joints != upper_limits.size:
+            raise ValueError(
+                "The number of joints must be equal to the size of the lower and upper limits"
+            )
+        
+        starting_points = np.zeros((number_of_starting_points, number_of_joints))
+        for joint_index in range(number_of_joints):
+            tmp = np.linspace(
+                lower_limits[joint_index] + safety_threshold,
+                upper_limits[joint_index] - safety_threshold,
+                number_of_starting_points + 2,
+            )
+            starting_points[:, joint_index] = tmp[1:-1]
+        
+        # repeat the starting points
+        return np.repeat(starting_points, repeats=repeats, axis=0)
 
 def build_remote_control_board_driver(
     param_handler: blf.parameters_handler.IParametersHandler, local_prefix: str
 ):
     param_handler.set_parameter_string("local_prefix", local_prefix)
     return blf.robot_interface.construct_remote_control_board_remapper(param_handler)
-
 
 def create_ctrl_c_handler(sensor_bridge, robot_control):
     def ctrl_c_handler(sig, frame):
@@ -168,10 +290,27 @@ def create_ctrl_c_handler(sensor_bridge, robot_control):
 
 def main():
 
+    # Create the argument parser
+    arg_parser = argparse.ArgumentParser(description="Process refrence trajectory type.")
+    
+    # Add an argument for the trajectory type with default value "sinusoid"
+    arg_parser.add_argument(
+        '-t', '--trajectory',
+        type=str,
+        default='ramp',
+        choices=['ramp', 'sinusoid'],
+        help="which trajectory (default: ramp)"
+    )
+
+    # Assign the content of the input argument to a variable
+    trajectory_type = arg_parser.parse_args().trajectory
+
+    # Check if running with Gazebo
     isGazebo = False
     if "gazebo" in (os.environ.get("YARP_ROBOT_NAME")).lower():
         isGazebo = True
 
+    # Load parameters file
     param_handler = blf.parameters_handler.YarpParametersHandler()
 
     param_file = "blf-motor-current-sinusoid-options.ini"
@@ -179,12 +318,14 @@ def main():
     if not param_handler.set_from_filename(param_file):
         raise RuntimeError("{} Unable to load the parameters".format(logPrefix))
 
-    # Load the trajectory parameters
-    sinusoid_group = param_handler.get_group("SINUSOID")
-
-    # Create the trajectory generator
-    trajectory_generator = SinusoidTrajectoryGenerator.from_parameter_handler(
-        sinusoid_group
+    # Load the trajectory parameters and create the trajectory generator
+    if trajectory_type == "sinusoid":
+        trajectory_generator = SinusoidTrajectoryGenerator.from_parameter_handler(
+        param_handler.get_group("SINUSOID")
+    )
+    elif trajectory_type == "ramp":
+        trajectory_generator = RampTrajectoryGenerator.from_parameter_handler(
+        param_handler.get_group("RAMP")
     )
 
     # Load joints to control and build the control board driver
@@ -301,14 +442,14 @@ def main():
     number_of_starting_points = param_handler.get_parameter_int(
         "number_of_starting_points"
     )
-    starting_positions = np.zeros((number_of_starting_points, len(joints_to_control)))
-    for joint_index, joint in enumerate(joints_to_control):
-        tmp = np.linspace(
-            lower_limits[joint_index],  # + safety_threshold,
-            upper_limits[joint_index],  # - safety_threshold,
-            number_of_starting_points + 2,
-        )
-        starting_positions[:, joint_index] = tmp[1:-1]
+    starting_positions = trajectory_generator.create_starting_points(
+                            number_of_starting_points=number_of_starting_points,
+                            number_of_joints=len(joints_to_control),
+                            lower_limits=lower_limits,
+                            upper_limits=upper_limits,
+                            safety_threshold=safety_threshold,
+                            repeats = 1 if trajectory_type == "sinusoid" else 2,
+    )
     blf.log().info(
         "{} Starting positions: \n {}".format(logPrefix, np.rad2deg(starting_positions))
     )
@@ -321,6 +462,8 @@ def main():
     )
     input()
     blf.log().info("{} Start".format(logPrefix))
+
+    opposite_direction = False
 
     for counter, starting_position in enumerate(starting_positions):
 
@@ -372,18 +515,20 @@ def main():
                     "{} Unable to get the motor current".format(logPrefix)
                 )
 
-        trajectory = []
+        trajectories = []
+        opposite_direction = not opposite_direction
+
         for joint_index in range(len(joints_to_control)):
-            trajectory.append(
+            trajectories.append(
                 trajectory_generator.generate(
                     dt=dt.total_seconds(),
                     initial_current=motor_currents[joint_index]
                     if not (bypass_motor_current_measure[joint_index])
                     else 0,
                     joint_index=joint_index,
+                    opposite_direction = False if trajectory_type == "sinusoid" else opposite_direction,
                 )
             )
-        #trajectory = np.array(trajectory).T
 
         # reset control modes for current/torque
         control_modes = [
@@ -404,8 +549,8 @@ def main():
         delta_traj_index = 1
 
         # loop over the trajectory
-        len_trajectory = np.array([len(traj) for traj in trajectory])
-        for _ in tqdm(range(len_trajectory.max())):
+        trajectories_length = np.array([len(trajectory) for trajectory in trajectories])
+        for _ in tqdm(range(trajectories_length.max())):
             tic = blf.clock().now()
 
             # get the feedback
@@ -457,24 +602,26 @@ def main():
                     )
 
             # get the current/torque references
-            if isGazebo:
-                current_reference = []
-                for joint_idx, traj in enumerate(trajectory):
-                    if traj_index < len(traj):
-                        current_reference.append(traj[traj_index] / MotorParameters.k_tau[joints_to_control[joint_idx]])
+            current_reference = []
+            for joint_idx, trajectory in enumerate(trajectories):
+                # check if the trajectory is over
+                if traj_index < len(trajectory):
+                    if is_out_of_safety_limits[joint_idx]:
+                        current_reference.append(0)
                     else:
-                        current_reference.append(traj[-1])
-                        position_reference[joint_idx] = joint_positions[joint_idx]
-                        is_out_of_safety_limits[joint_idx] = True
-            else:
-                current_reference = []
-                for joint_idx, traj in enumerate(trajectory):
-                    if traj_index < len(traj):
-                        current_reference.append(traj[traj_index])
-                    else:
-                        current_reference.append(traj[-1])
-                        position_reference[joint_idx] = joint_positions[joint_idx]
-                        is_out_of_safety_limits[joint_idx] = True
+                        if isGazebo:
+                            current_reference.append(
+                                trajectory[traj_index]
+                                / MotorParameters.k_tau[joints_to_control[joint_idx]]
+                            )
+                        else:
+                            current_reference.append(trajectory[traj_index])
+                else:
+                    # if the trajectory is over, switch to position control with
+                    # the the posiition reference as the last measured position
+                    current_reference.append(0) 
+                    position_reference[joint_idx] = joint_positions[joint_idx]
+                    is_out_of_safety_limits[joint_idx] = True
                         
             # merge the position and current/torque references depending on the control mode
             reference = np.where(
@@ -524,7 +671,7 @@ def main():
             if not is_tqdm_installed:
 
                 # Calculate progress
-                progress = (traj_index + 1) / trajectory.shape[0] * 100
+                progress = (traj_index + 1) / trajectories_length.max() * 100
 
                 # Check if progress is a multiple of 10 and different from last printed progress
                 if int(progress) % 10 == 0 and int(progress) != last_printed_progress:
