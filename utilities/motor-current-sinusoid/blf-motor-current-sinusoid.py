@@ -193,7 +193,7 @@ def main():
     blf.log().info("{} Joints to control: {}".format(logPrefix, joints_to_control))
     bypass_motor_current_measure = [
         True
-        if joint in ["l_ankle_roll", "r_ankle_roll", "l_ankle_pitch", "r_ankle_pitch"]
+        if joint in ["l_ankle_roll", "r_ankle_roll", "l_ankle_pitch", "r_ankle_pitch", "l_hip_yaw", "r_hip_yaw"]
         else False
         for joint in joints_to_control
     ]
