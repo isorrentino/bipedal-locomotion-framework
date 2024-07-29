@@ -383,7 +383,7 @@ def main():
                     joint_index=joint_index,
                 )
             )
-        trajectory = np.array(trajectory).T
+        #trajectory = np.array(trajectory).T
 
         # reset control modes for current/torque
         control_modes = [
@@ -404,7 +404,8 @@ def main():
         delta_traj_index = 1
 
         # loop over the trajectory
-        for _ in tqdm(range(trajectory.shape[0])):
+        len_trajectory = np.array([len(traj) for traj in trajectory])
+        for _ in tqdm(range(len_trajectory.max())):
             tic = blf.clock().now()
 
             # get the feedback
@@ -457,15 +458,27 @@ def main():
 
             # get the current/torque references
             if isGazebo:
-                current_reference = trajectory[traj_index] / [
-                    MotorParameters.k_tau[joint] for joint in joints_to_control
-                ]
+                current_reference = []
+                for joint_idx, traj in enumerate(trajectory):
+                    if traj_index < len(traj):
+                        current_reference.append(traj[traj_index] / MotorParameters.k_tau[joints_to_control[joint_idx]])
+                    else:
+                        current_reference.append(traj[-1])
+                        position_reference[joint_idx] = joint_positions[joint_idx]
+                        is_out_of_safety_limits[joint_idx] = True
             else:
-                current_reference = trajectory[traj_index]
-
+                current_reference = []
+                for joint_idx, traj in enumerate(trajectory):
+                    if traj_index < len(traj):
+                        current_reference.append(traj[traj_index])
+                    else:
+                        current_reference.append(traj[-1])
+                        position_reference[joint_idx] = joint_positions[joint_idx]
+                        is_out_of_safety_limits[joint_idx] = True
+                        
             # merge the position and current/torque references depending on the control mode
             reference = np.where(
-                is_out_of_safety_limits, position_reference, current_reference
+                is_out_of_safety_limits, position_reference, np.array(current_reference)
             )
 
             # send the references motor current (or joint torque for Gazebo)
