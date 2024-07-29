@@ -345,7 +345,7 @@ def main():
 
     # Create the argument parser
     arg_parser = argparse.ArgumentParser(
-        description="Process refrence trajectory type."
+        description="This application drives the motors in current based on the trajectory type specified from the user."
     )
 
     # Add an argument for the trajectory type with default value "sinusoid"
@@ -353,13 +353,14 @@ def main():
         "-t",
         "--trajectory",
         type=str,
-        default="ramp",
+        default="sinusoid",
         choices=["ramp", "sinusoid"],
-        help="which trajectory (default: ramp)",
+        help="which trajectory (default: sinusoid)",
     )
 
     # Assign the content of the input argument to a variable
     trajectory_type = arg_parser.parse_args().trajectory
+    blf.log().info("{} Trajectory type: {}".format(logPrefix, trajectory_type))
 
     # Check if running with Gazebo
     isGazebo = False
