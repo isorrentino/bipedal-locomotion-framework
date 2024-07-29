@@ -13,7 +13,7 @@ import bipedal_locomotion_framework as blf
 import numpy as np
 import yarp
 
-logPrefix = "[MotorCurrentSinusoidApplication]"
+logPrefix = "[MotorCurrentTrackingApplication]"
 
 
 # typing
@@ -370,7 +370,7 @@ def main():
     # Load parameters file
     param_handler = blf.parameters_handler.YarpParametersHandler()
 
-    param_file = "blf-motor-current-sinusoid-options.ini"
+    param_file = "blf-motor-current-tracking-options.ini"
 
     if not param_handler.set_from_filename(param_file):
         raise RuntimeError("{} Unable to load the parameters".format(logPrefix))
@@ -409,7 +409,7 @@ def main():
 
     poly_drivers["REMOTE_CONTROL_BOARD"] = build_remote_control_board_driver(
         param_handler=robot_control_handler,
-        local_prefix="motor_current_sinusoid",
+        local_prefix="motor_current_tracking",
     )
     if not poly_drivers["REMOTE_CONTROL_BOARD"].is_valid():
         raise RuntimeError(

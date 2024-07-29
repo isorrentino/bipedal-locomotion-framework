@@ -44,7 +44,7 @@ BSD-3-Clause license. -->
 
     <group name="CurrentControl">
       <param name="local">"/yarp-robot-logger/exogenous_signals/current_control_trajectory"</param>
-      <param name="remote">"/motor_current_trajectory_player/logger"</param>
+      <param name="remote">"/motor_current_tracking/logger"</param>
       <param name="signal_name">"current_control"</param>
       <param name="carrier">"udp"</param>
     </group>
