@@ -43,6 +43,21 @@ class MotorParameters(ABC):
         "r_ankle_pitch": 64 * 1e-3,
         "r_ankle_roll": 177 * 1e-3,
     }
+    # max_safety_current[A] limits the motor current to avoid damages
+    max_safety_current = {
+        "l_hip_roll": 8.0,
+        "l_hip_pitch": 8.0,
+        "l_hip_yaw": 4.0,
+        "l_knee": 6.0,
+        "l_ankle_pitch": 3.5,
+        "l_ankle_roll": 3.0,
+        "r_hip_roll": 8.0,
+        "r_hip_pitch": 8.0,
+        "r_hip_yaw": 4.0,
+        "r_knee": 6.0,
+        "r_ankle_pitch": 3.5,
+        "r_ankle_roll": 3.0,
+    }
 
 
 class Trajectory(ABC):
@@ -389,6 +404,15 @@ def main():
     robot_control_handler = param_handler.get_group("ROBOT_CONTROL")
     joints_to_control = robot_control_handler.get_parameter_vector_string("joints_list")
     blf.log().info("{} Joints to control: {}".format(logPrefix, joints_to_control))
+    # check if the joints are in the list of supported joints
+    for joint in joints_to_control:
+        if joint not in MotorParameters.max_safety_current.keys():
+            raise RuntimeError(
+                "{} The joint {} is not supported by the application".format(
+                    logPrefix, joint
+                )
+            )
+    # check for which joints the motor current measure should be bypassed, when generating the reference trajectory
     bypass_motor_current_measure = [
         True
         if joint
@@ -682,6 +706,18 @@ def main():
                                 / MotorParameters.k_tau[joints_to_control[joint_idx]]
                             )
                         else:
+                            # check if the current is within the safety limits
+                            if (
+                                np.abs(trajectory[traj_index])
+                                > MotorParameters.max_safety_current[
+                                    joints_to_control[joint_idx]
+                                ]
+                            ):
+                                RuntimeError(
+                                    "{} The current reference for joint {} is exceeding the safety limits, exiting the application".format(
+                                        logPrefix, joints_to_control[joint_idx]
+                                    )
+                                )
                             current_reference.append(trajectory[traj_index])
                 else:
                     # if the trajectory is over, switch to position control with
