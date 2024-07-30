@@ -40,7 +40,7 @@ Configuration files allow to specify the motors to drive and the current traject
 In this file, the following parameters are defined:
 
 1. the sample time `dt` of the reference trajectory
-2. the joints position safety threshold `safety_threshold`, which restricts the motion range of joints to `[joint_lower_limit + safetytreshold, joint_upper_limit - safety_threshold]`
+2. the joints position safety threshold `safety_threshold`, which restricts the motion range of joints to `[joint_lower_limit + safety_threshold, joint_upper_limit - safety_threshold]`
 3. the number of starting positions `number_of_starting_points` from which the same reference trajectory is repeated.
 4. the `SINUSOID` parameters group, which defines the sinusoid trajectory as detailed later
 5. the `RAMP` parameters group, which defines the ramp trajectory as detailed later
@@ -70,7 +70,11 @@ The starting amplitude is set by `min_delta_current`, while the final one by `ma
 Note that for some motors, such as the `ankles` ones, the initial current `current_0` is not the measured one 
 at the starting position, but is set to `0`.
 
-Each current sinusoidal signal is repeated for each starting position.
+Each current sinusoidal signal is repeated for each starting position. 
+
+These starting positions are computed by dividing the range of motion of the joint 
+(`[joint_lower_limit, joint_upper_limit]`) in `number_of_starting_points + 1` segments, and
+then taking the inner nodes.
 
 Finally, every parameter of the `SINUSOID` group has to be defined by a vector whose length corresponds to the number
 of motors to drive.
@@ -85,6 +89,8 @@ Depending on the motors, the initial current is set to `0` or to the mesured one
 
 Note that, each ramp is repeated twice for each starting position, in order to cover both direction of motion. 
 Therefore, to move to the opposite direction, the amplitude gets decreased by `delta_current_increment` up to `-max_delta_current`. 
+
+The sarting positions are computed like for the sinusoidal trajectories.
 
 Finally, every parameter of the `RAMP` group has to be defined by a vector whose length corresponds to the number
 of motors to drive.

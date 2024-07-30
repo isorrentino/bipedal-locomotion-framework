@@ -539,7 +539,6 @@ def main():
         number_of_joints=len(joints_to_control),
         lower_limits=lower_limits,
         upper_limits=upper_limits,
-        safety_threshold=safety_threshold,
         repeats=1 if trajectory_type == "sinusoid" else 2,
     )
     blf.log().info(
