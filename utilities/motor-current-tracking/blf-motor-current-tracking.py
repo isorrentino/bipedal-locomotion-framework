@@ -156,7 +156,7 @@ class SinusoidTrajectoryGenerator(Trajectory):
 
             A += delta_current_increment
 
-        return trajectory if not (opposite_direction) else -trajectory
+        return trajectory
 
     @staticmethod
     def create_starting_points(
@@ -251,19 +251,24 @@ class RampTrajectoryGenerator(Trajectory):
 
         delta_time_ramp = 0.0
         motor_current = initial_current
+        delta_current_increment = (
+            -self.delta_current_increment[joint_index]
+            if opposite_direction
+            else self.delta_current_increment[joint_index]
+        )
+        max_delta_current = (
+            -self.max_delta_current[joint_index]
+            if opposite_direction
+            else self.max_delta_current[joint_index]
+        )
 
         while not is_generation_over:
 
             if delta_time_ramp > self.delta_time[joint_index]:
                 delta_time_ramp = 0.0
-                motor_current = (
-                    motor_current + self.delta_current_increment[joint_index]
-                )
+                motor_current = motor_current + delta_current_increment
 
-                if (
-                    np.abs(motor_current - initial_current)
-                    > self.max_delta_current[joint_index]
-                ):
+                if np.abs(motor_current - initial_current) > np.abs(max_delta_current):
                     is_generation_over = True
                 else:
                     trajectory.append(motor_current)
@@ -277,9 +282,7 @@ class RampTrajectoryGenerator(Trajectory):
         # plt.plot(np.array(trajectory), marker='o')  # Plot the data
         # plt.show()  # Show the plot
 
-        return (
-            trajectory if not (opposite_direction) else [-point for point in trajectory]
-        )
+        return trajectory
 
     @staticmethod
     def create_starting_points(
