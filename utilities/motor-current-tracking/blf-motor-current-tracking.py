@@ -74,14 +74,14 @@ class SinusoidTrajectoryGenerator(Trajectory):
         delta_current_increment: npt.NDArray[np.float_],
         min_frequency: npt.NDArray[np.float_],
         max_frequency: npt.NDArray[np.float_],
-        frequency_increment: npt.NDArray[np.float_],
+        frequency_decrement: npt.NDArray[np.float_],
     ):
         self.min_delta_current = min_delta_current
         self.max_delta_current = max_delta_current
         self.delta_current_increment = delta_current_increment
         self.min_frequency = min_frequency
         self.max_frequency = max_frequency
-        self.frequency_increment = frequency_increment
+        self.frequency_decrement = frequency_decrement
         self.joint_list = []
         self.trajectory = np.array([])
 
@@ -100,8 +100,8 @@ class SinusoidTrajectoryGenerator(Trajectory):
         )
         min_frequency = param_handler.get_parameter_vector_float("min_frequency")
         max_frequency = param_handler.get_parameter_vector_float("max_frequency")
-        frequency_increment = param_handler.get_parameter_vector_float(
-            "frequency_increment"
+        frequency_decrement = param_handler.get_parameter_vector_float(
+            "frequency_decrement"
         )
 
         return SinusoidTrajectoryGenerator(
@@ -110,7 +110,7 @@ class SinusoidTrajectoryGenerator(Trajectory):
             delta_current_increment=delta_current_increment,
             min_frequency=min_frequency,
             max_frequency=max_frequency,
-            frequency_increment=frequency_increment,
+            frequency_decrement=frequency_decrement,
         )
 
     def set_joint_list(self, joint_list: List[str]):
@@ -141,7 +141,7 @@ class SinusoidTrajectoryGenerator(Trajectory):
         A = self.min_delta_current[joint_index]
         f_in = self.max_frequency[joint_index]
         f_end = self.min_frequency[joint_index]
-        delta_f = -self.frequency_increment[joint_index]
+        delta_f = -self.frequency_decrement[joint_index]
         delta_current_increment = self.delta_current_increment[joint_index]
 
         # Generate the trajectory

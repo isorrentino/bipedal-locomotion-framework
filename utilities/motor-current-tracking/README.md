@@ -9,14 +9,14 @@ It is a command line application, which can be run like:
 python3 blf-joints-grid-position-tracking.py
 ```
 
-The application accept an additional argument to specify the type of trajectory to deploy.
+The application accepts an additional argument to specify the type of trajectory to deploy.
 From terminal, run:
 
 ```sh 
 python3 blf-joints-grid-position-tracking.py -h
 ```
 
-to display the help message which details how to specify the additional input argument.
+to display the help message which details how to pass the additional input argument.
 
 If bipedal locmotion framework is installed correctly, the application can be run from anywhere. In order to 
 to install the application, you should set the option `FRAMEWORK_COMPILE_MotorCurrentTrackingApplication` to `ON`.
@@ -25,7 +25,7 @@ Once run, the application will:
 
 1. Generate the current trajectory used to drive the motors.
 
-2. Drive the motors in current as long as they are within the safety limits, which are defined in the config files.
+2. Drive the motors in current as long as they are within the safety limits, which are defined in the configuration files.
 
 In fact, the application will check if the joints come close to the position limits. In this case, the related motors are switch to position control
 and kept still in the last read position as long as all the other motors have completed the current trajectory. 
@@ -55,7 +55,7 @@ Two trajectory types are currently supported: ramps and sinusoids.
 
 ### Sinusoids
 
-Indeed they are defined as sinusoidal signals with varying frequency `f` and amplitude `A`:
+They are defined as sinusoidal signals with varying frequency `f` and amplitude `A`:
 
 ```math
 
@@ -63,14 +63,14 @@ current = current_0 + A \sin (2 \pi f t)
 
 ```
 
-The frequency is gradually decreased, every 2 cycles, from `max_frequency` to `min_frequency` by `frequency_increment`
+The frequency is gradually decreased, every 2 cycles, from `max_frequency` to `min_frequency` by `frequency_decrement`.
 Once the frequency range is covered the amplitude is increased by `delta_current_increment`. 
-The starting amplitude is set by `min_delta_current` to `max_delta_current`.
+The starting amplitude is set by `min_delta_current`, while the final one by `max_delta_current`.
 
-Note that for some motors, such as the `ankles` ones, the ininitial current `current_0` is not the one measured 
-from the motors at the starting position, but is set to `0`.
+Note that for some motors, such as the `ankles` ones, the initial current `current_0` is not the measured one 
+at the starting position, but is set to `0`.
 
-Each current sinusoid is repeated at each starting position.
+Each current sinusoidal signal is repeated for each starting position.
 
 Finally, every parameter of the `SINUSOID` group has to be defined by a vector whose length corresponds to the number
 of motors to drive.
@@ -83,7 +83,7 @@ up to the maximum amplitude `max_delta_current`.
 
 Depending on the motors, the initial current is set to `0` or to the mesured one at the starting position.
 
-Note that, each ramp is repetaed twice for each starting position, in order to cover both direction of motion. 
+Note that, each ramp is repeated twice for each starting position, in order to cover both direction of motion. 
 Therefore, to move to the opposite direction, the amplitude gets decreased by `delta_current_increment` up to `-max_delta_current`. 
 
 Finally, every parameter of the `RAMP` group has to be defined by a vector whose length corresponds to the number
@@ -104,7 +104,7 @@ max_delta_current             ( 1.6,   2.0,   1.5,   2.0,   1.5  ) #[A]
 delta_current_increment       ( 0.05,  0.05,  0.05,  0.05,  0.05 ) #[A]
 min_frequency                 ( 0.1,   0.1,   0.1,   0.1,   0.1  ) #[Hz]
 max_frequency                 ( 0.8,   0.8,   0.8,   0.8,   0.8  ) #[Hz]
-frequency_increment           ( 0.05,  0.05,  0.05,  0.05,  0.05 ) #[Hz]
+frequency_decrement           ( 0.05,  0.05,  0.05,  0.05,  0.05 ) #[Hz]
 
 [RAMP]
 TO BE COMPLETED
