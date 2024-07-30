@@ -6,14 +6,14 @@ to the motors. The user can leverage predefined signals to define the reference 
 It is a command line application, which can be run like:
 
 ```sh 
-python3 blf-motor-current-tracking.py
+blf-motor-current-tracking.py
 ```
 
 The application accepts an additional argument to specify the type of trajectory to deploy.
 From terminal, run:
 
 ```sh 
-python3 blf-motor-current-tracking.py -h
+blf-motor-current-tracking.py -h
 ```
 
 to display the help message which details how to pass the additional input argument.
