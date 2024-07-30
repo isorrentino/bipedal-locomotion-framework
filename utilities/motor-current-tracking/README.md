@@ -1,29 +1,119 @@
-# joints-grid-position-tracking
-The **joints-grid-position-tracking** is an application that allows to move the joints
-through all the combinations of a set of way points.
+# motor-current-tracking
+The **motor-current-tracking** is an application that allows to send current commands
+to the motors. The user can leverage predefined signals to define the reference current.
 
 ## 🏃 How to use the application
-The fastest way to use the utility is to run the `python` application
-[`blf-joints-grid-position-tracking.py`](./blf-joints-grid-position-tracking.py).
-If you correctly installed the framework, you can run the application from any folder.
+It is a command line application, which can be run like:
 
-The application will:
-1. Move the robot joints following a trajectory computed to pass through all the way points specified in
-   [blf-joints-grid-position-tracking-options.ini](./config/robots/ergoCubGazeboV1_1/blf-joints-grid-position-tracking-options.ini)
-   ```ini
-   r_hip_pitch       (-0.2, 0.44)
-   r_hip_roll        (0.36, 0.14)
-   ```
-   The above lists represent the knots for the controlled robot joints.
-   The first joint that is moved is the last in the list of the controlled joints.
-   All the possible combinations are computed from the list of knots. For example, if you specify
-   $3$ way points for $2$ joints you will have $9$ list of knots.
-   The trajectory is generated using a cubic spline to guarantee null joint accelerations.
-   The trajectory lasts `motion_duration` seconds. Once the knot is reached the planner
-   will wait for `motion_timeout` seconds before starting a new trajectory.
-2. Open a port named `/joints_grid_position_tracking/logger/data:o` containing the joint trajectory values structured as
-   [`VectorCollection`](../../src/YarpUtilities/thrifts/BipedalLocomotion/YarpUtilities/VectorsCollection.thrift)
-   data. The user may collect the data via [`YarpRobotLoggerDevice`](../../devices/YarpRobotLoggerDevice).
+```sh 
+python3 blf-joints-grid-position-tracking.py
+```
+
+The application accept an additional argument to specify the type of trajectory to deploy.
+From terminal, run:
+
+```sh 
+python3 blf-joints-grid-position-tracking.py -h
+```
+
+to display the help message which details how to specify the additional input argument.
+
+If bipedal locmotion framework is installed correctly, the application can be run from anywhere. In order to 
+to install the application, you should set the option `FRAMEWORK_COMPILE_MotorCurrentTrackingApplication` to `ON`.
+
+Once run, the application will:
+
+1. Generate the current trajectory used to drive the motors.
+
+2. Drive the motors in current as long as they are within the safety limits, which are defined in the config files.
+
+In fact, the application will check if the joints come close to the position limits. In this case, the related motors are switch to position control
+and kept still in the last read position as long as all the other motors have completed the current trajectory. 
+
+Moreover, the application streams data, which is the motors reference current and the control mode, through the port
+`/motor_current_tracking/logger/data:o`. The user may collect the data via [`YarpRobotLoggerDevice`](../../devices/YarpRobotLoggerDevice).
+
+## Configuration files
+Configuration files allow to specify the motors to drive and the current trajectory to use. 
+[`blf-motor-current-tracking-options.ini`](./config/robots/ergoCubSN001/blf-motor-current-tracking-options.ini) is an example of the main configuration file.
+
+In this file, the following parameters are defined:
+
+1. the sample time `dt` of the reference trajectory
+2. the joints position safety threshold `safety_threshold`, which restricts the motion range of joints to `[joint_lower_limit + safetytreshold, joint_upper_limit - safety_threshold]`
+3. the number of starting positions `number_of_starting_points` from which the same reference trajectory is repeated.
+4. the `SINUSOID` parameters group, which defines the sinusoid trajectory as detailed later
+5. the `RAMP` parameters group, which defines the ramp trajectory as detailed later
+
+Instead, the configuration file [`robot_control.ini`](./config/robots/ergoCubSN001/blf_motor_current_tracking/robot_control.ini) defines the list of motors to command.
 
 If you want to run the application for a different robot remember to create a new folder in
 [`./config/robots/`](./config/robots). The name of the folder should match the name of the robot.
+
+## Predefined Trajectories
+Two trajectory types are currently supported: ramps and sinusoids.
+
+### Sinusoids
+
+Indeed they are defined as sinusoidal signals with varying frequency `f` and amplitude `A`:
+
+```math
+
+current = current_0 + A \sin (2 \pi f t)
+
+```
+
+The frequency is gradually decreased, every 2 cycles, from `max_frequency` to `min_frequency` by `frequency_increment`
+Once the frequency range is covered the amplitude is increased by `delta_current_increment`. 
+The starting amplitude is set by `min_delta_current` to `max_delta_current`.
+
+Note that for some motors, such as the `ankles` ones, the ininitial current `current_0` is not the one measured 
+from the motors at the starting position, but is set to `0`.
+
+Each current sinusoid is repeated at each starting position.
+
+Finally, every parameter of the `SINUSOID` group has to be defined by a vector whose length corresponds to the number
+of motors to drive.
+
+
+### Ramps
+
+They are ramp signals, whose amplitude is increased by `delta_current_increment` every `delta_time` seconds 
+up to the maximum amplitude `max_delta_current`.
+
+Depending on the motors, the initial current is set to `0` or to the mesured one at the starting position.
+
+Note that, each ramp is repetaed twice for each starting position, in order to cover both direction of motion. 
+Therefore, to move to the opposite direction, the amplitude gets decreased by `delta_current_increment` up to `-max_delta_current`. 
+
+Finally, every parameter of the `RAMP` group has to be defined by a vector whose length corresponds to the number
+of motors to drive.
+
+### Examples
+
+The following are some set of configurations which were tested on `ergoCubSN001`.
+
+```
+dt 0.002 #[s]
+safety_threshold 2.0 #[deg]
+number_of_starting_points 5
+
+[SINUSOID]
+min_delta_current             ( 0.05,  0.05,  0.05,  0.05,  0.05 ) #[A]
+max_delta_current             ( 1.6,   2.0,   1.5,   2.0,   1.5  ) #[A]
+delta_current_increment       ( 0.05,  0.05,  0.05,  0.05,  0.05 ) #[A]
+min_frequency                 ( 0.1,   0.1,   0.1,   0.1,   0.1  ) #[Hz]
+max_frequency                 ( 0.8,   0.8,   0.8,   0.8,   0.8  ) #[Hz]
+frequency_increment           ( 0.05,  0.05,  0.05,  0.05,  0.05 ) #[Hz]
+
+[RAMP]
+TO BE COMPLETED
+
+[ROBOT_CONTROL]
+robot_name                              ergocub
+joints_list                             ("l_hip_yaw", "l_ankle_pitch", "l_ankle_roll", "r_ankle_pitch", "r_ankle_roll")
+remote_control_boards                   ("left_leg", "right_leg")
+positioning_duration                    3.0  #[s]
+positioning_tolerance                   0.05 #[s]
+position_direct_max_admissible_error    0.1  #[s]
+```
