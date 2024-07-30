@@ -6,14 +6,14 @@ to the motors. The user can leverage predefined signals to define the reference 
 It is a command line application, which can be run like:
 
 ```sh 
-python3 blf-joints-grid-position-tracking.py
+python3 blf-motor-current-tracking.py
 ```
 
 The application accepts an additional argument to specify the type of trajectory to deploy.
 From terminal, run:
 
 ```sh 
-python3 blf-joints-grid-position-tracking.py -h
+python3 blf-motor-current-tracking.py -h
 ```
 
 to display the help message which details how to pass the additional input argument.
@@ -51,7 +51,7 @@ If you want to run the application for a different robot remember to create a ne
 [`./config/robots/`](./config/robots). The name of the folder should match the name of the robot.
 
 ## Predefined Trajectories
-Two trajectory types are currently supported: ramps and sinusoids.
+Two trajectory types are currently supported: sinusoids and ramps.
 
 ### Sinusoids
 
@@ -79,7 +79,7 @@ of motors to drive.
 ### Ramps
 
 They are ramp signals, whose amplitude is increased by `delta_current_increment` every `delta_time` seconds 
-up to the maximum amplitude `max_delta_current`.
+up to a total increment of `max_delta_current`.
 
 Depending on the motors, the initial current is set to `0` or to the mesured one at the starting position.
 
