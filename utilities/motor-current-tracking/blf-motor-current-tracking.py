@@ -463,10 +463,16 @@ def main():
     # Get joint limits
     safety_threshold = param_handler.get_parameter_float("safety_threshold")
     safety_threshold = np.deg2rad(safety_threshold)
+    use_safety_threshold_for_starting_position = param_handler.get_parameter_bool("use_safety_threshold_for_starting_position")
     _, lower_limits, upper_limits = robot_control.get_joint_limits()
     lower_limits = np.deg2rad(lower_limits)
     upper_limits = np.deg2rad(upper_limits)
 
+    # Modify joint limits to reduce range of motion
+    for idx, joint in enumerate(joints_to_control):
+        if joint == "l_hip_roll" or joint == "r_hip_roll":
+            upper_limits[idx] = np.deg2rad(80)
+    
     # Create the sensor bridge
     sensor_bridge = blf.robot_interface.YarpSensorBridge()
     sensor_bridge_handler = param_handler.get_group("SENSOR_BRIDGE")
@@ -537,6 +543,7 @@ def main():
     starting_positions = trajectory_generator.create_starting_points(
         number_of_starting_points=number_of_starting_points,
         number_of_joints=len(joints_to_control),
+        safety_threshold=safety_threshold if use_safety_threshold_for_starting_position else 0.0,
         lower_limits=lower_limits,
         upper_limits=upper_limits,
         repeats=1 if trajectory_type == "sinusoid" else 2,
