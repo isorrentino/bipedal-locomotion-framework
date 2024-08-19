@@ -41,9 +41,10 @@ In this file, the following parameters are defined:
 
 1. the sample time `dt` of the reference trajectory
 2. the joints position safety threshold `safety_threshold`, which restricts the motion range of joints to `[joint_lower_limit + safety_threshold, joint_upper_limit - safety_threshold]`
-3. the number of starting positions `number_of_starting_points` from which the same reference trajectory is repeated.
-4. the `SINUSOID` parameters group, which defines the sinusoid trajectory as detailed later
-5. the `RAMP` parameters group, which defines the ramp trajectory as detailed later
+3. the `use_safety_threshold_for_starting_position` boolean, which determines wheter to use (or not) the `safety_threshold` when computing the starting positions.
+4. the number of starting positions `number_of_starting_points` from which the same reference trajectory is repeated.
+5. the `SINUSOID` parameters group, which defines the sinusoid trajectory as detailed later
+6. the `RAMP` parameters group, which defines the ramp trajectory as detailed later
 
 Instead, the configuration file [`robot_control.ini`](./config/robots/ergoCubSN001/blf_motor_current_tracking/robot_control.ini) defines the list of motors to command.
 
@@ -102,6 +103,7 @@ The following are some set of configurations which were tested on `ergoCubSN001`
 ```
 dt 0.002 #[s]
 safety_threshold 2.0 #[deg]
+use_safety_threshold_for_starting_position false
 number_of_starting_points 5
 
 [SINUSOID]
