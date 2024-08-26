@@ -21,7 +21,7 @@ BSD-3-Clause license. -->
   <param name="code_status_cmd_prefixes">("ssh ergocub@10.0.2.2" "ssh ergocub@10.0.2.3")</param>
 
   <group name="Telemetry">
-    <param name="save_period">1800.0</param>
+    <param name="save_period">7200.0</param>
   </group>
 
   <group name="ExogenousSignals">

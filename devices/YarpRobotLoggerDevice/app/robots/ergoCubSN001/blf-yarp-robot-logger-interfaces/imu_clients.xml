@@ -60,7 +60,7 @@
     <param name="remote">/ergocub/right_leg/imu</param>
     <param name="local">/yarp_robot_logger/right_leg/imu</param>
     <param name="timeout">0.5</param>
-    <param name="carrier">fast_tcp</param-->
-  </device>
+    <param name="carrier">fast_tcp</param>
+  </device-->
 
 </devices>
