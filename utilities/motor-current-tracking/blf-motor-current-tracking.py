@@ -8,18 +8,14 @@ import os
 import signal
 import sys
 from abc import ABC, abstractmethod
+from typing import Callable, List, Optional, Type
 
 import bipedal_locomotion_framework as blf
 import numpy as np
+import numpy.typing as npt
 import yarp
 
 logPrefix = "[MotorCurrentTrackingApplication]"
-
-
-# typing
-from typing import Callable, List, Optional, Type
-
-import numpy.typing as npt
 
 ParamHandler = Type[blf.parameters_handler.YarpParametersHandler]
 RobotControl = Type[blf.robot_interface.YarpRobotControl]
@@ -158,14 +154,13 @@ class SinusoidTrajectoryGenerator(Trajectory):
 
         return trajectory
 
-    @staticmethod
     def create_starting_points(
+        self,
         number_of_starting_points: int,
         number_of_joints: int,
         lower_limits: npt.NDArray[np.float_],
         upper_limits: npt.NDArray[np.float_],
         safety_threshold: Optional[float] = 0.0,
-        repeats: Optional[int] = 1,
     ) -> npt.NDArray[np.float_]:
 
         if (
@@ -185,20 +180,22 @@ class SinusoidTrajectoryGenerator(Trajectory):
             )
             starting_points[:, joint_index] = tmp[1:-1]
 
-        # repeat the starting points
-        return np.repeat(starting_points, repeats=repeats, axis=0)
+        return starting_points
 
 
 class RampTrajectoryGenerator(Trajectory):
     def __init__(
         self,
-        max_delta_current: npt.NDArray[np.float_],
-        delta_current_increment: npt.NDArray[np.float_],
-        delta_time: npt.NDArray[np.float_],
+        max_current: npt.NDArray[np.float_],
+        speed_in: npt.NDArray[np.float_],
+        speed_end: npt.NDArray[np.float_],
+        speed_increment: npt.NDArray[np.float_],
     ):
-        self.max_delta_current = max_delta_current
-        self.delta_current_increment = delta_current_increment
-        self.delta_time = delta_time
+        self.max_current = max_current
+        self.speed_in = speed_in
+        self.speed = speed_in.copy()
+        self.speed_end = speed_end
+        self.speed_increment = speed_increment
         self.joint_list = []
         self.trajectory = np.array([])
 
@@ -206,22 +203,38 @@ class RampTrajectoryGenerator(Trajectory):
         param_handler: ParamHandler,
     ) -> "RampTrajectoryGenerator":
 
-        max_delta_current = param_handler.get_parameter_vector_float(
-            "max_delta_current"
-        )
-        delta_current_increment = param_handler.get_parameter_vector_float(
-            "delta_current_increment"
-        )
-        delta_time = param_handler.get_parameter_vector_float("delta_time")
+        max_current = param_handler.get_parameter_vector_float("max_current")
+        speed_in = param_handler.get_parameter_vector_float("initial_speed")
+        speed_end = param_handler.get_parameter_vector_float("final_speed")
+        speed_increment = param_handler.get_parameter_vector_float("speed_increment")
 
         return RampTrajectoryGenerator(
-            max_delta_current=max_delta_current,
-            delta_current_increment=delta_current_increment,
-            delta_time=delta_time,
+            max_current=max_current,
+            speed_in=speed_in,
+            speed_end=speed_end,
+            speed_increment=speed_increment,
         )
 
     def set_joint_list(self, joint_list: List[str]):
         self.joint_list = joint_list
+
+    def reset_velocity(self, joint_index: Optional[int] = None):
+
+        # Set default joint index, if not specified
+        if joint_index is None:
+            joint_index = 0
+
+        self.speed[joint_index] = self.speed_in[joint_index]
+
+    def increment_velocity(self, joint_index: Optional[int] = None):
+
+        # Set default joint index, if not specified
+        if joint_index is None:
+            joint_index = 0
+
+        self.speed[joint_index] = (
+            self.speed[joint_index] + self.speed_increment[joint_index]
+        )
 
     def generate(
         self,
@@ -247,35 +260,24 @@ class RampTrajectoryGenerator(Trajectory):
 
         # Generate the trajectory
         trajectory = []
-        is_generation_over = False
 
-        delta_time_ramp = 0.0
+        max_current = (
+            -self.max_current[joint_index]
+            if opposite_direction
+            else self.max_current[joint_index]
+        )
+        speed = (
+            -self.speed[joint_index] if opposite_direction else self.speed[joint_index]
+        )
+        t_start = 0.0
+        t_end = (max_current - initial_current) / speed
+        t = t_start
         motor_current = initial_current
-        delta_current_increment = (
-            -self.delta_current_increment[joint_index]
-            if opposite_direction
-            else self.delta_current_increment[joint_index]
-        )
-        max_delta_current = (
-            -self.max_delta_current[joint_index]
-            if opposite_direction
-            else self.max_delta_current[joint_index]
-        )
 
-        while not is_generation_over:
-
-            if delta_time_ramp > self.delta_time[joint_index]:
-                delta_time_ramp = 0.0
-                motor_current = motor_current + delta_current_increment
-
-                if np.abs(motor_current - initial_current) > np.abs(max_delta_current):
-                    is_generation_over = True
-                else:
-                    trajectory.append(motor_current)
-            else:
-                trajectory.append(motor_current)
-
-            delta_time_ramp = delta_time_ramp + dt
+        while t <= t_end:
+            trajectory.append(motor_current)
+            t = t + dt
+            motor_current = motor_current + dt * speed
 
         # import matplotlib.pyplot as plt
         # plt.figure(figsize=(10, 4))  # Create a new figure with a specific size
@@ -284,14 +286,13 @@ class RampTrajectoryGenerator(Trajectory):
 
         return trajectory
 
-    @staticmethod
     def create_starting_points(
+        self,
         number_of_starting_points: int,
         number_of_joints: int,
         lower_limits: npt.NDArray[np.float_],
         upper_limits: npt.NDArray[np.float_],
         safety_threshold: Optional[float] = 0.0,
-        repeats: Optional[int] = 1,
     ) -> npt.NDArray[np.float_]:
 
         if (
@@ -312,6 +313,14 @@ class RampTrajectoryGenerator(Trajectory):
             starting_points[:, joint_index] = tmp[1:-1]
 
         # repeat the starting points
+        # each ramp has to be performed in both direction and for each speed
+        speed_in = np.array(self.speed_in)
+        speed_end = np.array(self.speed_end)
+        speed_increment = np.array(self.speed_increment)
+        repeats = 2 * int(
+            np.floor(np.min((speed_end - speed_in) / speed_increment)) + 1
+        )
+
         return np.repeat(starting_points, repeats=repeats, axis=0)
 
 
@@ -463,7 +472,9 @@ def main():
     # Get joint limits
     safety_threshold = param_handler.get_parameter_float("safety_threshold")
     safety_threshold = np.deg2rad(safety_threshold)
-    use_safety_threshold_for_starting_position = param_handler.get_parameter_bool("use_safety_threshold_for_starting_position")
+    use_safety_threshold_for_starting_position = param_handler.get_parameter_bool(
+        "use_safety_threshold_for_starting_position"
+    )
     _, lower_limits, upper_limits = robot_control.get_joint_limits()
     lower_limits = np.deg2rad(lower_limits)
     upper_limits = np.deg2rad(upper_limits)
@@ -472,7 +483,7 @@ def main():
     for idx, joint in enumerate(joints_to_control):
         if joint == "l_hip_roll" or joint == "r_hip_roll":
             upper_limits[idx] = np.deg2rad(80)
-    
+
     # Create the sensor bridge
     sensor_bridge = blf.robot_interface.YarpSensorBridge()
     sensor_bridge_handler = param_handler.get_group("SENSOR_BRIDGE")
@@ -543,10 +554,11 @@ def main():
     starting_positions = trajectory_generator.create_starting_points(
         number_of_starting_points=number_of_starting_points,
         number_of_joints=len(joints_to_control),
-        safety_threshold=safety_threshold if use_safety_threshold_for_starting_position else 0.0,
+        safety_threshold=safety_threshold
+        if use_safety_threshold_for_starting_position
+        else 0.0,
         lower_limits=lower_limits,
         upper_limits=upper_limits,
-        repeats=1 if trajectory_type == "sinusoid" else 2,
     )
     blf.log().info(
         "{} Starting positions: \n {}".format(logPrefix, np.rad2deg(starting_positions))
@@ -617,18 +629,37 @@ def main():
         opposite_direction = not opposite_direction
 
         for joint_index in range(len(joints_to_control)):
-            trajectories.append(
-                trajectory_generator.generate(
-                    dt=dt.total_seconds(),
-                    initial_current=motor_currents[joint_index]
-                    if not (bypass_motor_current_measure[joint_index])
-                    else 0,
-                    joint_index=joint_index,
-                    opposite_direction=False
-                    if trajectory_type == "sinusoid"
-                    else opposite_direction,
+
+            if trajectory_type == "ramp":
+
+                if counter % (2 * number_of_starting_points) == 0:
+                    trajectory_generator.reset_velocity(joint_index=joint_index)
+
+                trajectories.append(
+                    trajectory_generator.generate(
+                        dt=dt.total_seconds(),
+                        initial_current=motor_currents[joint_index]
+                        if not (bypass_motor_current_measure[joint_index])
+                        else 0,
+                        joint_index=joint_index,
+                        opposite_direction=opposite_direction,
+                    )
                 )
-            )
+
+                if not (counter % 2 == 0):
+                    trajectory_generator.increment_velocity(joint_index=joint_index)
+
+            else:
+                trajectories.append(
+                    trajectory_generator.generate(
+                        dt=dt.total_seconds(),
+                        initial_current=motor_currents[joint_index]
+                        if not (bypass_motor_current_measure[joint_index])
+                        else 0,
+                        joint_index=joint_index,
+                        opposite_direction=False,
+                    )
+                )
 
         # reset control modes for current/torque
         control_modes = [

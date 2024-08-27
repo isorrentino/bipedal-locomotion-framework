@@ -83,13 +83,12 @@ of motors to drive.
 
 ### Ramps
 
-They are ramp signals, whose amplitude is increased by `delta_current_increment` every `delta_time` seconds 
-up to a total increment of `max_delta_current`.
+They are ramp signals from an initial current to `max_current`, with a slope that ranges from `initial_speed` to `final_speed`. 
 
 Depending on the motors, the initial current is set to `0` or to the mesured one at the starting position.
 
 Note that, each ramp is repeated twice for each starting position, in order to cover both direction of motion. 
-Therefore, to move to the opposite direction, the amplitude gets decreased by `delta_current_increment` up to `-max_delta_current`. 
+Morever from one ramp to the following one the slope is incremented by `speed_increment`.
 
 The sarting positions are computed like for the sinusoidal trajectories.
 
@@ -115,7 +114,10 @@ max_frequency                 ( 0.8,   0.8,   0.8,   0.8,   0.8  ) #[Hz]
 frequency_decrement           ( 0.05,  0.05,  0.05,  0.05,  0.05 ) #[Hz]
 
 [RAMP]
-TO BE COMPLETED
+initial_speed #[A/s]
+final_speed #[A/s]
+speed_increment #[A/s]
+max_current #[A]
 
 [ROBOT_CONTROL]
 robot_name                              ergocub
