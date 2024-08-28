@@ -186,12 +186,12 @@ class SinusoidTrajectoryGenerator(Trajectory):
 class RampTrajectoryGenerator(Trajectory):
     def __init__(
         self,
-        max_current: npt.NDArray[np.float_],
+        max_current_increment: npt.NDArray[np.float_],
         speed_in: npt.NDArray[np.float_],
         speed_end: npt.NDArray[np.float_],
         speed_increment: npt.NDArray[np.float_],
     ):
-        self.max_current = max_current
+        self.max_current_increment = max_current_increment
         self.speed_in = speed_in
         self.speed = speed_in.copy()
         self.speed_end = speed_end
@@ -203,13 +203,13 @@ class RampTrajectoryGenerator(Trajectory):
         param_handler: ParamHandler,
     ) -> "RampTrajectoryGenerator":
 
-        max_current = param_handler.get_parameter_vector_float("max_current")
+        max_current_increment = param_handler.get_parameter_vector_float("max_current_increment")
         speed_in = param_handler.get_parameter_vector_float("initial_speed")
         speed_end = param_handler.get_parameter_vector_float("final_speed")
         speed_increment = param_handler.get_parameter_vector_float("speed_increment")
 
         return RampTrajectoryGenerator(
-            max_current=max_current,
+            max_current_increment=max_current_increment,
             speed_in=speed_in,
             speed_end=speed_end,
             speed_increment=speed_increment,
@@ -261,16 +261,16 @@ class RampTrajectoryGenerator(Trajectory):
         # Generate the trajectory
         trajectory = []
 
-        max_current = (
-            -self.max_current[joint_index]
+        max_current_increment = (
+            -self.max_current_increment[joint_index]
             if opposite_direction
-            else self.max_current[joint_index]
+            else self.max_current_increment[joint_index]
         )
         speed = (
             -self.speed[joint_index] if opposite_direction else self.speed[joint_index]
         )
         t_start = 0.0
-        t_end = (max_current - initial_current) / speed
+        t_end = max_current_increment / speed
         t = t_start
         motor_current = initial_current
 
