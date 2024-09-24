@@ -25,8 +25,22 @@ BSD-3-Clause license. -->
   </group>
 
   <group name="ExogenousSignals">
-    <param name="vectors_collection_exogenous_inputs">("Walking", "GridTracking","cmw")</param>
+    <param name="vectors_collection_exogenous_inputs">("Walking", "GridTracking", "cmw", "friction_r_lower_leg", "friction_l_lower_leg")</param>
     <param name="vectors_exogenous_inputs">()</param>
+    
+    <group name="friction_l_lower_leg">
+      <param name="local">"/yarp-robot-logger/hijackingTrqCrl/l_lower_leg"</param>
+      <param name="remote">"/hijackingTrqCrl/l_lower_leg"</param>
+      <param name="signal_name">"friction_l_lower_leg"</param>
+      <param name="carrier">"udp"</param>
+    </group>
+
+    <group name="friction_r_lower_leg">
+      <param name="local">"/yarp-robot-logger/hijackingTrqCrl/r_lower_leg"</param>
+      <param name="remote">"/hijackingTrqCrl/r_lower_leg"</param>
+      <param name="signal_name">"friction_r_lower_leg"</param>
+      <param name="carrier">"udp"</param>
+    </group>
 
     <group name="Walking">
       <param name="local">"/yarp-robot-logger/exogenous_signals/walking"</param>
@@ -65,7 +79,7 @@ BSD-3-Clause license. -->
   </group>
 
   <group name="RobotCameraBridge">
-      <param name="stream_cameras">true</param>
+      <param name="stream_cameras">false</param>
       <group name="Cameras">
         <param name="rgb_cameras_list">("jabra")</param>
         <param name="rgbd_cameras_list">()</param>
@@ -88,11 +102,11 @@ BSD-3-Clause license. -->
     </group>
 
     <group name="SixAxisForceTorqueSensors">
-      <param name="sixaxis_forcetorque_sensors_list">(l_foot_front_ft, l_foot_rear_ft, r_foot_front_ft, r_foot_rear_ft, l_leg_ft, r_leg_ft, r_arm_ft, l_arm_ft)</param>
+      <param name="sixaxis_forcetorque_sensors_list">(l_foot_front_ft, l_foot_rear_ft, r_foot_front_ft, r_foot_rear_ft, l_leg_ft, r_leg_ft)</param>
     </group>
 
     <group name="TemperatureSensors">
-      <param name="temperature_sensors_list">(l_foot_front_ft, l_foot_rear_ft, r_foot_front_ft, r_foot_rear_ft, l_leg_ft, r_leg_ft, r_arm_ft, l_arm_ft)</param>
+      <param name="temperature_sensors_list">(l_foot_front_ft, l_foot_rear_ft, r_foot_front_ft, r_foot_rear_ft, l_leg_ft, r_leg_ft)</param>
     </group>
 
     <group name="CartesianWrenches">
@@ -121,7 +135,7 @@ BSD-3-Clause license. -->
       <elem name="left_arm_wrench_client">left_arm_wrench_client</elem-->
       <elem name="mas-remapper">mas-remapper</elem>
       <!-- <elem name="realsense">realsense</elem> -->
-      <elem name="jabra">jabra</elem>
+      <!-- <elem name="jabra">jabra</elem> -->
     </paramlist>
   </action>
 
