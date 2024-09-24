@@ -368,7 +368,10 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
         m_motorPositionError[joint] = m_tempJointPosMotorSideRad - m_motorPositionCorrected[joint];
 
         // Test network with inputs position error motor side, joint velocity
-        if (!frictionEstimators[joint]->estimate(m_motorPositionError[joint],
+        if (!frictionEstimators[joint]->estimate(m_tempJointPosRad,
+                                                 m_motorPositionsRadians[joint],
+                                                 measuredMotorVelocities[joint] * M_PI / 180.0,
+                                                 m_motorPositionError[joint],
                                                  m_jointVelRadSec,
                                                  frictionTorque))
         {
@@ -728,6 +731,12 @@ bool JointTorqueControlDevice::loadFrictionParams(
             return false;
         }
 
+        if (!frictionGroup->getParameter("model_type", m_modelType))
+        {
+            log()->error("{} Parameter `model_type` not found", logPrefix);
+            // return false;
+        }
+
         for (int i = 0; i < models.size(); i++)
         {
             pinnParameters[i].modelPath = models[i];
@@ -872,7 +881,8 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
 
             if (!frictionEstimators[i]->initialize(pinnParameters[i].modelPath,
                                                    threadNumber,
-                                                   threadNumber))
+                                                   threadNumber,
+                                                   m_modelType))
             {
                 log()->error("{} Failed to initialize friction estimator", logPrefix);
                 return false;

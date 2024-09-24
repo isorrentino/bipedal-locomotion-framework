@@ -185,6 +185,7 @@ private:
     std::vector<double> m_motorPositionsRadians;
     std::vector<std::string> m_axisNames;
     LowPassFilterParameters m_lowPassFilterParameters;
+    int m_modelType{0};
 
     yarp::os::Port m_rpcPort; /**< Remote Procedure Call port. */
 
