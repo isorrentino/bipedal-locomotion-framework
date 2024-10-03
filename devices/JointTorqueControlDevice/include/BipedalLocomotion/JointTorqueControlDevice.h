@@ -88,6 +88,7 @@ struct PINNParameters
 {
     std::string modelPath; /**< PINN model path */
     int threadNumber; /**< number of threads */
+    int modelType; /**< type of the model */
 
     /**
      * Reset the parameters
@@ -96,6 +97,7 @@ struct PINNParameters
     {
         modelPath = "";
         threadNumber = 0;
+        modelType = 0;
     }
 };
 
@@ -185,7 +187,6 @@ private:
     std::vector<double> m_motorPositionsRadians;
     std::vector<std::string> m_axisNames;
     LowPassFilterParameters m_lowPassFilterParameters;
-    int m_modelType{0};
 
     yarp::os::Port m_rpcPort; /**< Remote Procedure Call port. */
 
@@ -295,6 +296,8 @@ public:
     virtual double getMaxFrictionTorque(const std::string& jointName) override;
     virtual bool setFrictionModel(const std::string& jointName, const std::string& model) override;
     virtual std::string getFrictionModel(const std::string& jointName) override;
+    virtual bool setPINNModel(const std::string& jointName, const std::string& pinnModelName, const int modelType) override;
+    virtual std::string getPINNModel(const std::string& jointName) override;
 };
 
 #endif // BIPEDAL_LOCOMOTION_FRAMEWORK_JOINT_TORQUE_CONTROL_DEVICE_H

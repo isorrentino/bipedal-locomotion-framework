@@ -282,6 +282,60 @@ std::string JointTorqueControlDevice::getFrictionModel(const std::string& jointN
     return model;
 }
 
+bool JointTorqueControlDevice::setPINNModel(const std::string& jointName,
+                                            const std::string& pinnModelName,
+                                            const int modelType)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    // If jointName is found
+    if (it != m_axisNames.end())
+    {
+        // Calculate the index of the found element
+        size_t index = std::distance(m_axisNames.begin(), it);
+
+        pinnParameters[index].modelPath = pinnModelName;
+        pinnParameters[index].modelType = modelType;
+
+        // Lock the mutex to safely modify motorTorqueCurrentParameters
+        std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+
+        if (!frictionEstimators[index]->initialize(pinnParameters[index].modelPath,
+                                               pinnParameters[index].threadNumber,
+                                               pinnParameters[index].threadNumber,
+                                               pinnParameters[index].modelType))
+        {
+            log()->error("[JointTorqueControlDevice::setPINNModel] Failed to re-initialize friction estimator with model {}", pinnModelName);
+            return false;
+        }
+
+        return true;
+    }
+
+    return false;   
+}
+
+std::string JointTorqueControlDevice::getPINNModel(const std::string& jointName)
+{
+    std::string pinnModelName = "none";
+
+    size_t index = 0;
+
+    do
+    {
+        if (m_axisNames[index] == jointName)
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+
+            return pinnParameters[index].modelPath;
+        }
+
+        index++;
+    } while (index < m_axisNames.size());
+
+    return pinnModelName;
+}
+
 // HIJACKING CONTROL
 void JointTorqueControlDevice::startHijackingTorqueControlIfNecessary(int j)
 {
@@ -731,7 +785,8 @@ bool JointTorqueControlDevice::loadFrictionParams(
             return false;
         }
 
-        if (!frictionGroup->getParameter("model_type", m_modelType))
+        int modelType;
+        if (!frictionGroup->getParameter("model_type", modelType))
         {
             log()->error("{} Parameter `model_type` not found", logPrefix);
             // return false;
@@ -741,6 +796,7 @@ bool JointTorqueControlDevice::loadFrictionParams(
         {
             pinnParameters[i].modelPath = models[i];
             pinnParameters[i].threadNumber = threads;
+            pinnParameters[i].modelType = modelType;
         }
     }
 
@@ -871,8 +927,6 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
         return false;
     }
 
-    int threadNumber = 1;
-
     for (int i = 0; i < kt.size(); i++)
     {
         if (motorTorqueCurrentParameters[i].frictionModel == "FRICTION_PINN")
@@ -880,9 +934,9 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
             frictionEstimators[i] = std::make_unique<PINNFrictionEstimator>();
 
             if (!frictionEstimators[i]->initialize(pinnParameters[i].modelPath,
-                                                   threadNumber,
-                                                   threadNumber,
-                                                   m_modelType))
+                                                   pinnParameters[i].threadNumber,
+                                                   pinnParameters[i].threadNumber,
+                                                   pinnParameters[i].modelType))
             {
                 log()->error("{} Failed to initialize friction estimator", logPrefix);
                 return false;
