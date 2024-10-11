@@ -27,5 +27,9 @@ service JointTorqueControlCommands
     bool setPINNModel(1:string jointName, 2:string pinnModelName, 3:i32 modelType);
 
     string getPINNModel(1:string jointName);
+
+    bool setKtJtcvc(1:string jointName, 2:double kt);
+
+    double getKtJtcvc(1:string jointName);
 }
 

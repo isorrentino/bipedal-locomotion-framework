@@ -298,6 +298,8 @@ public:
     virtual std::string getFrictionModel(const std::string& jointName) override;
     virtual bool setPINNModel(const std::string& jointName, const std::string& pinnModelName, const int modelType) override;
     virtual std::string getPINNModel(const std::string& jointName) override;
+    virtual bool setKtJtcvc(const std::string& jointName, const double kt) override;
+    virtual double getKtJtcvc(const std::string& jointName) override;
 };
 
 #endif // BIPEDAL_LOCOMOTION_FRAMEWORK_JOINT_TORQUE_CONTROL_DEVICE_H

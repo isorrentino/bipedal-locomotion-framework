@@ -312,7 +312,8 @@ bool JointTorqueControlDevice::setPINNModel(const std::string& jointName,
         return true;
     }
 
-    return false;   
+    log()->error("[JointTorqueControlDevice::setPINNModel] Failed to set the PINN model {}. The joint {} is not found.", pinnModelName, jointName);
+    return true;
 }
 
 std::string JointTorqueControlDevice::getPINNModel(const std::string& jointName)
@@ -334,6 +335,54 @@ std::string JointTorqueControlDevice::getPINNModel(const std::string& jointName)
     } while (index < m_axisNames.size());
 
     return pinnModelName;
+}
+
+bool JointTorqueControlDevice::setKtJtcvc(const std::string& jointName, const double kt)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    if (it != m_axisNames.end())
+    {
+        // Calculate the index of the found element
+        std::size_t index = std::distance(m_axisNames.begin(), it);
+
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+            motorTorqueCurrentParameters[index].kt = kt;
+
+            log()->info("Request for kt des = {}", kt);
+            log()->info("Setting value kt = {}", motorTorqueCurrentParameters[index].kt);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+double JointTorqueControlDevice::getKtJtcvc(const std::string& jointName)
+{
+    // Use std::find to locate the jointName in m_axisNames
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    // If jointName is found
+    if (it != m_axisNames.end())
+    {
+        // Calculate the index of the found element
+        size_t index = std::distance(m_axisNames.begin(), it);
+
+        // Lock the mutex to safely access motorTorqueCurrentParameters
+        std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+
+        // Log the kp value
+        log()->info("kt value is {}", motorTorqueCurrentParameters[index].kt);
+
+        // Return the kp value
+        return motorTorqueCurrentParameters[index].kt;
+    }
+
+    // jointName was not found, return default value
+    return -1;
 }
 
 // HIJACKING CONTROL
