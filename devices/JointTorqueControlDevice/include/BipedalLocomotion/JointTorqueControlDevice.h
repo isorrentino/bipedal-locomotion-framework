@@ -65,6 +65,7 @@ struct MotorTorqueCurrentParameters
     double kt; /**< motor torque to current gain */
     double kfc; /**< friction compensation weight parameter */
     double kp; /**< proportional gain */
+    double ki; /**< integral gain */
     double maxCurr; /**< maximum current */
     std::string frictionModel; ///< friction model
     double maxOutputFriction; /**< maximum output of the friction model */
@@ -178,6 +179,7 @@ private:
     yarp::sig::Vector measuredJointPositions;
     yarp::sig::Vector measuredMotorPositions;
     yarp::sig::Vector estimatedFrictionTorques;
+    yarp::sig::Vector torqueIntegralErrors;
     std::string m_portPrefix{"/hijackingTrqCrl"}; /**< Default port prefix. */
     BipedalLocomotion::YarpUtilities::VectorsCollectionServer m_vectorsCollectionServer; /**< Logger server. */
     std::vector<int> m_gearRatios;
@@ -290,6 +292,8 @@ public:
 
     virtual bool setKpJtcvc(const std::string& jointName, const double kp) override;
     virtual double getKpJtcvc(const std::string& jointName) override;
+    virtual bool setKiJtcvc(const std::string& jointName, const double ki) override;
+    virtual double getKiJtcvc(const std::string& jointName) override;
     virtual bool setKfcJtcvc(const std::string& jointName, const double kfc) override;
     virtual double getKfcJtcvc(const std::string& jointName) override;
     virtual bool setMaxFrictionTorque(const std::string& jointName, const double maxFriction) override;

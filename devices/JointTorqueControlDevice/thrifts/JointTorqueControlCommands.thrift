@@ -31,5 +31,9 @@ service JointTorqueControlCommands
     bool setKtJtcvc(1:string jointName, 2:double kt);
 
     double getKtJtcvc(1:string jointName);
+
+    bool setKiJtcvc(1:string jointName, 2:double ki);
+
+    double getKiJtcvc(1:string jointName);
 }
 

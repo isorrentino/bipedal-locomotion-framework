@@ -143,6 +143,54 @@ double JointTorqueControlDevice::getKpJtcvc(const std::string& jointName)
     return -1;
 }
 
+bool JointTorqueControlDevice::setKiJtcvc(const std::string& jointName, const double ki)
+{
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    if (it != m_axisNames.end())
+    {
+        // Calculate the index of the found element
+        std::size_t index = std::distance(m_axisNames.begin(), it);
+
+        {
+            std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+            motorTorqueCurrentParameters[index].ki = ki;
+
+            log()->info("Request for ki des = {}", ki);
+            log()->info("Setting value ki = {}", motorTorqueCurrentParameters[index].ki);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+double JointTorqueControlDevice::getKiJtcvc(const std::string& jointName)
+{
+    // Use std::find to locate the jointName in m_axisNames
+    auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
+
+    // If jointName is found
+    if (it != m_axisNames.end())
+    {
+        // Calculate the index of the found element
+        size_t index = std::distance(m_axisNames.begin(), it);
+
+        // Lock the mutex to safely access motorTorqueCurrentParameters
+        std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
+
+        // Log the ki value
+        log()->info("ki value is {}", motorTorqueCurrentParameters[index].ki);
+
+        // Return the ki value
+        return motorTorqueCurrentParameters[index].ki;
+    }
+
+    // jointName was not found, return default value
+    return -1;
+}
+
 bool JointTorqueControlDevice::setKfcJtcvc(const std::string& jointName, const double kfc)
 {
     // Use std::find to locate the jointName in m_axisNames
@@ -531,11 +579,14 @@ void JointTorqueControlDevice::computeDesiredCurrents()
     {
         if (this->hijackingTorqueControl[j])
         {
+            torqueIntegralErrors[j]
+                += (desiredJointTorques[j] - measuredJointTorques[j]) * this->getPeriod();
 
             desiredMotorCurrents[j]
                 = (desiredJointTorques[j]
                    + motorTorqueCurrentParameters[j].kp
                          * (desiredJointTorques[j] - measuredJointTorques[j])
+                   + motorTorqueCurrentParameters[j].ki * torqueIntegralErrors[j]
                    + motorTorqueCurrentParameters[j].kfc * estimatedFrictionTorques[j])
                   / motorTorqueCurrentParameters[j].kt;
 
@@ -902,6 +953,12 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
         log()->error("{} Parameter `kp` not found", logPrefix);
         return false;
     }
+    Eigen::VectorXd ki;
+    if (!torqueGroup->getParameter("ki", ki))
+    {
+        log()->error("{} Parameter `ki` not found", logPrefix);
+        return false;
+    }
     Eigen::VectorXd maxCurr;
     if (!torqueGroup->getParameter("max_curr", maxCurr))
     {
@@ -953,6 +1010,7 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
         motorTorqueCurrentParameters[i].kt = kt[i];
         motorTorqueCurrentParameters[i].kfc = kfc[i];
         motorTorqueCurrentParameters[i].kp = kp[i];
+        motorTorqueCurrentParameters[i].ki = ki[i];
         motorTorqueCurrentParameters[i].maxCurr = maxCurr[i];
         motorTorqueCurrentParameters[i].frictionModel = frictionModels[i];
         motorTorqueCurrentParameters[i].maxOutputFriction = maxOutputFriction[i];
@@ -1104,6 +1162,7 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         measuredJointVelocities.resize(axes, 0.0);
         measuredMotorVelocities.resize(axes, 0.0);
         measuredJointTorques.resize(axes, 0.0);
+        torqueIntegralErrors.resize(axes, 0.0);
         measuredJointPositions.resize(axes, 0.0);
         measuredMotorPositions.resize(axes, 0.0);
         estimatedFrictionTorques.resize(axes, 0.0);
