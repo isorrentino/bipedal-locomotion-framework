@@ -28,10 +28,7 @@ struct PINNFrictionEstimator::Impl
     std::unique_ptr<Ort::Session> session;
     Ort::MemoryInfo memoryInfo;
 
-    std::deque<float> jointPositionBuffer;
     std::deque<float> jointVelocityBuffer;
-    std::deque<float> errorPositionBuffer;
-    std::deque<float> motorPositionBuffer;
     std::deque<float> motorVelocityBuffer;
 
     size_t historyLength;
@@ -143,7 +140,7 @@ bool PINNFrictionEstimator::estimate(double inputMotorVelocity,
                                      double inputJointVelocity,
                                      double& output)
 {
-    if (m_pimpl->errorPositionBuffer.size() == m_pimpl->historyLength)
+    if (m_pimpl->motorVelocityBuffer.size() == m_pimpl->historyLength)
     {
         // The buffer is full, remove the oldest element
         m_pimpl->motorVelocityBuffer.pop_front();
@@ -155,7 +152,7 @@ bool PINNFrictionEstimator::estimate(double inputMotorVelocity,
     m_pimpl->jointVelocityBuffer.push_back(inputJointVelocity);
 
     // Check if the buffer is full
-    if (m_pimpl->errorPositionBuffer.size() < m_pimpl->historyLength)
+    if (m_pimpl->motorVelocityBuffer.size() < m_pimpl->historyLength)
     {
         // The buffer is not full yet
         return false;
