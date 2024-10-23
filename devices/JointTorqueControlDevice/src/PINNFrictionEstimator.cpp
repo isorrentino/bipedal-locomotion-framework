@@ -35,7 +35,6 @@ struct PINNFrictionEstimator::Impl
     std::deque<float> motorVelocityBuffer;
 
     size_t historyLength;
-    size_t modelType;
 
     struct DataStructured
     {
@@ -63,8 +62,7 @@ PINNFrictionEstimator::~PINNFrictionEstimator() = default;
 
 bool PINNFrictionEstimator::initialize(const std::string& networkModelPath,
                                        const std::size_t intraOpNumThreads,
-                                       const std::size_t interOpNumThreads,
-                                       const std::size_t modelType)
+                                       const std::size_t interOpNumThreads)
 {
     std::basic_string<ORTCHAR_T> networkModelPathAsOrtString(networkModelPath.begin(),
                                                              networkModelPath.end());
@@ -96,27 +94,7 @@ bool PINNFrictionEstimator::initialize(const std::string& networkModelPath,
 
     const std::size_t inputCount = inputShape[1];
 
-    // Check the model type
-    m_pimpl->modelType = modelType;
-
-    int numberOfInputs = 0;
-    if (modelType == 1 || modelType == 2)
-    {
-        numberOfInputs = 2;
-    }
-    else if (modelType == 3 || modelType == 4)
-    {
-        numberOfInputs = 3;
-    }
-    else if (modelType == 5)
-    {
-        numberOfInputs = 4;
-    }
-    else
-    {
-        BipedalLocomotion::log()->error("Wrong model type");
-        return false;
-    }
+    int numberOfInputs = 2;
 
     m_pimpl->historyLength = inputCount / numberOfInputs;
 
@@ -125,10 +103,7 @@ bool PINNFrictionEstimator::initialize(const std::string& networkModelPath,
     m_pimpl->structuredInput.shape[0] = 1; // batch
     m_pimpl->structuredInput.shape[1] = inputCount;
 
-    m_pimpl->jointPositionBuffer.resize(m_pimpl->historyLength);
     m_pimpl->jointVelocityBuffer.resize(m_pimpl->historyLength);
-    m_pimpl->errorPositionBuffer.resize(m_pimpl->historyLength);
-    m_pimpl->motorPositionBuffer.resize(m_pimpl->historyLength);
     m_pimpl->motorVelocityBuffer.resize(m_pimpl->historyLength);
 
     // create tensor required by onnx
@@ -160,35 +135,23 @@ bool PINNFrictionEstimator::initialize(const std::string& networkModelPath,
 
 void PINNFrictionEstimator::resetEstimator()
 {
-    m_pimpl->jointPositionBuffer.clear();
-    m_pimpl->motorPositionBuffer.clear();
     m_pimpl->motorVelocityBuffer.clear();
     m_pimpl->jointVelocityBuffer.clear();
-    m_pimpl->errorPositionBuffer.clear();
 }
 
-bool PINNFrictionEstimator::estimate(double inputJointPositon,
-                                     double inputMotorPosition,
-                                     double inputMotorVelocity,
-                                     double inputDeltaPosition,
+bool PINNFrictionEstimator::estimate(double inputMotorVelocity,
                                      double inputJointVelocity,
                                      double& output)
 {
     if (m_pimpl->errorPositionBuffer.size() == m_pimpl->historyLength)
     {
         // The buffer is full, remove the oldest element
-        m_pimpl->jointPositionBuffer.pop_front();
-        m_pimpl->motorPositionBuffer.pop_front();
         m_pimpl->motorVelocityBuffer.pop_front();
-        m_pimpl->errorPositionBuffer.pop_front();
         m_pimpl->jointVelocityBuffer.pop_front();
     }
 
     // Push element into the queue
-    m_pimpl->jointPositionBuffer.push_back(inputJointPositon);
-    m_pimpl->motorPositionBuffer.push_back(inputMotorPosition);
     m_pimpl->motorVelocityBuffer.push_back(inputMotorVelocity);
-    m_pimpl->errorPositionBuffer.push_back(inputDeltaPosition);
     m_pimpl->jointVelocityBuffer.push_back(inputJointVelocity);
 
     // Check if the buffer is full
@@ -202,63 +165,12 @@ bool PINNFrictionEstimator::estimate(double inputJointPositon,
     // Copy the joint positions and then the motor positions in the
     // structured input without emptying the buffer
     // Use iterators to copy the data to the vector
-    if (m_pimpl->modelType == 1)
-    {
-        std::copy(m_pimpl->errorPositionBuffer.cbegin(),
-              m_pimpl->errorPositionBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin());
-        std::copy(m_pimpl->jointVelocityBuffer.cbegin(),
-              m_pimpl->jointVelocityBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin() + m_pimpl->historyLength);
-    }
-    else if (m_pimpl->modelType == 2)
-    {
-        std::copy(m_pimpl->motorVelocityBuffer.cbegin(),
+    std::copy(m_pimpl->motorVelocityBuffer.cbegin(),
               m_pimpl->motorVelocityBuffer.cend(),
               m_pimpl->structuredInput.rawData.begin());
         std::copy(m_pimpl->jointVelocityBuffer.cbegin(),
               m_pimpl->jointVelocityBuffer.cend(),
               m_pimpl->structuredInput.rawData.begin() + m_pimpl->historyLength);
-    }
-    else if (m_pimpl->modelType == 3)
-    {
-        std::copy(m_pimpl->errorPositionBuffer.cbegin(),
-              m_pimpl->errorPositionBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin());
-        std::copy(m_pimpl->motorVelocityBuffer.cbegin(),
-              m_pimpl->motorVelocityBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin() + m_pimpl->historyLength);
-        std::copy(m_pimpl->jointVelocityBuffer.cbegin(),
-              m_pimpl->jointVelocityBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin() + 2 * m_pimpl->historyLength);
-    }
-    else if (m_pimpl->modelType == 4)
-    {
-        std::copy(m_pimpl->errorPositionBuffer.cbegin(),
-              m_pimpl->errorPositionBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin());
-        std::copy(m_pimpl->jointPositionBuffer.cbegin(),
-              m_pimpl->jointPositionBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin() + m_pimpl->historyLength);
-        std::copy(m_pimpl->jointVelocityBuffer.cbegin(),
-              m_pimpl->jointVelocityBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin() + 2 * m_pimpl->historyLength);
-    }
-    else if (m_pimpl->modelType == 5)
-    {
-        std::copy(m_pimpl->motorPositionBuffer.cbegin(),
-              m_pimpl->motorPositionBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin());
-        std::copy(m_pimpl->motorVelocityBuffer.cbegin(),
-              m_pimpl->motorVelocityBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin() + m_pimpl->historyLength);
-        std::copy(m_pimpl->jointPositionBuffer.cbegin(),
-              m_pimpl->jointPositionBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin() + 2 * m_pimpl->historyLength);
-        std::copy(m_pimpl->jointVelocityBuffer.cbegin(),
-              m_pimpl->jointVelocityBuffer.cend(),
-              m_pimpl->structuredInput.rawData.begin() + 3 * m_pimpl->historyLength);
-    }
 
     // perform the inference
     const char* inputNames[] = {"input"};

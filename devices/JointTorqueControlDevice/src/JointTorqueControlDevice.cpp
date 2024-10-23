@@ -331,8 +331,7 @@ std::string JointTorqueControlDevice::getFrictionModel(const std::string& jointN
 }
 
 bool JointTorqueControlDevice::setPINNModel(const std::string& jointName,
-                                            const std::string& pinnModelName,
-                                            const int modelType)
+                                            const std::string& pinnModelName)
 {
     auto it = std::find(m_axisNames.begin(), m_axisNames.end(), jointName);
 
@@ -343,15 +342,13 @@ bool JointTorqueControlDevice::setPINNModel(const std::string& jointName,
         size_t index = std::distance(m_axisNames.begin(), it);
 
         pinnParameters[index].modelPath = pinnModelName;
-        pinnParameters[index].modelType = modelType;
 
         // Lock the mutex to safely modify motorTorqueCurrentParameters
         std::lock_guard<std::mutex> lock(mutexTorqueControlParam_);
 
         if (!frictionEstimators[index]->initialize(pinnParameters[index].modelPath,
                                                pinnParameters[index].threadNumber,
-                                               pinnParameters[index].threadNumber,
-                                               pinnParameters[index].modelType))
+                                               pinnParameters[index].threadNumber))
         {
             log()->error("[JointTorqueControlDevice::setPINNModel] Failed to re-initialize friction estimator with model {}", pinnModelName);
             return false;
@@ -447,12 +444,6 @@ void JointTorqueControlDevice::startHijackingTorqueControlIfNecessary(int j)
             frictionEstimators[j]->resetEstimator();
 
             this->readStatus();
-            for (int i = 0; i < axes; i++)
-            {
-                m_initialDeltaMotorJointRadians[i]
-                    = (measuredMotorPositions[i] - m_gearRatios[i] * measuredJointPositions[i])
-                      * M_PI / 180.0;
-            }
         }
 
         this->hijackingTorqueControl[j] = true;
@@ -510,20 +501,9 @@ double JointTorqueControlDevice::computeFrictionTorque(int joint)
         frictionTorque = tauCoulomb + tauViscous + tauStribeck;
     } else if (motorTorqueCurrentParameters[joint].frictionModel == "FRICTION_PINN")
     {
-        m_tempJointPosRad = measuredJointPositions[joint] * M_PI / 180.0;
-        m_tempJointPosMotorSideRad = m_gearRatios[joint] * m_tempJointPosRad;
-        m_motorPositionsRadians[joint] = measuredMotorPositions[joint] * M_PI / 180.0;
-        m_motorPositionCorrected[joint]
-            = m_motorPositionsRadians[joint] - m_initialDeltaMotorJointRadians[joint];
-        m_jointVelRadSec = measuredJointVelocities[joint] * M_PI / 180.0;
-        m_motorPositionError[joint] = m_tempJointPosMotorSideRad - m_motorPositionCorrected[joint];
-
         // Test network with inputs position error motor side, joint velocity
-        if (!frictionEstimators[joint]->estimate(m_tempJointPosRad,
-                                                 m_motorPositionsRadians[joint],
-                                                 measuredMotorVelocities[joint] * M_PI / 180.0,
-                                                 m_motorPositionError[joint],
-                                                 m_jointVelRadSec,
+        if (!frictionEstimators[joint]->estimate(measuredMotorVelocities[joint] * M_PI / 180.0,
+                                                 measuredJointVelocities[joint] * M_PI / 180.0,
                                                  frictionTorque))
         {
             frictionTorque = 0.0;
@@ -599,7 +579,6 @@ void JointTorqueControlDevice::computeDesiredCurrents()
             {
                 std::lock_guard<std::mutex> lockOutput(m_status.mutex);
                 m_status.m_frictionLogging[j] = estimatedFrictionTorques[j];
-                m_status.m_motorPositionError[j] = m_motorPositionError[j];
                 m_status.m_currentLogging[j] = desiredMotorCurrents[j];
             }
         }
@@ -885,18 +864,10 @@ bool JointTorqueControlDevice::loadFrictionParams(
             return false;
         }
 
-        int modelType;
-        if (!frictionGroup->getParameter("model_type", modelType))
-        {
-            log()->error("{} Parameter `model_type` not found", logPrefix);
-            // return false;
-        }
-
         for (int i = 0; i < models.size(); i++)
         {
             pinnParameters[i].modelPath = models[i];
             pinnParameters[i].threadNumber = threads;
-            pinnParameters[i].modelType = modelType;
         }
     }
 
@@ -1042,8 +1013,7 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
 
             if (!frictionEstimators[i]->initialize(pinnParameters[i].modelPath,
                                                    pinnParameters[i].threadNumber,
-                                                   pinnParameters[i].threadNumber,
-                                                   pinnParameters[i].modelType))
+                                                   pinnParameters[i].threadNumber))
             {
                 log()->error("{} Failed to initialize friction estimator", logPrefix);
                 return false;
@@ -1121,8 +1091,6 @@ void JointTorqueControlDevice::publishStatus()
             std::lock_guard<std::mutex> lockOutput(m_status.mutex);
             m_vectorsCollectionServer.populateData("motor_currents::desired",
                                                    m_status.m_currentLogging);
-            m_vectorsCollectionServer.populateData("position_error::input_network",
-                                                   m_status.m_motorPositionError);
             m_vectorsCollectionServer.populateData("friction_torques::estimated",
                                                    m_status.m_frictionLogging);
             m_vectorsCollectionServer.sendData();
@@ -1168,11 +1136,6 @@ bool JointTorqueControlDevice::attachAll(const PolyDriverList& p)
         estimatedFrictionTorques.resize(axes, 0.0);
         m_gearRatios.resize(axes, 1);
         m_axisNames.resize(axes);
-        m_initialDeltaMotorJointRadians.resize(axes, 1);
-        m_motorPositionError.resize(axes, 1);
-        m_motorPositionCorrected.resize(axes, 1);
-        m_motorPositionsRadians.resize(axes, 1);
-        m_status.m_motorPositionError.resize(axes, 1);
         m_status.m_frictionLogging.resize(axes, 1);
         m_status.m_currentLogging.resize(axes, 1);
     }

@@ -24,7 +24,7 @@ service JointTorqueControlCommands
 
     string getFrictionModel(1:string jointName);
 
-    bool setPINNModel(1:string jointName, 2:string pinnModelName, 3:i32 modelType);
+    bool setPINNModel(1:string jointName, 2:string pinnModelName);
 
     string getPINNModel(1:string jointName);
 

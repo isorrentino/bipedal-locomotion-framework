@@ -89,7 +89,6 @@ struct PINNParameters
 {
     std::string modelPath; /**< PINN model path */
     int threadNumber; /**< number of threads */
-    int modelType; /**< type of the model */
 
     /**
      * Reset the parameters
@@ -98,7 +97,6 @@ struct PINNParameters
     {
         modelPath = "";
         threadNumber = 0;
-        modelType = 0;
     }
 };
 
@@ -183,18 +181,10 @@ private:
     std::string m_portPrefix{"/hijackingTrqCrl"}; /**< Default port prefix. */
     BipedalLocomotion::YarpUtilities::VectorsCollectionServer m_vectorsCollectionServer; /**< Logger server. */
     std::vector<int> m_gearRatios;
-    std::vector<double> m_initialDeltaMotorJointRadians;
-    std::vector<double> m_motorPositionError;
-    std::vector<double> m_motorPositionCorrected;
-    std::vector<double> m_motorPositionsRadians;
     std::vector<std::string> m_axisNames;
     LowPassFilterParameters m_lowPassFilterParameters;
 
     yarp::os::Port m_rpcPort; /**< Remote Procedure Call port. */
-
-    double m_tempJointPosRad = 0.0;
-    double m_tempJointPosMotorSideRad = 0.0;
-    double m_jointVelRadSec = 0.0;
 
     CouplingMatrices couplingMatrices;
 
@@ -204,7 +194,6 @@ private:
     struct Status
     {
         std::mutex mutex;
-        std::vector<double> m_motorPositionError;
         std::vector<double> m_frictionLogging;
         std::vector<double> m_currentLogging;
     } m_status;
@@ -300,7 +289,7 @@ public:
     virtual double getMaxFrictionTorque(const std::string& jointName) override;
     virtual bool setFrictionModel(const std::string& jointName, const std::string& model) override;
     virtual std::string getFrictionModel(const std::string& jointName) override;
-    virtual bool setPINNModel(const std::string& jointName, const std::string& pinnModelName, const int modelType) override;
+    virtual bool setPINNModel(const std::string& jointName, const std::string& pinnModelName) override;
     virtual std::string getPINNModel(const std::string& jointName) override;
     virtual bool setKtJtcvc(const std::string& jointName, const double kt) override;
     virtual double getKtJtcvc(const std::string& jointName) override;
