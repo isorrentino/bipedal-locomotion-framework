@@ -179,9 +179,11 @@ class Application:
             raise ValueError(
                 "Impossible to set the set point for the joint regularization task."
             )
+        
+        torso_orientation = self.kindyn_with_measured.getWorldTransform(base_link).getRotation().toNumPy()
 
         if not self.tsid.tasks["torso_task"].set_set_point(
-            manif.SO3.Identity(), manif.SO3Tangent.Zero(), manif.SO3Tangent.Zero()
+            blf.conversions.to_manif_rot(torso_orientation), manif.SO3Tangent.Zero(), manif.SO3Tangent.Zero()
         ):
             raise ValueError("Impossible to set the set point for the torso task.")
 
