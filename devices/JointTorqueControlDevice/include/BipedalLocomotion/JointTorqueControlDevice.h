@@ -273,6 +273,8 @@ public:
     virtual bool setRefTorques(const int n_joints, const int* joints, const double* trqs);
     virtual bool setRefTorques(const double* t);
     virtual bool setRefTorque(int j, double t);
+    virtual bool getMotorEncoderAcceleration(int j, double* acc);
+    virtual bool getMotorEncoderAccelerations(double* accs);
 
     // CONTROL THREAD
     virtual bool threadInit();

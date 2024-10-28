@@ -1399,6 +1399,20 @@ bool JointTorqueControlDevice::getRefTorque(int j, double* trq)
     return true;
 }
 
+bool JointTorqueControlDevice::getMotorEncoderAccelerations(double* accs)
+{
+    std::lock_guard<std::mutex>(this->globalMutex);
+    memcpy(accs, estimatedFrictionTorques.data(), this->axes * sizeof(double));
+    return true;
+}
+
+bool JointTorqueControlDevice::getMotorEncoderAcceleration(int j, double* acc)
+{
+    std::lock_guard<std::mutex>(this->globalMutex);
+    *acc = estimatedFrictionTorques[j];
+    return true;
+}
+
 // HIJACKED CONTROL THREAD
 bool JointTorqueControlDevice::threadInit()
 {
