@@ -5,6 +5,7 @@
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/ConfigFolderPath.h.in" "${CMAKE_CURRENT_BINARY_DIR}/ConfigFolderPath.h" @ONLY)
 
+
 add_bipedal_test(NAME ZeroVelocityStateDynamics
                 SOURCES ZeroVelocityStateDynamicsTest.cpp
                 LINKS BipedalLocomotion::RobotDynamicsEstimator
@@ -48,46 +49,48 @@ if(FRAMEWORK_COMPILE_YarpImplementation)
         BipedalLocomotion::ParametersHandlerYarpImplementation)
 endif()
 
-if(FRAMEWORK_USE_icub-models)
+if (FRAMEWORK_COMPILE_ManifConversions)
+    find_package(ResolveRoboticsURICpp REQUIRED)
 
-    if (FRAMEWORK_COMPILE_ManifConversions)
-        add_bipedal_test(NAME KinDynWrapper
-            SOURCES KinDynWrapperTest.cpp
-            LINKS BipedalLocomotion::RobotDynamicsEstimator
-            BipedalLocomotion::ParametersHandler
-            icub-models::icub-models
-            BipedalLocomotion::ManifConversions)
 
-        add_bipedal_test(NAME GyroscopeMeasurementDynamics
-            SOURCES GyroscopeMeasurementDynamicsTest.cpp
-            LINKS BipedalLocomotion::RobotDynamicsEstimator
-            BipedalLocomotion::ParametersHandler
-            icub-models::icub-models
-            Eigen3::Eigen
-            BipedalLocomotion::ManifConversions
-            iDynTree::idyntree-model)
+    add_bipedal_test(NAME KinDynWrapper
+        SOURCES KinDynWrapperTest.cpp
+        LINKS BipedalLocomotion::RobotDynamicsEstimator
+        BipedalLocomotion::ParametersHandler
+        icub-models::icub-models
+        BipedalLocomotion::ManifConversions)
 
-        add_bipedal_test(NAME AccelerometerMeasurementDynamics
-            SOURCES AccelerometerMeasurementDynamicsTest.cpp
-            LINKS   BipedalLocomotion::RobotDynamicsEstimator
-            BipedalLocomotion::ParametersHandler
-            icub-models::icub-models
-            Eigen3::Eigen
-            MANIF::manif
-            BipedalLocomotion::ManifConversions
-            iDynTree::idyntree-model)
+    add_bipedal_test(NAME GyroscopeMeasurementDynamics
+        SOURCES GyroscopeMeasurementDynamicsTest.cpp
+        LINKS BipedalLocomotion::RobotDynamicsEstimator
+        BipedalLocomotion::ParametersHandler
+        icub-models::icub-models
+        Eigen3::Eigen
+        BipedalLocomotion::ManifConversions
+        iDynTree::idyntree-model)
 
-        add_bipedal_test(NAME JointVelocityStateDynamics
-            SOURCES JointVelocityStateDynamicsTest.cpp
-            LINKS BipedalLocomotion::RobotDynamicsEstimator
-            BipedalLocomotion::ParametersHandler
-            icub-models::icub-models
-            Eigen3::Eigen
-            MANIF::manif
-            BipedalLocomotion::ManifConversions
-            iDynTree::idyntree-model)
-    endif()
+    add_bipedal_test(NAME AccelerometerMeasurementDynamics
+        SOURCES AccelerometerMeasurementDynamicsTest.cpp
+        LINKS   BipedalLocomotion::RobotDynamicsEstimator
+        BipedalLocomotion::ParametersHandler
+        icub-models::icub-models
+        Eigen3::Eigen
+        MANIF::manif
+        BipedalLocomotion::ManifConversions
+        iDynTree::idyntree-model)
+
+    add_bipedal_test(NAME JointVelocityStateDynamics
+        SOURCES JointVelocityStateDynamicsTest.cpp
+        LINKS BipedalLocomotion::RobotDynamicsEstimator
+        BipedalLocomotion::ParametersHandler
+        icub-models::icub-models
+        ResolveRoboticsURICpp::ResolveRoboticsURICpp
+        Eigen3::Eigen
+        MANIF::manif
+        BipedalLocomotion::ManifConversions
+        iDynTree::idyntree-model)
 endif()
+
 
 if(FRAMEWORK_COMPILE_YarpImplementation AND FRAMEWORK_COMPILE_ManifConversions AND FRAMEWORK_COMPILE_matioCppConversions)
     if(BUILD_TESTING)

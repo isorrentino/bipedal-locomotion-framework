@@ -117,7 +117,7 @@ loadSensors(std::weak_ptr<const ParametersHandler::IParametersHandler> handler)
     }
     sensors["ft"] = ftSensorPairs;
 
-    auto contactGroup = groupModel->getGroup("EXTERNAL_CONTACT").lock();
+    auto contactGroup = groupModel->getGroup("UNKNOWN_EXTERNAL_CONTACT").lock();
     REQUIRE(contactGroup != nullptr);
     std::unordered_map<std::string, std::string> contactSensors;
     REQUIRE(contactGroup->getParameter("names", names));
@@ -296,14 +296,22 @@ void createInitialState(Dataset& dataset,
         output.ftWrenches[ftNames[idx]] = dataset.fts[ftFrames[idx]].row(0);
     }
 
-    auto contactGroup = groupModel->getGroup("EXTERNAL_CONTACT").lock();
+    auto contactGroup = groupModel->getGroup("UNKNOWN_EXTERNAL_CONTACT").lock();
     REQUIRE(contactGroup != nullptr);
-
     std::vector<std::string> contactNames;
     REQUIRE(contactGroup->getParameter("names", contactNames));
     for (int idx = 0; idx < contactNames.size(); idx++)
     {
         output.contactWrenches[contactNames[idx]] = Eigen::VectorXd::Zero(6);
+    }
+
+    auto outputExtGroup = groupModel->getGroup("OUTPUT_EXTERNAL_WRENCHES").lock();
+    REQUIRE(outputExtGroup != nullptr);
+    std::vector<std::string> extWrenchNames;
+    REQUIRE(outputExtGroup->getParameter("names", extWrenchNames));
+    for (int idx = 0; idx < extWrenchNames.size(); idx++)
+    {
+        output.outputExternalWrenches[extWrenchNames[idx]] = Eigen::VectorXd::Zero(6);
     }
 
     auto accGroup = groupModel->getGroup("ACCELEROMETER").lock();

@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators_all.hpp>
 #include <chrono>
+#include <ResolveRoboticsURICpp.h>
 
 #include <iCubModels/iCubModels.h>
 #include <yarp/os/ResourceFinder.h>
@@ -35,7 +36,11 @@ void createModelLoader(IParametersHandler::shared_ptr group, iDynTree::ModelLoad
     // List of joints and fts to load the model
     std::vector<SubModel> subModelList;
 
-    const std::string modelPath = iCubModels::getModelFile("iCubGenova09");
+    std::optional<std::string> pathTemp = ResolveRoboticsURICpp::resolveRoboticsURI("package://ergoCub/robots/ergoCubSN000/model.urdf");
+    REQUIRE(pathTemp.has_value());
+
+    std::string modelPath = pathTemp.value();
+    BipedalLocomotion::log()->info("Model path {}", modelPath);
 
     std::vector<std::string> jointList;
     REQUIRE(group->getParameter("joint_list", jointList));
@@ -109,7 +114,7 @@ IParametersHandler::shared_ptr createModelParameterHandler()
     emptyGroupNamesFrames->setParameter("associated_joints", emptyVectorString);
     REQUIRE(modelParamHandler->setGroup("FT", emptyGroupNamesFrames));
     REQUIRE(modelParamHandler->setGroup("GYROSCOPE", emptyGroupNamesFrames));
-    REQUIRE(modelParamHandler->setGroup("EXTERNAL_CONTACT", emptyGroupNamesFrames));
+    REQUIRE(modelParamHandler->setGroup("UNKNOWN_EXTERNAL_CONTACT", emptyGroupNamesFrames));
 
     auto accGroup = std::make_shared<StdImplementation>();
     std::vector<std::string> accNameList = {"r_leg_ft_acc"};

@@ -438,7 +438,7 @@ bool RDE::SubModelCreator::createSubModels(
 
     std::vector<std::string> contactNames, contactFrames;
     ok = ok
-         && populateSensorParameters("EXTERNAL_CONTACT",
+         && populateSensorParameters("UNKNOWN_EXTERNAL_CONTACT",
                                      contactNames,
                                      contactFrames);
 

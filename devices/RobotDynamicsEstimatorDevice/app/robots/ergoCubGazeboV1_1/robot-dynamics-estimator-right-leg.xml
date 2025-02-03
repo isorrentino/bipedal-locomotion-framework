@@ -32,7 +32,7 @@ BSD-3-Clause license. -->
             <param name="frames">()</param>
         </group>
 
-        <group name="EXTERNAL_CONTACT">
+        <group name="UNKNOWN_EXTERNAL_CONTACT">
             <param name="names">()</param>
             <param name="frames">()</param>
         </group>

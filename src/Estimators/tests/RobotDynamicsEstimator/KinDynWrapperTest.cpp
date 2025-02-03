@@ -10,6 +10,7 @@
 
 #include <iCubModels/iCubModels.h>
 #include <yarp/os/ResourceFinder.h>
+#include <ResolveRoboticsURICpp.h>
 
 #include <iDynTree/KinDynComputations.h>
 #include <iDynTree/FreeFloatingState.h>
@@ -35,7 +36,11 @@ void createModelLoader(IParametersHandler::shared_ptr group, iDynTree::ModelLoad
     // List of joints and fts to load the model
     std::vector<SubModel> subModelList;
 
-    const std::string modelPath = iCubModels::getModelFile("iCubGenova09");
+    std::optional<std::string> pathTemp = ResolveRoboticsURICpp::resolveRoboticsURI("package://ergoCub/robots/ergoCubSN000/model.urdf");
+    REQUIRE(pathTemp.has_value());
+
+    std::string modelPath = pathTemp.value();
+    BipedalLocomotion::log()->info("Model path {}", modelPath);
 
     std::vector<std::string> jointList;
     REQUIRE(group->getParameter("joint_list", jointList));
@@ -124,7 +129,7 @@ IParametersHandler::shared_ptr createModelParameterHandler()
     accGroup->setParameter("frames", accFrameList);
     accGroup->setParameter("ukf_names", accUkfNameList);
     REQUIRE(modelParamHandler->setGroup("ACCELEROMETER", accGroup));
-    REQUIRE(modelParamHandler->setGroup("EXTERNAL_CONTACT", emptyGroupNamesFrames));
+    REQUIRE(modelParamHandler->setGroup("UNKNOWN_EXTERNAL_CONTACT", emptyGroupNamesFrames));
 
     modelParamHandler->setParameter("joint_list", jointList);
 

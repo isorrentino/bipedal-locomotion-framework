@@ -48,12 +48,19 @@ struct RobotDynamicsEstimator::Impl
 
     std::unique_ptr<UkfState> stateModel; /**< UKF state model. */
     std::unique_ptr<UkfMeasurement> measurementModel; /**< UKF measurement model. */
+    std::shared_ptr<iDynTree::KinDynComputations> kinDyn; /**< KinDynComputations object. */
 
     std::unique_ptr<bfl::UKFPrediction> ukfPrediction;
     std::unique_ptr<bfl::UKFCorrection> ukfCorrection;
 
     System::VariablesHandler stateHandler; /**< Handler of the ukf state. */
     System::VariablesHandler measurementHandler; /**< Handler of the ukf measurement. */
+
+    std::map<std::string, std::pair<std::string, std::string>> m_externalWrenchOutputInfo; /**< List
+                                                                      of external wrenches with the
+                                                                      corresponding application
+                                                                      frame and orientation output
+                                                                      frame. */
 
     Eigen::MatrixXd initialStateCovariance;
 
@@ -95,6 +102,43 @@ bool RobotDynamicsEstimator::initialize(
     {
         log()->error("{} Error while retrieving the sampling time variable.", logPrefix);
         return false;
+    }
+
+    // Get group MODEL
+    auto groupModel = ptr->getGroup("MODEL").lock();
+    if (groupModel == nullptr)
+    {
+        log()->error("{} Error while retrieving the group MODEL.", logPrefix);
+        return false;
+    }
+    auto groupExtWrenches = groupModel->getGroup("OUTPUT_EXTERNAL_WRENCHES").lock();
+    if (groupExtWrenches == nullptr)
+    {
+        log()->error("{} Error while retrieving the group OUTPUT_EXTERNAL_WRENCHES.", logPrefix);
+        return false;
+    }
+    std::vector<std::string> contactFrames;
+    if (!groupExtWrenches->getParameter("contact_frames", contactFrames))
+    {
+        log()->error("{} Error while retrieving the application_frames of the external wrenches.", logPrefix);
+        return false;
+    }
+    std::vector<std::string> orientationOutputFrames;
+    if (!groupExtWrenches->getParameter("orientation_output_frames", orientationOutputFrames))
+    {
+        log()->error("{} Error while retrieving the orientation_output_frames of the external wrenches.", logPrefix);
+        return false;
+    }
+    std::vector<std::string> contactNames;
+    if (!groupExtWrenches->getParameter("names", contactNames))
+    {
+        log()->error("{} Error while retrieving the names of the external wrenches.", logPrefix);
+        return false;
+    }
+    // Build map with <extWrenchePorts, <application_frames, orientation_output_frames>>
+    for (size_t i = 0; i < contactNames.size(); i++)
+    {
+        m_pimpl->m_externalWrenchOutputInfo[contactNames[i]] = std::make_pair(contactFrames[i], orientationOutputFrames[i]);
     }
 
     auto groupUkf = ptr->getGroup("UKF").lock();
@@ -149,6 +193,7 @@ bool RobotDynamicsEstimator::finalize(const System::VariablesHandler& stateVaria
     m_pimpl->ukfInput.robotJointPositions.resize(kinDynFullModel->model().getNrOfDOFs());
     m_pimpl->ukfInput.robotJointAccelerations.resize(kinDynFullModel->model().getNrOfDOFs());
     m_pimpl->inputProvider->setInput(m_pimpl->ukfInput);
+    m_pimpl->kinDyn = kinDynFullModel;
 
     m_pimpl->isFinalized = true;
 
@@ -702,21 +747,6 @@ const RobotDynamicsEstimatorOutput& RobotDynamicsEstimator::getOutput() const
             }
         }
 
-        for (auto& [key, value] : m_pimpl->estimatorOutput.ftWrenchesBiases)
-        {
-            if (m_pimpl->stateHandler.getVariable(m_pimpl->variableNameToUkfState[{key, "none"}]).size > 0)
-            {
-                m_pimpl->estimatorOutput.ftWrenchesBiases[key]
-                    = m_pimpl->correctedState.mean()
-                          .segment(m_pimpl->stateHandler
-                                       .getVariable(m_pimpl->variableNameToUkfState[{key, "none"}])
-                                       .offset,
-                                   m_pimpl->stateHandler
-                                       .getVariable(m_pimpl->variableNameToUkfState[{key, "none"}])
-                                       .size);
-            }
-        }
-
         for (auto& [key, value] : m_pimpl->estimatorOutput.linearAccelerations)
         {
             if (m_pimpl->stateHandler.getVariable(m_pimpl->variableNameToUkfState[{key, "accelerometer"}]).size > 0)
@@ -807,6 +837,52 @@ const RobotDynamicsEstimatorOutput& RobotDynamicsEstimator::getOutput() const
                              logPrefix,
                              m_pimpl->variableNameToUkfState[{key, "none"}],
                              key);
+            }
+        }
+
+        for (auto& [key, value] : m_pimpl->m_externalWrenchOutputInfo)
+        {
+            // Check if key is in the keys of m_pimpl->estimatorOutput.ftWrenches
+            // if yes take the value, compute the adjoint to rotate the wrench
+            // from the sensor to the frame m_pimpl->m_externalWrenchOutputInfo[key]
+            // and assign the output.
+            if (m_pimpl->estimatorOutput.ftWrenches.find(key)
+                != m_pimpl->estimatorOutput.ftWrenches.end())
+            {
+                iDynTree::Wrench idyntreeWrench;
+                idyntreeWrench.getLinearVec3()
+                    = iDynTree::GeomVector3(m_pimpl->estimatorOutput.ftWrenches[key][0],
+                                        m_pimpl->estimatorOutput.ftWrenches[key][1],
+                                        m_pimpl->estimatorOutput.ftWrenches[key][2]);
+
+                idyntreeWrench.getAngularVec3()
+                    = iDynTree::GeomVector3(m_pimpl->estimatorOutput.ftWrenches[key][3],
+                                        m_pimpl->estimatorOutput.ftWrenches[key][4],
+                                        m_pimpl->estimatorOutput.ftWrenches[key][5]);
+
+                iDynTree::Wrench transformedWrench = m_pimpl->kinDyn->getRelativeTransform(value.second, value.first) * idyntreeWrench;
+
+                m_pimpl->estimatorOutput.outputExternalWrenches[key].head<3>() = iDynTree::toEigen(transformedWrench.getLinearVec3());
+                m_pimpl->estimatorOutput.outputExternalWrenches[key].tail<3>() = iDynTree::toEigen(transformedWrench.getAngularVec3());
+            }
+            // do the same for contactWrenches if it is not in fts
+            else if (m_pimpl->estimatorOutput.contactWrenches.find(key)
+                     != m_pimpl->estimatorOutput.contactWrenches.end())
+            {
+                iDynTree::Wrench idyntreeWrench;
+                idyntreeWrench.getLinearVec3()
+                    = iDynTree::GeomVector3(m_pimpl->estimatorOutput.contactWrenches[key][0],
+                                        m_pimpl->estimatorOutput.contactWrenches[key][1],
+                                        m_pimpl->estimatorOutput.contactWrenches[key][2]);
+
+                idyntreeWrench.getAngularVec3()
+                    = iDynTree::GeomVector3(m_pimpl->estimatorOutput.contactWrenches[key][3],
+                                        m_pimpl->estimatorOutput.contactWrenches[key][4],
+                                        m_pimpl->estimatorOutput.contactWrenches[key][5]);
+
+                iDynTree::Wrench transformedWrench = m_pimpl->kinDyn->getRelativeTransform(value.second, value.first) * idyntreeWrench;
+                m_pimpl->estimatorOutput.outputExternalWrenches[key].head<3>() = iDynTree::toEigen(transformedWrench.getLinearVec3());
+                m_pimpl->estimatorOutput.outputExternalWrenches[key].tail<3>() = iDynTree::toEigen(transformedWrench.getAngularVec3());
             }
         }
     }

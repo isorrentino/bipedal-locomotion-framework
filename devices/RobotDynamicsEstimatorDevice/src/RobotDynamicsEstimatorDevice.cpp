@@ -259,7 +259,7 @@ bool RobotDynamicsEstimatorDevice::resizeEstimatorInitialState(
     }
 
     std::vector<std::string> contactList;
-    auto contactGroup = modelHandler.lock()->getGroup("EXTERNAL_CONTACT").lock();
+    auto contactGroup = modelHandler.lock()->getGroup("UNKNOWN_EXTERNAL_CONTACT").lock();
     if (!contactGroup->getParameter("names", contactList))
     {
         return false;
@@ -267,6 +267,17 @@ bool RobotDynamicsEstimatorDevice::resizeEstimatorInitialState(
     for (const auto& contact : contactList)
     {
         m_estimatorOutput.output.contactWrenches[contact] = Eigen::VectorXd::Zero(6);
+    }
+
+    std::vector<std::string> outputExtWrenches;
+    auto outputExtWrenchesGroup = modelHandler.lock()->getGroup("OUTPUT_EXTERNAL_WRENCHES").lock();
+    if (!outputExtWrenchesGroup->getParameter("names", outputExtWrenches))
+    {
+        return false;
+    }
+    for (const auto& wrenchName : outputExtWrenches)
+    {
+        m_estimatorOutput.output.outputExternalWrenches[wrenchName] = Eigen::VectorXd::Zero(6);
     }
 
     std::vector<std::string> accList;
@@ -685,6 +696,12 @@ bool RobotDynamicsEstimatorDevice::open(yarp::os::Searchable& config)
         return false;
     }
 
+    if (!openExternalWrenchesPorts(modelGroupHandler))
+    {
+        log()->error("{} Could not open external wrenches ports.", logPrefix);
+        return false;
+    }
+
     if (!openRemapperVirtualSensors())
     {
         log()->error("{} Could not open virtual analog sensors remapper.", logPrefix);
@@ -704,6 +721,55 @@ bool RobotDynamicsEstimatorDevice::open(yarp::os::Searchable& config)
     }
 
     return true;
+}
+
+bool RobotDynamicsEstimatorDevice::openExternalWrenchesPorts(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler)
+{
+    constexpr auto logPrefix = "[RobotDynamicsEstimatorDevice::openExternalWrenchesPorts]";
+    auto externalWrenchesGroup = paramHandler.lock()->getGroup("OUTPUT_EXTERNAL_WRENCHES").lock();
+    if (externalWrenchesGroup == nullptr)
+    {
+        log()->error("{} Group `OUTPUT_EXTERNAL_WRENCHES` not found in configuration.", logPrefix);
+        return false;
+    }
+
+    std::vector<std::string> portPrefixes;
+    if (!externalWrenchesGroup->getParameter("port_names", portPrefixes))
+    {
+        log()->error("{} Could not find parameter `port_names` in group `OUTPUT_EXTERNAL_WRENCHES`.", logPrefix);
+        return false;
+    }
+
+    std::vector<std::string> contactNames;
+    if (!externalWrenchesGroup->getParameter("names", contactNames))
+    {
+        log()->error("{} Could not find parameter `names` in group `OUTPUT_EXTERNAL_WRENCHES`.", logPrefix);
+        return false;
+    }
+
+    // Create map m_outputExternalWrenchesPorts
+    m_outputWrenchPorts.resize(portPrefixes.size());
+    for (size_t i = 0; i < portPrefixes.size(); i++)
+    {
+        m_outputWrenchPorts[i].portName = portPrefixes[i];
+        m_outputWrenchPorts[i].contactName = contactNames[i];
+
+        m_outputWrenchPorts[i].port = new yarp::os::BufferedPort<yarp::sig::Vector>;
+
+        if (!m_outputWrenchPorts[i].port->open(m_outputWrenchPorts[i].portName))
+        {
+            log()->error("{} Could not open port for publishing external wrenches.", logPrefix);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+template <class T> void broadcastData(T& _values, yarp::os::BufferedPort<T>& _port)
+{
+    _port.prepare()  = _values ;
+    _port.write();
 }
 
 bool RobotDynamicsEstimatorDevice::openCommunications()
@@ -874,22 +940,18 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
         {
             std::lock_guard<std::mutex> lockOutput(m_estimatorOutput.mutex);
 
-            // m_vectorsCollectionServer.populateData("ds::measured", m_estimatorInput.input.jointVelocities);
             m_vectorsCollectionServer.populateData("ds::estimated", m_estimatorOutput.output.ds);
 
             m_vectorsCollectionServer.populateData("tau_m::estimated", m_estimatorOutput.output.tau_m);
 
             m_vectorsCollectionServer.populateData("tau_F::estimated", m_estimatorOutput.output.tau_F);
-            // m_vectorsCollectionServer.populateData("tau_F::measured", m_estimatorInput.input.frictionTorques);
 
             m_estimatedTauj = m_estimatorOutput.output.tau_m - m_estimatorOutput.output.tau_F;
             m_vectorsCollectionServer.populateData("tau_j::estimated", m_estimatedTauj);
-            // m_vectorsCollectionServer.populateData("tau_j::measured", m_measuredTauj);
 
             for (auto& [key, value] : m_estimatorOutput.output.ftWrenches)
             {
                 m_vectorsCollectionServer.populateData("fts::" + key + "::estimated", value);
-                // m_vectorsCollectionServer.populateData("fts::" + key + "::measured", m_estimatorInput.input.ftWrenches[key]);
             }
 
             for (auto& [key, value] : m_estimatorOutput.output.contactWrenches)
@@ -900,13 +962,29 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
             for (auto& [key, value] : m_estimatorOutput.output.linearAccelerations)
             {
                 m_vectorsCollectionServer.populateData("accelerometers::" + key + "::estimated", value);
-                // m_vectorsCollectionServer.populateData("accelerometers::" + key + "::measured", m_estimatorInput.input.linearAccelerations[key]);
             }
 
             for (auto& [key, value] : m_estimatorOutput.output.angularVelocities)
             {
                 m_vectorsCollectionServer.populateData("gyroscopes::" + key + "::estimated", value);
-                // m_vectorsCollectionServer.populateData("gyroscopes::" + key + "::measured", m_estimatorInput.input.angularVelocities[key]);
+            }
+
+            for (auto& [key, value] : m_estimatorOutput.output.outputExternalWrenches)
+            {
+                m_vectorsCollectionServer.populateData("external_wrenches::" + key + "::estimated", value);
+            }
+
+            for (size_t i = 0; i < m_outputWrenchPorts.size(); i++)
+            {
+                yarp::sig::Vector wrenchVector;
+                m_outputWrenchPorts[i].outputVector.clear();
+                iDynTree::toYarp(m_estimatorOutput.output.outputExternalWrenches[m_outputWrenchPorts[i].contactName], wrenchVector);
+                for(int ele=0; ele<wrenchVector.size(); ele++)
+                {
+                    m_outputWrenchPorts[i].outputVector.push_back(wrenchVector[ele]);
+                }
+                broadcastData<yarp::sig::Vector>(m_outputWrenchPorts[i].outputVector,
+                                        *(m_outputWrenchPorts[i].port));
             }
 
             m_vectorsCollectionServer.sendData();
@@ -1007,6 +1085,16 @@ bool RobotDynamicsEstimatorDevice::detachAll()
     }
 
     m_remappedVirtualAnalogSensorsInterfaces.multwrap->detachAll();
+
+    return true;
+}
+
+bool RobotDynamicsEstimatorDevice::closeExternalWrenchesPorts()
+{
+    for(auto& port : m_outputWrenchPorts)
+    {
+        port.port->close();
+    }
 
     return true;
 }

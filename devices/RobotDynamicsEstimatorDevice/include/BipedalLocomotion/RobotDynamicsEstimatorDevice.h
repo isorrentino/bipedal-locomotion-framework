@@ -160,6 +160,15 @@ private:
     const std::string accelerometersName = "accelerometers";
     const std::vector<std::string> accelerometerElementNames = {"a_x", "a_y", "a_z"};
 
+    struct OutputWrenchPort
+    {
+        std::string portName;
+        std::string contactName;
+        yarp::sig::Vector outputVector;
+        yarp::os::BufferedPort<yarp::sig::Vector> * port;
+    }; /**< Output wrench port. */
+    std::vector<OutputWrenchPort> m_outputWrenchPorts; /**< Output wrench ports. */
+
     std::chrono::nanoseconds m_timePrint;
 
     // class methods
@@ -186,6 +195,13 @@ private:
                     std::vector<Estimators::RobotDynamicsEstimator::SubModel>& subModelList,
                     std::vector<std::shared_ptr<Estimators::RobotDynamicsEstimator::KinDynWrapper>>&
                         kinDynWrapperList);
+
+    /**
+     * Setup the external wrenches ports.
+     * @param paramHandler is a pointer to the parameter handler.
+     * @return true/false on success/failure.
+     */
+    bool openExternalWrenchesPorts(std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler);
 
     /**
      * Setup the robot dynamics estimator.
@@ -234,6 +250,12 @@ private:
      * @return true/false on success/failure.
      */
     bool setEstimatorInitialState();
+
+    /**
+     * Close the external wrenches ports.
+     * @return true/false on success/failure.
+     */
+    bool closeExternalWrenchesPorts();
 
     /**
      * Resize the estimator measurement based on configuration.

@@ -1149,7 +1149,7 @@ bool JointTorqueControlDevice::open(yarp::os::Searchable& config)
 
     if (!m_vectorsCollectionServer.initialize(params))
     {
-        log()->error("{} Unable to configure the server.", logPrefix);
+        log()->error("{} Unable to configure the vectors collection server.", logPrefix);
         return false;
     }
 

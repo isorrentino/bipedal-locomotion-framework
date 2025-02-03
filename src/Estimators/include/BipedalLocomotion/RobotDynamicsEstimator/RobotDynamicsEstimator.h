@@ -57,6 +57,7 @@ struct RobotDynamicsEstimatorOutput
     std::map<std::string, Eigen::VectorXd> contactWrenches; /**< External contact wrenches. */
     std::map<std::string, Eigen::VectorXd> linearAccelerations; /**< Linear acceleration of the accelerometer frames. */
     std::map<std::string, Eigen::VectorXd> angularVelocities; /**< Angular velocity of the gyroscope frames. */
+    std::map<std::string, Eigen::VectorXd> outputExternalWrenches; /**< External wrenches. */
 };
 
 /**

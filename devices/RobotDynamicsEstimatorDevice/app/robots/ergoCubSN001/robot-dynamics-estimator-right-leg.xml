@@ -35,11 +35,11 @@ BSD-3-Clause license. -->
             <param name="frames">("waist_imu_0", "r_foot_front_ft", "r_foot_rear_ft")</param>
         </group>
 
-        <!-- <group name="EXTERNAL_CONTACT">
+        <!-- <group name="UNKNOWN_EXTERNAL_CONTACT">
             <param name="names">("r_lower_leg", "r_foot_front", "r_foot_rear")</param>
             <param name="frames">("r_lower_leg", "r_foot_front", "r_foot_rear")</param>
         </group> -->
-         <group name="EXTERNAL_CONTACT">
+         <group name="UNKNOWN_EXTERNAL_CONTACT">
             <param name="names">()</param>
             <param name="frames">()</param>
         </group>
