@@ -18,7 +18,7 @@ BSD-3-Clause license. -->
   <param name="video_codec_code">mp4v</param>
   <param name="port_prefix">/yarp-robot-logger</param>
   <param name="text_logging_subnames">("ergoCubSN001/yarprobotinterface")</param>
-  <param name="code_status_cmd_prefixes">("ssh ergocub@10.0.2.2" "ssh ergocub@10.0.2.3")</param>
+  <!-- <param name="code_status_cmd_prefixes">("ssh ergocub@10.0.2.2" "ssh ergocub@10.0.2.3")</param> -->
 
   <!-- <group name="REAL_TIME_STREAMING">
     <param name="remote">"/rtLoggingVectorCollections"</param>
@@ -139,7 +139,7 @@ BSD-3-Clause license. -->
   </group>
 
   <group name="RobotCameraBridge">
-      <param name="stream_cameras">true</param>
+      <param name="stream_cameras">false</param>
       <group name="Cameras">
         <param name="rgb_cameras_list">("jabra")</param>
         <param name="rgbd_cameras_list">()</param>
@@ -151,7 +151,7 @@ BSD-3-Clause license. -->
     <param name="stream_joint_states">true</param>
     <param name="stream_motor_states">true</param>
     <param name="stream_inertials">true</param>
-    <param name="stream_cartesian_wrenches">false</param>
+    <param name="stream_cartesian_wrenches">true</param>
     <param name="stream_forcetorque_sensors">true</param>
     <param name="stream_pids">false</param>
     <param name="stream_motor_PWM">true</param>
@@ -169,9 +169,9 @@ BSD-3-Clause license. -->
       <param name="temperature_sensors_list">(l_arm_ft, r_arm_ft, l_foot_front_ft, l_foot_rear_ft, r_foot_front_ft, r_foot_rear_ft, l_leg_ft, r_leg_ft)</param>
     </group>
 
-    <!-- <group name="CartesianWrenches">
+    <group name="CartesianWrenches">
       <param name="cartesian_wrenches_list">("left_front_wrench_client", "left_rear_wrench_client", "right_front_wrench_client", "right_rear_wrench_client")</param> 
-    </group>-->
+    </group>
 
     <group name="InertialSensors">
       <param name="accelerometers_list">(waist_imu_0, l_foot_front_ft_imu, l_foot_rear_ft_imu, r_foot_front_ft_imu, r_foot_rear_ft_imu, l_leg_ft_imu, r_leg_ft_imu, r_arm_ft_imu, l_arm_ft_imu)</param>
@@ -186,13 +186,13 @@ BSD-3-Clause license. -->
   <action phase="startup" level="15" type="attach">
     <paramlist name="networks">
       <elem name="all_joints">all_joints_mc</elem>
-      <!-- <elem name="left_front_wrench_client">left_front_wrench_client</elem>
+      <elem name="left_front_wrench_client">left_front_wrench_client</elem>
       <elem name="left_rear_wrench_client">left_rear_wrench_client</elem>
       <elem name="right_front_wrench_client">right_front_wrench_client</elem>
-      <elem name="right_rear_wrench_client">right_rear_wrench_client</elem> -->
-      <!-- <elem name="right_arm_wrench_client">right_arm_wrench_client</elem>
-      <elem name="left_arm_wrench_client">left_arm_wrench_client</elem> -->
-      <elem name="jabra">jabra</elem>
+      <elem name="right_rear_wrench_client">right_rear_wrench_client</elem>
+      <elem name="right_arm_wrench_client">right_arm_wrench_client</elem>
+      <elem name="left_arm_wrench_client">left_arm_wrench_client</elem>
+      <!-- <elem name="jabra">jabra</elem> -->
       <elem name="mas-remapper">mas-remapper</elem>
     </paramlist>
   </action>
