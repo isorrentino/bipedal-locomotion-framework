@@ -3,6 +3,7 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include(FetchContent)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/ConfigFolderPath.h.in" "${CMAKE_CURRENT_BINARY_DIR}/ConfigFolderPath.h" @ONLY)
 
 
@@ -45,13 +46,17 @@ if(FRAMEWORK_COMPILE_YarpImplementation)
     add_bipedal_test(NAME SubModelCreator
         SOURCES SubModelCreatorTest.cpp
         LINKS BipedalLocomotion::RobotDynamicsEstimator
-        BipedalLocomotion::ParametersHandler
+        BipedalLocomotion::ParametersHandlerinclude(FetchContent)
         BipedalLocomotion::ParametersHandlerYarpImplementation)
 endif()
 
 if (FRAMEWORK_COMPILE_ManifConversions)
-    find_package(ResolveRoboticsURICpp REQUIRED)
-
+    FetchContent_Declare(
+        ResolveRoboticsURICpp
+        GIT_REPOSITORY https://github.com/ami-iit/resolve-robotics-uri-cpp
+        GIT_TAG        v0.0.1 # Or change this to use another release or tag
+    )
+    FetchContent_MakeAvailable(ResolveRoboticsURICpp)
 
     add_bipedal_test(NAME KinDynWrapper
         SOURCES KinDynWrapperTest.cpp
