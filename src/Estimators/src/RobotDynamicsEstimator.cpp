@@ -654,12 +654,6 @@ const RobotDynamicsEstimatorOutput& RobotDynamicsEstimator::getOutput() const
                                    m_pimpl->stateHandler
                                        .getVariable(m_pimpl->variableNameToUkfState[{key, "ft"}])
                                        .size);
-            } else
-            {
-                log()->debug("{} Variable {} associated to key {} not found in the state vector.",
-                             logPrefix,
-                             m_pimpl->variableNameToUkfState[{key, "none"}],
-                             key);
             }
         }
 
@@ -690,12 +684,6 @@ const RobotDynamicsEstimatorOutput& RobotDynamicsEstimator::getOutput() const
                                    m_pimpl->stateHandler
                                        .getVariable(m_pimpl->variableNameToUkfState[{key, "accelerometer"}])
                                        .size);
-            } else
-            {
-                log()->debug("{} Variable {} associated to key {} not found in the state vector.",
-                             logPrefix,
-                             m_pimpl->variableNameToUkfState[{key, "none"}],
-                             key);
             }
         }
 
@@ -711,12 +699,6 @@ const RobotDynamicsEstimatorOutput& RobotDynamicsEstimator::getOutput() const
                                    m_pimpl->stateHandler
                                        .getVariable(m_pimpl->variableNameToUkfState[{key, "gyroscope"}])
                                        .size);
-            } else
-            {
-                log()->debug("{} Variable {} associated to key {} not found in the state vector.",
-                             logPrefix,
-                             m_pimpl->variableNameToUkfState[{key, "none"}],
-                             key);
             }
         }
 
@@ -762,17 +744,6 @@ const RobotDynamicsEstimatorOutput& RobotDynamicsEstimator::getOutput() const
                                    m_pimpl->stateHandler
                                        .getVariable(m_pimpl->variableNameToUkfState[{key, "none"}])
                                        .size);
-                log()->info("{} Variable {} associated to key {} found in the state vector and has value {}.",
-                             logPrefix,
-                             m_pimpl->variableNameToUkfState[{key, "none"}],
-                             key,
-                             m_pimpl->estimatorOutput.contactWrenches[key]);
-            } else
-            {
-                log()->debug("{} Variable {} associated to key {} not found in the state vector.",
-                             logPrefix,
-                             m_pimpl->variableNameToUkfState[{key, "none"}],
-                             key);
             }
         }
     }
