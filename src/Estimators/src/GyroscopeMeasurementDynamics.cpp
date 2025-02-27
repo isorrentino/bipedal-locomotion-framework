@@ -5,212 +5,218 @@
  * distributed under the terms of the BSD-3-Clause license.
  */
 
-#include <Eigen/Dense>
+ #include <Eigen/Dense>
 
-#include <BipedalLocomotion/Math/Constants.h>
-#include <BipedalLocomotion/RobotDynamicsEstimator/GyroscopeMeasurementDynamics.h>
-#include <BipedalLocomotion/TextLogging/Logger.h>
+ #include <BipedalLocomotion/Math/Constants.h>
+ #include <BipedalLocomotion/RobotDynamicsEstimator/GyroscopeMeasurementDynamics.h>
+ #include <BipedalLocomotion/TextLogging/Logger.h>
 
-namespace RDE = BipedalLocomotion::Estimators::RobotDynamicsEstimator;
+ namespace RDE = BipedalLocomotion::Estimators::RobotDynamicsEstimator;
 
-RDE::GyroscopeMeasurementDynamics::GyroscopeMeasurementDynamics() = default;
+ RDE::GyroscopeMeasurementDynamics::GyroscopeMeasurementDynamics() = default;
 
-RDE::GyroscopeMeasurementDynamics::~GyroscopeMeasurementDynamics() = default;
+ RDE::GyroscopeMeasurementDynamics::~GyroscopeMeasurementDynamics() = default;
 
-bool RDE::GyroscopeMeasurementDynamics::initialize(
-    std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler,
-    const std::string& name)
-{
-    constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::initialize]";
+ bool RDE::GyroscopeMeasurementDynamics::initialize(
+     std::weak_ptr<const ParametersHandler::IParametersHandler> paramHandler,
+     const std::string& name)
+ {
+     constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::initialize]";
 
-    auto ptr = paramHandler.lock();
-    if (ptr == nullptr)
-    {
-        log()->error("{} The parameter handler is not valid.", errorPrefix);
-        return false;
-    }
+     auto ptr = paramHandler.lock();
+     if (ptr == nullptr)
+     {
+         log()->error("{} The parameter handler is not valid.", errorPrefix);
+         return false;
+     }
 
-    m_name = name;
+     m_name = name;
 
-    // Set the state process covariance
-    if (!ptr->getParameter("covariance", m_covSingleVar))
-    {
-        log()->error("{} Error while retrieving the covariance variable.", errorPrefix);
-        return false;
-    }
+     // Set the state process covariance
+     if (!ptr->getParameter("covariance", m_covSingleVar))
+     {
+         log()->error("{} Error while retrieving the covariance variable.", errorPrefix);
+         return false;
+     }
 
-    // Set the bias related variables if use_bias is true
-    if (!ptr->getParameter("use_bias", m_useBias))
-    {
-        log()->info("{} Variable use_bias not found. Set to false by default.", errorPrefix);
-    } else
-    {
-        m_biasVariableName = m_name + "_bias";
-    }
+     if (!ptr->getParameter("variable_name", m_gyroName))
+     {
+         log()->error("{} Error while retrieving the variable_name variable.", errorPrefix);
+         return false;
+     }
 
-    m_description = "Gyroscope measurement dynamics";
+     // Set the bias related variables if use_bias is true
+     if (!ptr->getParameter("use_bias", m_useBias))
+     {
+         log()->info("{} Variable use_bias not found. Set to false by default.", errorPrefix);
+     } else
+     {
+         m_biasVariableName = m_name + "_bias";
+     }
 
-    m_isInitialized = true;
+     m_description = "Gyroscope measurement dynamics";
 
-    return true;
-}
+     m_isInitialized = true;
 
-bool RDE::GyroscopeMeasurementDynamics::finalize(
-    const System::VariablesHandler& stateVariableHandler)
-{
-    constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::finalize]";
+     return true;
+ }
 
-    if (!m_isInitialized)
-    {
-        log()->error("{} Please initialize the dynamics before calling finalize.", errorPrefix);
-        return false;
-    }
+ bool RDE::GyroscopeMeasurementDynamics::finalize(
+     const System::VariablesHandler& stateVariableHandler)
+ {
+     constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::finalize]";
 
-    if (stateVariableHandler.getNumberOfVariables() == 0)
-    {
-        log()->error("{} The state variable handler is empty.", errorPrefix);
-        return false;
-    }
+     if (!m_isInitialized)
+     {
+         log()->error("{} Please initialize the dynamics before calling finalize.", errorPrefix);
+         return false;
+     }
 
-    m_stateVariableHandler = stateVariableHandler;
+     if (stateVariableHandler.getNumberOfVariables() == 0)
+     {
+         log()->error("{} The state variable handler is empty.", errorPrefix);
+         return false;
+     }
 
-    if (!checkStateVariableHandler())
-    {
-        log()->error("{} The state variable handler is not valid.", errorPrefix);
-        return false;
-    }
+     m_stateVariableHandler = stateVariableHandler;
 
-    // Search and save all the submodels containing the sensor
-    for (int submodelIndex = 0; submodelIndex < m_nrOfSubDynamics; submodelIndex++)
-    {
-        if (m_subModelList[submodelIndex].hasGyroscope(m_name))
-        {
-            m_subModelWithGyro.push_back(submodelIndex);
-        }
-    }
+     if (!checkStateVariableHandler())
+     {
+         log()->error("{} The state variable handler is not valid.", errorPrefix);
+         return false;
+     }
 
-    m_covariances.resize(m_covSingleVar.size() * m_subModelWithGyro.size());
-    for (int index = 0; index < m_subModelWithGyro.size(); index++)
-    {
-        m_covariances.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-            = m_covSingleVar;
-    }
+     // Search and save all the submodels containing the sensor
+     for (int submodelIndex = 0; submodelIndex < m_nrOfSubDynamics; submodelIndex++)
+     {
+         if (m_subModelList[submodelIndex].hasGyroscope(m_gyroName))
+         {
+             m_subModelWithGyro.push_back(submodelIndex);
+         }
+     }
 
-    m_size = m_covariances.size();
+     m_covariances.resize(m_covSingleVar.size() * m_subModelWithGyro.size());
+     for (int index = 0; index < m_subModelWithGyro.size(); index++)
+     {
+         m_covariances.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
+             = m_covSingleVar;
+     }
 
-    m_jointVelocityFullModel.resize(m_stateVariableHandler.getVariable("JOINT_VELOCITIES").size);
-    m_jointVelocityFullModel.setZero();
+     m_size = m_covariances.size();
 
-    m_subModelJointVel.resize(m_nrOfSubDynamics);
+     m_jointVelocityFullModel.resize(m_stateVariableHandler.getVariable("JOINT_VELOCITIES").size);
+     m_jointVelocityFullModel.setZero();
 
-    for (int idx = 0; idx < m_nrOfSubDynamics; idx++)
-    {
-        m_subModelJointVel[idx].resize(m_subModelList[idx].getJointMapping().size());
-        m_subModelJointVel[idx].setZero();
-    }
+     m_subModelJointVel.resize(m_nrOfSubDynamics);
 
-    m_bias.resize(m_covSingleVar.size());
-    m_bias.setZero();
+     for (int idx = 0; idx < m_nrOfSubDynamics; idx++)
+     {
+         m_subModelJointVel[idx].resize(m_subModelList[idx].getJointMapping().size());
+         m_subModelJointVel[idx].setZero();
+     }
 
-    m_updatedVariable.resize(m_size);
-    m_updatedVariable.setZero();
+     m_bias.resize(m_covSingleVar.size());
+     m_bias.setZero();
 
-    return true;
-}
+     m_updatedVariable.resize(m_size);
+     m_updatedVariable.setZero();
 
-bool RDE::GyroscopeMeasurementDynamics::setSubModels(
-    const std::vector<SubModel>& subModelList,
-    const std::vector<std::shared_ptr<KinDynWrapper>>& kinDynWrapperList)
-{
-    constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::setSubModels]";
+     return true;
+ }
 
-    m_subModelList = subModelList;
-    m_subModelKinDynList = kinDynWrapperList;
+ bool RDE::GyroscopeMeasurementDynamics::setSubModels(
+     const std::vector<SubModel>& subModelList,
+     const std::vector<std::shared_ptr<KinDynWrapper>>& kinDynWrapperList)
+ {
+     constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::setSubModels]";
 
-    if (m_subModelList.size() == 0 || m_subModelKinDynList.size() == 0
-        || m_subModelList.size() != m_subModelKinDynList.size())
-    {
-        log()->error("{} Wrong size of input parameters", errorPrefix);
-        return false;
-    }
+     m_subModelList = subModelList;
+     m_subModelKinDynList = kinDynWrapperList;
 
-    m_nrOfSubDynamics = m_subModelList.size();
+     if (m_subModelList.size() == 0 || m_subModelKinDynList.size() == 0
+         || m_subModelList.size() != m_subModelKinDynList.size())
+     {
+         log()->error("{} Wrong size of input parameters", errorPrefix);
+         return false;
+     }
 
-    m_isSubModelListSet = true;
+     m_nrOfSubDynamics = m_subModelList.size();
 
-    return true;
-}
+     m_isSubModelListSet = true;
 
-bool RDE::GyroscopeMeasurementDynamics::checkStateVariableHandler()
-{
-    constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::checkStateVariableHandler]";
+     return true;
+ }
 
-    if (!m_stateVariableHandler.getVariable("JOINT_VELOCITIES").isValid())
-    {
-        log()->error("{} The variable handler does not contain the expected state with name `JOINT_VELOCITIES`.",
-                     errorPrefix);
-        return false;
-    }
+ bool RDE::GyroscopeMeasurementDynamics::checkStateVariableHandler()
+ {
+     constexpr auto errorPrefix = "[GyroscopeMeasurementDynamics::checkStateVariableHandler]";
 
-    if (!m_useBias)
-    {
-        return true;
-    }
-    if (!m_stateVariableHandler.getVariable(m_biasVariableName).isValid())
-    {
-        log()->error("{} The variable handler does not contain the expected state with name `{}`.",
-                     errorPrefix,
-                     m_biasVariableName);
-        return false;
-    }
+     if (!m_stateVariableHandler.getVariable("JOINT_VELOCITIES").isValid())
+     {
+         log()->error("{} The variable handler does not contain the expected state with name `JOINT_VELOCITIES`.",
+                      errorPrefix);
+         return false;
+     }
 
-    return true;
-}
+     if (!m_useBias)
+     {
+         return true;
+     }
+     if (!m_stateVariableHandler.getVariable(m_biasVariableName).isValid())
+     {
+         log()->error("{} The variable handler does not contain the expected state with name `{}`.",
+                      errorPrefix,
+                      m_biasVariableName);
+         return false;
+     }
 
-bool RDE::GyroscopeMeasurementDynamics::update()
-{
-    for (int index = 0; index < m_subModelWithGyro.size(); index++)
-    {
-        m_accelerometerVelocity = Conversions::toManifTwist(
-            m_subModelKinDynList[m_subModelWithGyro[index]]->getFrameVel(
-                m_subModelList[m_subModelWithGyro[index]].getGyroscope(m_name).frameIndex));
+     return true;
+ }
 
-        m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-            = m_accelerometerVelocity.ang();
+ bool RDE::GyroscopeMeasurementDynamics::update()
+ {
+     for (int index = 0; index < m_subModelWithGyro.size(); index++)
+     {
+         m_accelerometerVelocity = Conversions::toManifTwist(
+             m_subModelKinDynList[m_subModelWithGyro[index]]->getFrameVel(
+                 m_subModelList[m_subModelWithGyro[index]].getGyroscope(m_gyroName).frameIndex));
 
-        if (m_useBias)
-        {
-            m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
-                += m_bias;
-        }
-    }
+         m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
+             = m_accelerometerVelocity.ang();
 
-    return true;
-}
+         if (m_useBias)
+         {
+             m_updatedVariable.segment(index * m_covSingleVar.size(), m_covSingleVar.size())
+                 += m_bias;
+         }
+     }
 
-void RDE::GyroscopeMeasurementDynamics::setState(const Eigen::Ref<const Eigen::VectorXd> ukfState)
-{
-    m_jointVelocityFullModel = ukfState.segment(m_stateVariableHandler.getVariable("JOINT_VELOCITIES").offset,
-                                                m_stateVariableHandler.getVariable("JOINT_VELOCITIES").size);
+     return true;
+ }
 
-    for (int smIndex = 0; smIndex < m_subModelList.size(); smIndex++)
-    {
-        for (int jntIndex = 0; jntIndex < m_subModelList[smIndex].getModel().getNrOfDOFs();
-             jntIndex++)
-        {
-            m_subModelJointVel[smIndex][jntIndex]
-                = m_jointVelocityFullModel[m_subModelList[smIndex].getJointMapping()[jntIndex]];
-        }
-    }
+ void RDE::GyroscopeMeasurementDynamics::setState(const Eigen::Ref<const Eigen::VectorXd> ukfState)
+ {
+     m_jointVelocityFullModel = ukfState.segment(m_stateVariableHandler.getVariable("JOINT_VELOCITIES").offset,
+                                                 m_stateVariableHandler.getVariable("JOINT_VELOCITIES").size);
 
-    if (m_useBias)
-    {
-        m_bias = ukfState.segment(m_stateVariableHandler.getVariable(m_biasVariableName).offset,
-                                  m_stateVariableHandler.getVariable(m_biasVariableName).size);
-    }
-}
+     for (int smIndex = 0; smIndex < m_subModelList.size(); smIndex++)
+     {
+         for (int jntIndex = 0; jntIndex < m_subModelList[smIndex].getModel().getNrOfDOFs();
+              jntIndex++)
+         {
+             m_subModelJointVel[smIndex][jntIndex]
+                 = m_jointVelocityFullModel[m_subModelList[smIndex].getJointMapping()[jntIndex]];
+         }
+     }
 
-void RDE::GyroscopeMeasurementDynamics::setInput(const UKFInput& ukfInput)
-{
-    return;
-}
+     if (m_useBias)
+     {
+         m_bias = ukfState.segment(m_stateVariableHandler.getVariable(m_biasVariableName).offset,
+                                   m_stateVariableHandler.getVariable(m_biasVariableName).size);
+     }
+ }
+
+ void RDE::GyroscopeMeasurementDynamics::setInput(const UKFInput& ukfInput)
+ {
+     return;
+ }

@@ -5,76 +5,76 @@
  * distributed under the terms of the BSD-3-Clause license.
  */
 
-#include <BipedalLocomotion/RobotDynamicsEstimator/Dynamics.h>
+ #include <BipedalLocomotion/RobotDynamicsEstimator/Dynamics.h>
 
-using namespace BipedalLocomotion::Estimators::RobotDynamicsEstimator;
-using namespace BipedalLocomotion::System;
-using namespace BipedalLocomotion::ParametersHandler;
+ using namespace BipedalLocomotion::Estimators::RobotDynamicsEstimator;
+ using namespace BipedalLocomotion::System;
+ using namespace BipedalLocomotion::ParametersHandler;
 
-const UKFInput& UkfInputProvider::getOutput() const
-{
-    return m_ukfInput;
-}
+ const UKFInput& UkfInputProvider::getOutput() const
+ {
+     return m_ukfInput;
+ }
 
-bool UkfInputProvider::advance()
-{
-    return true;
-}
+ bool UkfInputProvider::advance()
+ {
+     return true;
+ }
 
-bool UkfInputProvider::setInput(const UKFInput& input)
-{
-    m_ukfInput = input;
+ bool UkfInputProvider::setInput(const UKFInput& input)
+ {
+     m_ukfInput = input;
 
-    return true;
-}
+     return true;
+ }
 
-bool UkfInputProvider::isOutputValid() const
-{
-    return m_ukfInput.robotJointPositions.size() != 0;
-}
+ bool UkfInputProvider::isOutputValid() const
+ {
+     return m_ukfInput.robotJointPositions.size() != 0;
+ }
 
-bool Dynamics::initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> /**paramHandler**/,
-                          const std::string& /**name**/)
-{
-    return true;
-}
+ bool Dynamics::initialize(std::weak_ptr<const ParametersHandler::IParametersHandler> /**paramHandler**/,
+                           const std::string& /**name**/)
+ {
+     return true;
+ }
 
-bool Dynamics::finalize(const System::VariablesHandler& /**stateVariableHandler**/)
-{
-    return true;
-}
+ bool Dynamics::finalize(const System::VariablesHandler& /**stateVariableHandler**/)
+ {
+     return true;
+ }
 
-bool Dynamics::setSubModels(const std::vector<SubModel>& /**subModelList**/, const std::vector<std::shared_ptr<KinDynWrapper>>& /**kinDynWrapperList**/)
-{
-    return true;
-}
+ bool Dynamics::setSubModels(const std::vector<SubModel>& /**subModelList**/, const std::vector<std::shared_ptr<KinDynWrapper>>& /**kinDynWrapperList**/)
+ {
+     return true;
+ }
 
-bool Dynamics::update()
-{
-    return true;
-}
+ bool Dynamics::update()
+ {
+     return true;
+ }
 
-Eigen::Ref<const Eigen::VectorXd> Dynamics::getUpdatedVariable() const
-{
-    return m_updatedVariable;
-}
+ Eigen::Ref<const Eigen::VectorXd> Dynamics::getUpdatedVariable() const
+ {
+     return m_updatedVariable;
+ }
 
-int Dynamics::size() const
-{
-    return m_size;
-}
+ int Dynamics::size() const
+ {
+     return m_size;
+ }
 
-Eigen::Ref<const Eigen::VectorXd> Dynamics::getCovariance()
-{
-    return m_covariances;
-}
+ Eigen::Ref<const Eigen::VectorXd> Dynamics::getCovariance()
+ {
+     return m_covariances;
+ }
 
-bool Dynamics::checkStateVariableHandler()
-{
-    return true;
-}
+ bool Dynamics::checkStateVariableHandler()
+ {
+     return true;
+ }
 
-Eigen::Ref<const Eigen::VectorXd> Dynamics::getInitialStateCovariance()
-{
-    return m_initialCovariances;
-}
+ Eigen::Ref<const Eigen::VectorXd> Dynamics::getInitialStateCovariance()
+ {
+     return m_initialCovariances;
+ }
