@@ -157,8 +157,6 @@ bool RobotDynamicsEstimatorDevice::setupRobotModel(
     jointsAndFTs.insert(jointsAndFTs.begin(), m_jointNameList.begin(), m_jointNameList.end());
     jointsAndFTs.insert(jointsAndFTs.end(), ftJointList.begin(), ftJointList.end());
 
-    log()->error("");
-
     if (!mdlLdr.loadReducedModelFromFile(modelFilePath, jointsAndFTs, fixedJointsMap))
     {
         log()->error("{} Could not load robot model", logPrefix);
