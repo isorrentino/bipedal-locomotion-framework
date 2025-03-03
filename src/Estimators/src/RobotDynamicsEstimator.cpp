@@ -529,11 +529,11 @@
              }
              m_pimpl->correctedState.mean().segment(variable.offset, variable.size) = val;
          }
-         else
-         {
-             log()->error("{} Variable `{}` not found.", logPrefix, key);
-             return false;
-         }
+        //  else
+        //  {
+        //      log()->error("{} Variable `{}` not found.", logPrefix, key);
+        //      return false;
+        //  }
      }
 
      for (auto const& [key, val] : initialState.angularVelocities)
@@ -551,11 +551,11 @@
              }
              m_pimpl->correctedState.mean().segment(variable.offset, variable.size) = val;
          }
-         else
-         {
-             log()->error("{} Variable `{}` not found.", logPrefix, key);
-             return false;
-         }
+        //  else
+        //  {
+        //      log()->error("{} Variable `{}` not found.", logPrefix, key);
+        //      return false;
+        //  }
      }
 
      m_pimpl->estimatorOutput = initialState;

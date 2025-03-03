@@ -51,9 +51,17 @@
 
  // INLINE OPERATIONS
  /** Saturate the specified value between the specified bounds. */
+ inline double saturation(const double x, const double jointVel, const double xMax, const double xMin)
+ {
+    if (jointVel > 5.0 || jointVel < -5.0)
+        return x > xMax ? xMax : (x < xMin ? xMin : x);
+    else
+        return x;
+ }
+
  inline double saturation(const double x, const double xMax, const double xMin)
  {
-     return x > xMax ? xMax : (x < xMin ? xMin : x);
+    return x > xMax ? xMax : (x < xMin ? xMin : x);
  }
 
  inline double sign(double x)
@@ -522,6 +530,7 @@
      }
 
      frictionTorque = saturation(frictionTorque,
+                                 measuredJointVelocities[joint],
                                  motorTorqueCurrentParameters[joint].maxOutputFriction,
                                  -motorTorqueCurrentParameters[joint].maxOutputFriction);
 
