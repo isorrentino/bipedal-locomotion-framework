@@ -864,7 +864,7 @@ bool RobotDynamicsEstimatorDevice::updateMeasurements()
         }
     }
 
-    m_robotSensorBridge->getJointTorques(m_measuredTauj);
+    // m_robotSensorBridge->getJointTorques(m_measuredTauj);
 
     return true;
 }
@@ -913,7 +913,6 @@ void RobotDynamicsEstimatorDevice::publishEstimatorOutput()
 
             m_estimatedTauj = m_estimatorOutput.output.tau_m - m_estimatorOutput.output.tau_F;
             m_vectorsCollectionServer.populateData("tau_j::estimated", m_estimatedTauj);
-            // m_vectorsCollectionServer.populateData("tau_j::measured", m_measuredTauj);
 
             for (auto& [key, value] : m_estimatorOutput.output.ftWrenches)
             {
