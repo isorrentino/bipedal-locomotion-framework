@@ -1709,13 +1709,7 @@
 
  void JointTorqueControlDevice::run()
  {
-     std::chrono::nanoseconds now = BipedalLocomotion::clock().now();
-
-     std::lock_guard<std::mutex> lock(globalMutex);
-     if (now.count() - timeOfLastControlLoop.count() >= this->getPeriod())
-     {
-         this->controlLoop();
-     }
+     this->controlLoop();
  }
 
  void JointTorqueControlDevice::controlLoop()
@@ -1740,6 +1734,5 @@
                              hijackedMotors.data(),
                              desiredMotorCurrentsHijackedMotors.data());
 
-         timeOfLastControlLoop = BipedalLocomotion::clock().now();
      }
  }
