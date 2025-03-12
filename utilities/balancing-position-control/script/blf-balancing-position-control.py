@@ -99,8 +99,22 @@ def build_kin_dyn(param_handler):
     joint_list = param_handler.get_group("ROBOT_CONTROL").get_parameter_vector_string(
         "joints_list"
     )
+
+    fixed_joints_list = param_handler.get_group("ROBOT_CONTROL").get_parameter_vector_string(
+        "fixed_joints_list"
+    )
+
+    fixed_joints_position = param_handler.get_group("ROBOT_CONTROL").get_parameter_vector_float(
+        "fixed_joints_position"
+    )
+
+    ## create a dictionary with the fixed joints
+    fixed_joints = dict()
+    for i in range(len(fixed_joints_list)):
+        fixed_joints[fixed_joints_list[i]] = np.deg2rad(fixed_joints_position[i])
+
     ml = idyn.ModelLoader()
-    ml.loadReducedModelFromFile(robot_model_path, joint_list)
+    ml.loadReducedModelFromFile(robot_model_path, joint_list, fixed_joints)
 
     kindyn = idyn.KinDynComputations()
     kindyn.loadRobotModel(ml.model())
@@ -122,8 +136,25 @@ def create_new_spline(knots_positions, motion_duration: timedelta, dt: timedelta
     com_spline.set_final_conditions([0, 0, 0], [0, 0, 0])
     com_spline.set_advance_time_step(dt)
     com_spline.set_knots(knots_positions, [timedelta(seconds=0), motion_duration])
+    
     return com_spline
 
+def get_com_reference(t_start: timedelta, t: timedelta, amplitude: float, frequency: float):
+
+    com_position_delta = np.zeros(3)
+    com_velocity = np.zeros(3)
+    com_acceleration = np.zeros(3)
+
+    ## if time lower than t_start, the com is at the middle of the support polygon
+    if t.total_seconds() > t_start.total_seconds():
+        #sinusoid only on y-direction
+        com_position_delta[1] = amplitude * np.sin(2 * np.pi * frequency * (t.total_seconds() - t_start.total_seconds()))
+        #velocity
+        com_velocity[1] = amplitude * 2 * np.pi * frequency * np.cos(2 * np.pi * frequency * (t.total_seconds() - t_start.total_seconds()))
+        #acceleration
+        com_acceleration[1] = - amplitude * (2 * np.pi * frequency)**2 * np.sin(2 * np.pi * frequency * (t.total_seconds() - t_start.total_seconds()))
+
+    return com_position_delta, com_velocity, com_acceleration
 
 def main():
     # Before everything let use the YarpSink for the logger and the YarpClock as clock. These are functionalities
@@ -209,6 +240,7 @@ def main():
     ):
         raise RuntimeError("Unable to set the robot state")
     initial_com_position = kindyn.getCenterOfMassPosition().toNumPy()
+    initial_torso_orientation = kindyn.getWorldTransform("chest").getRotation().toNumPy()
 
     if not kindyn_with_measured.setFloatingBase(base_link):
         raise RuntimeError("Unable to set the floating base")
@@ -253,31 +285,37 @@ def main():
         raise RuntimeError(
             "Unable to set the set point for the joint regularization task"
         )
-    if not ik.tasks["torso_task"].set_set_point(manif.SO3.Identity()):
+    # if not ik.tasks["torso_task"].set_set_point(manif.SO3.Identity()):
+    #     raise RuntimeError("Unable to set the set point for the torso task")
+
+    if not ik.tasks["torso_task"].set_set_point(blf.conversions.to_manif_rot(initial_torso_orientation)):
         raise RuntimeError("Unable to set the set point for the torso task")
 
     desired_joint_positions = joint_positions.copy()
 
-    com_knots_delta_x = param_handler.get_parameter_vector_float("com_knots_delta_x")
-    com_knots_delta_y = param_handler.get_parameter_vector_float("com_knots_delta_y")
-    com_knots_delta_z = param_handler.get_parameter_vector_float("com_knots_delta_z")
-    motion_duration = param_handler.get_parameter_datetime("motion_duration")
+    # com_knots_delta_x = param_handler.get_parameter_vector_float("com_knots_delta_x")
+    # com_knots_delta_y = param_handler.get_parameter_vector_float("com_knots_delta_y")
+    # com_knots_delta_z = param_handler.get_parameter_vector_float("com_knots_delta_z")
+    # motion_duration = param_handler.get_parameter_datetime("motion_duration")
+
+    sinusoid_amplitude = param_handler.get_parameter_float("amplitude")
+    sinusoid_frequency = param_handler.get_parameter_float("frequency")
     motion_timeout = param_handler.get_parameter_datetime("motion_timeout")
 
-    spline = create_new_spline(
-        [
-            initial_com_position
-            + np.array(
-                [com_knots_delta_x[0], com_knots_delta_y[0], com_knots_delta_z[0]]
-            ),
-            initial_com_position
-            + np.array(
-                [com_knots_delta_x[1], com_knots_delta_y[1], com_knots_delta_z[1]]
-            ),
-        ],
-        motion_duration,
-        dt,
-    )
+    # spline = create_new_spline(
+    #     [
+    #         initial_com_position
+    #         + np.array(
+    #             [com_knots_delta_x[0], com_knots_delta_y[0], com_knots_delta_z[0]]
+    #         ),
+    #         initial_com_position
+    #         + np.array(
+    #             [com_knots_delta_x[1], com_knots_delta_y[1], com_knots_delta_z[1]]
+    #         ),
+    #     ],
+    #     motion_duration,
+    #     dt,
+    # )
 
     index = 0
     knot_index = 1
@@ -343,6 +381,8 @@ def main():
     blf.log().info("Press enter to start the balancing controller")
     input()
     blf.log().info("Starting the balancing controller")
+
+    t = timedelta(seconds=0)
 
     while True:
         tic = blf.clock().now()
@@ -416,24 +456,38 @@ def main():
             raise RuntimeError("Unable to advance the global cop evaluator")
         global_zmp_from_measured = global_cop_evaluator.get_output()
 
-        # use the CoM-ZMP controller
-        if not spline.advance():
-            raise RuntimeError("Unable to advance the spline")
 
-        com_spline_output = spline.get_output()
+        # advance reference trajectory
+        com_position_delta_reference, com_velocity_reference, com_acceleration_reference = get_com_reference(
+            t_start=motion_timeout,
+            t=t,
+            amplitude=sinusoid_amplitude,
+            frequency=sinusoid_frequency,
+        )
+        com_position_reference = initial_com_position + com_position_delta_reference
+
+        # use the CoM-ZMP controller
+        # if not spline.advance():
+        #     raise RuntimeError("Unable to advance the spline")
+
+        # com_spline_output = spline.get_output()
         # evaluate the desired ZMP using the LIP model
         # ddx_com = omega^2 * (x_com - x_zmp)
+        # desired_zmp = (
+        #     com_spline_output.position[:2]
+        #     - com_spline_output.acceleration[:2] / lipm_omega_square
+        # )
         desired_zmp = (
-            com_spline_output.position[:2]
-            - com_spline_output.acceleration[:2] / lipm_omega_square
+            com_position_reference[:2]
+            - com_acceleration_reference[:2] / lipm_omega_square
         )
         desired_zmp = np.append(desired_zmp, 0.0)
 
         # set the desired ZMP and the feedback if close_loop_with_zmp is true
         if close_loop_with_zmp:
             com_zmp_controller.set_set_point(
-                com_spline_output.velocity[:2],
-                com_spline_output.position[:2],
+                com_velocity_reference[:2],
+                com_position_reference[:2],
                 desired_zmp[:2],
             )
             com_zmp_controller.set_feedback(
@@ -447,15 +501,15 @@ def main():
         # evaluate the desired CoM position
         if close_loop_with_zmp:
             desired_com_velocity = np.append(
-                com_zmp_controller.get_output(), com_spline_output.velocity[2]
+                com_zmp_controller.get_output(), com_velocity_reference[2]
             )
             desired_com_position[0:2] += (
                 com_zmp_controller.get_output() * dt.total_seconds()
             )
-            desired_com_position[2] = com_spline_output.position[2]
+            desired_com_position[2] = com_position_reference[2]
         else:
-            desired_com_velocity = com_spline_output.velocity
-            desired_com_position = com_spline_output.position
+            desired_com_velocity = com_velocity_reference
+            desired_com_position = com_position_reference
 
         # solve the IK
         if not ik.tasks["com_task"].set_set_point(
@@ -512,13 +566,13 @@ def main():
             "com::measured::with_joint_measured", com_from_measured
         )
         vectors_collection_server.populate_data(
-            "com::planned::position", com_spline_output.position
+            "com::planned::position", com_position_reference
         )
         vectors_collection_server.populate_data(
-            "com::planned::velocity", com_spline_output.velocity
+            "com::planned::velocity", com_velocity_reference
         )
         vectors_collection_server.populate_data(
-            "com::planned::acceleration", com_spline_output.acceleration
+            "com::planned::acceleration", com_acceleration_reference
         )
         vectors_collection_server.populate_data(
             "com::com_zmp::position", desired_com_position
@@ -532,41 +586,42 @@ def main():
 
         vectors_collection_server.send_data()
 
-        if index * dt >= motion_duration + motion_timeout:
-            if knot_index + 1 >= len(com_knots_delta_x):
-                blf.log().info("Motion completed. Closing.")
-                break
+        # if index * dt >= motion_duration + motion_timeout:
+        #     if knot_index + 1 >= len(com_knots_delta_x):
+        #         blf.log().info("Motion completed. Closing.")
+        #         break
 
-            spline = create_new_spline(
-                [
-                    initial_com_position
-                    + np.array(
-                        [
-                            com_knots_delta_x[knot_index],
-                            com_knots_delta_y[knot_index],
-                            com_knots_delta_z[knot_index],
-                        ]
-                    ),
-                    initial_com_position
-                    + np.array(
-                        [
-                            com_knots_delta_x[knot_index + 1],
-                            com_knots_delta_y[knot_index + 1],
-                            com_knots_delta_z[knot_index + 1],
-                        ]
-                    ),
-                ],
-                motion_duration,
-                dt,
-            )
+        #     spline = create_new_spline(
+        #         [
+        #             initial_com_position
+        #             + np.array(
+        #                 [
+        #                     com_knots_delta_x[knot_index],
+        #                     com_knots_delta_y[knot_index],
+        #                     com_knots_delta_z[knot_index],
+        #                 ]
+        #             ),
+        #             initial_com_position
+        #             + np.array(
+        #                 [
+        #                     com_knots_delta_x[knot_index + 1],
+        #                     com_knots_delta_y[knot_index + 1],
+        #                     com_knots_delta_z[knot_index + 1],
+        #                 ]
+        #             ),
+        #         ],
+        #         motion_duration,
+        #         dt,
+        #     )
 
-            knot_index += 1
-            index = 0
-        else:
-            index += 1
+        #     knot_index += 1
+        #     index = 0
+        # else:
+        #     index += 1
 
         toc = blf.clock().now()
         delta_time = toc - tic
+        t = t + dt
         if delta_time < dt:
             blf.clock().sleep_for(dt - delta_time)
 
