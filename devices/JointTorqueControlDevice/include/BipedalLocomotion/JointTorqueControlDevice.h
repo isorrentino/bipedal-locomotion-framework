@@ -185,6 +185,8 @@ struct MotorTorqueCurrentParameters
      std::string m_portPrefix{"/hijackingTrqCrl"}; /**< Default port prefix. */
      BipedalLocomotion::YarpUtilities::VectorsCollectionServer m_vectorsCollectionServer; /**< Logger server. */
      std::vector<int> m_gearRatios;
+     std::vector<double> m_lowerLimits;
+     std::vector<double> m_upperLimits;
      std::vector<std::string> m_axisNames;
      LowPassFilterParameters m_lowPassFilterParameters;
      bool isTorqueControlEnabled = false;
