@@ -611,18 +611,15 @@ void JointTorqueControlDevice::computeDesiredCurrents()
             desiredMotorCurrents[j] = saturation(desiredMotorCurrents[j],
                                                  motorTorqueCurrentParameters[j].maxCurr,
                                                  -motorTorqueCurrentParameters[j].maxCurr);
-                                    
+
             // Check if jointPositions are close the hardware limitits
-            for (int j = 0; j < this->axes; j++)
-            {
-                if ((desiredMotorCurrents[j] >= motorTorqueCurrentParameters[j].maxCurr || 
+            if ((desiredMotorCurrents[j] >= motorTorqueCurrentParameters[j].maxCurr ||
                 desiredMotorCurrents[j] <= -motorTorqueCurrentParameters[j].maxCurr) & 
                 measuredJointPositions[j] < m_lowerLimits[j]
                     || measuredJointPositions[j] > m_upperLimits[j])
-                {
-                    desiredMotorCurrents[j] = 0.0;
-                    log()->error("Joint {} is close to the hardware limits", m_axisNames[j]);
-                }
+            {
+                desiredMotorCurrents[j] = 0.0;
+                log()->error("Joint {} is close to the hardware limits", m_axisNames[j]);
             }
 
             {
