@@ -11,6 +11,8 @@
 #include <ResolveRoboticsURICpp.h>
 #include <yarp/os/ResourceFinder.h>
 
+#include <ConfigFolderPath.h>
+
 #include <iDynTree/KinDynComputations.h>
 #include <iDynTree/FreeFloatingState.h>
 #include <iDynTree/Model.h>
@@ -25,6 +27,9 @@
 
 #include <BipedalLocomotion/RobotDynamicsEstimator/KinDynWrapper.h>
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 using namespace BipedalLocomotion::Estimators::RobotDynamicsEstimator;
 using namespace BipedalLocomotion::ParametersHandler;
 using namespace BipedalLocomotion::System;
@@ -35,11 +40,8 @@ void createModelLoader(IParametersHandler::shared_ptr group, iDynTree::ModelLoad
     // List of joints and fts to load the model
     std::vector<SubModel> subModelList;
 
-    std::optional<std::string> pathTemp = ResolveRoboticsURICpp::resolveRoboticsURI("package://ergoCub/robots/ergoCubSN000/model.urdf");
-    REQUIRE(pathTemp.has_value());
-
-    std::string modelPath = pathTemp.value();
-    BipedalLocomotion::log()->info("Model path {}", modelPath);
+    std::string modelPath = getRobotModelPath();
+    BipedalLocomotion::log()->info("Model path {}", getRobotModelPath());
 
     std::vector<std::string> jointList;
     REQUIRE(group->getParameter("joint_list", jointList));

@@ -188,7 +188,7 @@ void loadRobotModel(std::weak_ptr<const ParametersHandler::IParametersHandler> h
     jointsAndFTs.insert(jointsAndFTs.end(), ftFramesList.begin(), ftFramesList.end());
 
     iDynTree::ModelLoader mdlLdr;
-    REQUIRE(mdlLdr.loadReducedModelFromFile(getRobotModelPath(), jointsAndFTs));
+    REQUIRE(mdlLdr.loadReducedModelFromFile(getCustomRobotModelPath(), jointsAndFTs));
 
     REQUIRE(kindyn->loadRobotModel(mdlLdr.model()));
 
