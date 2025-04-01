@@ -101,7 +101,7 @@ jobs:
                              libboost-system-dev libboost-filesystem-dev libboost-thread-dev \
                              liborocos-kdl-dev libeigen3-dev swig qtbase5-dev qtdeclarative5-dev \
                              qtmultimedia5-dev libxml2-dev liburdfdom-dev libtinyxml-dev \
-                             liburdfdom-dev liboctave-dev python3-dev valgrind coinor-libipopt-dev \
+                             liburdfdom-dev python3-dev valgrind coinor-libipopt-dev \
                              libmatio-dev python3-pytest python3-numpy python3-scipy \
                              python3-setuptools  libspdlog-dev libopencv-dev libpcl-dev \
                              python3-pybind11 nlohmann-json3-dev libassimp-dev libqhull-dev
