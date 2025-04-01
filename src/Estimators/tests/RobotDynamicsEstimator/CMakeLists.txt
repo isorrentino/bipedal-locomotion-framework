@@ -62,6 +62,22 @@ file(DOWNLOAD https://raw.githubusercontent.com/ami-iit/paper_sorrentino_2024_ic
     EXPECTED_MD5 ${CUSTOM_MODEL_EXPECTED_MD5})
 endif()
 
+set(DATASET_UPDATED FALSE)
+set(DATASET_EXPECTED_MD5 af2d4c57650ab5f9bf3613d12dc54614)
+if (EXISTS "${CMAKE_CURRENT_BINARY_DIR}/dataset.mat")
+    file(MD5 "${CMAKE_CURRENT_BINARY_DIR}/dataset.mat" MAT_DATASET_CHECKSUM_VARIABLE)
+    string(COMPARE EQUAL ${MAT_DATASET_CHECKSUM_VARIABLE} ${DATASET_EXPECTED_MD5} DATASET_UPDATED)
+else()
+        set(DATASET_UPDATED FALSE)
+endif()
+
+if(NOT ${DATASET_UPDATED})
+message(STATUS "Fetching synthetic dataset from https://github.com/ami-iit/paper_...")
+file(DOWNLOAD https://github.com/ami-iit/paper_sorrentino_2024_icra_robot-dynamics-estimation/raw/main/python/dataset/synthetic_data/four_joints_two_ft_three_imu.mat
+    ${CMAKE_CURRENT_BINARY_DIR}/dataset.mat
+    EXPECTED_MD5 ${DATASET_EXPECTED_MD5})
+endif()
+
 if(FRAMEWORK_COMPILE_YarpImplementation)
     add_bipedal_test(NAME SubModelCreator
         SOURCES SubModelCreatorTest.cpp
@@ -110,24 +126,6 @@ if (FRAMEWORK_COMPILE_ManifConversions)
 endif()
 
 if(FRAMEWORK_COMPILE_YarpImplementation AND FRAMEWORK_COMPILE_ManifConversions AND FRAMEWORK_COMPILE_matioCppConversions)
-    if(BUILD_TESTING)
-        set(DATASET_UPDATED FALSE)
-        set(DATASET_EXPECTED_MD5 af2d4c57650ab5f9bf3613d12dc54614)
-        if (EXISTS "${CMAKE_CURRENT_BINARY_DIR}/dataset.mat")
-            file(MD5 "${CMAKE_CURRENT_BINARY_DIR}/dataset.mat" MAT_DATASET_CHECKSUM_VARIABLE)
-            string(COMPARE EQUAL ${MAT_DATASET_CHECKSUM_VARIABLE} ${DATASET_EXPECTED_MD5} DATASET_UPDATED)
-        else()
-                set(DATASET_UPDATED FALSE)
-        endif()
-
-        if(NOT ${DATASET_UPDATED})
-        message(STATUS "Fetching synthetic dataset from https://github.com/ami-iit/paper_...")
-        file(DOWNLOAD https://github.com/ami-iit/paper_sorrentino_2024_icra_robot-dynamics-estimation/raw/main/python/dataset/synthetic_data/four_joints_two_ft_three_imu.mat
-            ${CMAKE_CURRENT_BINARY_DIR}/dataset.mat
-            EXPECTED_MD5 ${DATASET_EXPECTED_MD5})
-        endif()
-    endif()
-
     add_bipedal_test(NAME RobotDynamicsEstimation
         SOURCES RobotDynamicsEstimationTest.cpp
         LINKS   BipedalLocomotion::RobotDynamicsEstimator

@@ -208,12 +208,12 @@ TEST_CASE("KinDynWrapper Test")
         kinDyn->getWorldTransform(kinDynWrapperList[0]->getFloatingBase()));
 
     // Set the sub-model state
-    kinDynWrapperList[0]->setRobotState(worldTBase.transform(),
+    REQUIRE(kinDynWrapperList[0]->setRobotState(worldTBase.transform(),
                                         jointPos,
                                         iDynTree::make_span(baseVel.data(),
                                                             manif::SE3d::Tangent::DoF),
                                         jointVel,
-                                        gravity);
+                                        gravity));
 
     // Forward dynamics
     Eigen::VectorXd jointAccFD(numJoints);
@@ -266,12 +266,12 @@ TEST_CASE("KinDynWrapper Test")
     jointTrq = iDynTree::toEigen(jointTorques.jointTorques());
 
     // Set the sub-model state
-    kinDynWrapperList[0]->setRobotState(worldTBase.transform(),
+    REQUIRE(kinDynWrapperList[0]->setRobotState(worldTBase.transform(),
                                         jointPos,
                                         iDynTree::make_span(baseVel.data(),
                                                             manif::SE3d::Tangent::DoF),
                                         jointVel,
-                                        gravity);
+                                        gravity));
 
     // Forward dynamics
     Eigen::VectorXd jointAccFD2(numJoints);
@@ -302,12 +302,12 @@ TEST_CASE("KinDynWrapper Test")
     jointTrq = iDynTree::toEigen(jointTorques.jointTorques());
 
     // Set the sub-model state
-    kinDynWrapperList[0]->setRobotState(worldTBase.transform(),
+    REQUIRE(kinDynWrapperList[0]->setRobotState(worldTBase.transform(),
                                         jointPos,
                                         iDynTree::make_span(baseVel.data(),
                                                             manif::SE3d::Tangent::DoF),
                                         jointVel,
-                                        gravity);
+                                        gravity));
 
     // Forward dynamics
     REQUIRE(kinDynWrapperList[0]->forwardDynamics(jointTrq,
