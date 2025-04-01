@@ -58,7 +58,7 @@ jobs:
     strategy:
       matrix:
         build_type: [Release, Debug]
-        os: [ubuntu-20.04, windows-2019]
+        os: [ubuntu-22.04, windows-2019]
       fail-fast: false
 
     steps:
@@ -527,7 +527,7 @@ jobs:
               -DFRAMEWORK_RUN_Valgrind_tests:BOOL=ON ..
 
     - name: Check build if some dependencies are not enabled [Ubuntu]
-      if: github.event_name != 'push' && github.event_name != 'release' && matrix.os == 'ubuntu-20.04'
+      if: github.event_name != 'push' && github.event_name != 'release' && matrix.os == 'ubuntu-22.04'
       shell: bash
       run: |
         cd build
