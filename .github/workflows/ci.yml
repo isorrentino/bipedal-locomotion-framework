@@ -33,6 +33,10 @@ env:
   # Default number of cores set to one
   NUM_CORES_FOR_CMAKE_BUILD: 1
 
+  # Compatibility with CMake 4.0.0 for older projects
+  CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
+
 jobs:
   check-style:
     name: Find Trailing Whitespace
@@ -365,9 +369,8 @@ jobs:
         cd osqp
         mkdir -p build
         cd build
-        # -DCMAKE_POLICY_VERSION_MINIMUM=3.5 can be removed once we update to osqp 1, see https://github.com/osqp/qdldl/issues/60
         cmake -DCMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/install/deps -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install/deps ..
+              -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install/deps ..
         cmake --build . --config ${{ matrix.build_type }} --target install -j${{env.NUM_CORES_FOR_CMAKE_BUILD}}
 
         # osqp-eigen
