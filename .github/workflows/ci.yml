@@ -15,7 +15,7 @@ env:
   YCM_TAG: v0.18.2
   YARP_TAG: v3.10.1
   iDynTree_TAG: v12.3.3
-  CasADi_TAG: 3.5.5.2
+  CasADi_TAG: 3.6.7
   manif_TAG: 0.0.5
   matioCpp_TAG: v0.2.5
   LieGroupControllers_TAG: v0.2.0
@@ -202,7 +202,7 @@ jobs:
         # the other dependencies. Please check:
         # https://github.com/casadi/casadi/blob/6f122ca22e2a869903628c5738f154c8ac0f7455/CMakeLists.txt#L317
         cd ${GITHUB_WORKSPACE}
-        git clone https://github.com/ami-iit/casadi.git -b ${CasADi_TAG} casadi
+        git clone https://github.com/casadi/casadi.git -b ${CasADi_TAG} casadi
         cd casadi
         mkdir build
         cd build
@@ -383,13 +383,12 @@ jobs:
 
         # CasADi
         cd ${GITHUB_WORKSPACE}
-        git clone https://github.com/ami-iit/casadi.git -b ${CasADi_TAG} casadi
+        git clone https://github.com/casadi/casadi.git -b ${CasADi_TAG} casadi
         cd casadi
         mkdir build
         cd build
-        # -DCMAKE_POLICY_VERSION_MINIMUM=3.5 can be removed once we update to casadi 3.6.7 or greater
         cmake -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install/deps -DWITH_IPOPT=BOOL:ON \
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DWITH_OSQP:BOOL=ON -DUSE_SYSTEM_WISE_OSQP=BOOL:ON ..
+              -DWITH_OSQP:BOOL=ON -DUSE_SYSTEM_WISE_OSQP=BOOL:ON ..
         cmake --build . --config ${{ matrix.build_type }} --target install -j${{env.NUM_CORES_FOR_CMAKE_BUILD}}
 
         # manif
