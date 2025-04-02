@@ -387,8 +387,9 @@ jobs:
         cd casadi
         mkdir build
         cd build
+        # -DCMAKE_POLICY_VERSION_MINIMUM=3.5 can be removed once we update to casadi 3.6.7 or greater
         cmake -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install/deps -DWITH_IPOPT=BOOL:ON \
-              -DWITH_OSQP:BOOL=ON -DUSE_SYSTEM_WISE_OSQP=BOOL:ON ..
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DWITH_OSQP:BOOL=ON -DUSE_SYSTEM_WISE_OSQP=BOOL:ON ..
         cmake --build . --config ${{ matrix.build_type }} --target install -j${{env.NUM_CORES_FOR_CMAKE_BUILD}}
 
         # manif
