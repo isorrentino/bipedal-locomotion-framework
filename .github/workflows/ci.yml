@@ -24,7 +24,7 @@ env:
   tomlplusplus_TAG: v3.0.1
   icub_models_TAG: v2.4.0
   UnicyclePlanner_TAG: v0.8.1
-  telemetry_TAG: v1.2.0
+  telemetry_TAG: v1.2.6
   bayes_filters_TAG: 53124b1d85fc00c8cd44d572a1e482d7e58c0f50
 
   # Overwrite the VCPKG_INSTALLATION_ROOT env variable defined by GitHub Actions to point to our vcpkg
